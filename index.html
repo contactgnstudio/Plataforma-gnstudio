@@ -6,9 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <title>Dashboard Financiero - Proyintel</title>
 <link rel="stylesheet" href="css/styles.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
-        integrity="sha384-gVP0vL/gX62dRWnOz/0HQGgiM69qoWLqvz3YugIqH8wBhw+7LQ2aR4tD7q9C3q2v"
-        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -18,7 +16,7 @@
     <div class="logo-circle">P</div>
     <div class="header-title">
       <h1>Dashboard Financiero</h1>
-      <p>Proyintel · Administración Técnica</p>
+      <p>Proyintel · Administracion Tecnica</p>
     </div>
   </div>
   <div class="header-right">
@@ -29,7 +27,7 @@
 
 <div class="container">
 
-  <!-- NAVEGACIÓN DE SECCIONES -->
+  <!-- NAVEGACION DE SECCIONES -->
   <nav class="nav-tabs">
     <button class="nav-tab active" data-section="dashboard" onclick="switchSection('dashboard')">
       📊 Dashboard
@@ -46,18 +44,18 @@
   </nav>
 
   <!-- ============================================================
-       SECCIÓN: DASHBOARD
+       SECCION: DASHBOARD
        ============================================================ -->
   <section id="dashboard" class="section-panel active">
 
     <!-- KPIs -->
     <div class="kpi-grid" id="kpi-container"></div>
 
-    <!-- Gráficas principales -->
+    <!-- Graficas principales -->
     <div class="charts-grid">
       <div class="chart-card">
         <div class="chart-header">
-          <span class="chart-title">📊 Evolución Mensual por Categoría</span>
+          <span class="chart-title">📊 Evolucion Mensual por Categoria</span>
           <div class="chart-legend">
             <span class="legend-item"><span class="legend-dot" style="background:#6bbd45"></span>Materiales</span>
             <span class="legend-item"><span class="legend-dot" style="background:#243b86"></span>Operativo</span>
@@ -71,7 +69,7 @@
 
       <div class="chart-card">
         <div class="chart-header">
-          <span class="chart-title">🥧 Distribución por Categoría</span>
+          <span class="chart-title">🥧 Distribucion por Categoria</span>
         </div>
         <div class="chart-container">
           <canvas id="chartDistribucion"></canvas>
@@ -79,7 +77,7 @@
       </div>
     </div>
 
-    <!-- Gráficas secundarias -->
+    <!-- Graficas secundarias -->
     <div class="charts-grid">
       <div class="chart-card">
         <div class="chart-header">
@@ -118,8 +116,8 @@
               <th>No.</th>
               <th>Fecha</th>
               <th>Factura</th>
-              <th>Descripción</th>
-              <th>Categoría</th>
+              <th>Descripcion</th>
+              <th>Categoria</th>
               <th>Total</th>
               <th>Acciones</th>
             </tr>
@@ -136,7 +134,7 @@
       </div>
       <div class="resumen-grid">
         <div class="resumen-card">
-          <h3>📋 Desglose por Categoría</h3>
+          <h3>📋 Desglose por Categoria</h3>
           <div id="desgloseCategorias"></div>
         </div>
         <div class="resumen-card">
@@ -146,7 +144,7 @@
       </div>
     </div>
 
-    <!-- Sección de Pagos Recibidos -->
+    <!-- Seccion de Pagos Recibidos -->
     <div class="section">
       <div class="section-header">
         <h2 class="section-title">💰 Pagos Recibidos de Clientes</h2>
@@ -164,7 +162,7 @@
               <th>Fecha</th>
               <th>Cliente</th>
               <th>Proyecto/Servicio</th>
-              <th>Método</th>
+              <th>Metodo</th>
               <th>Monto</th>
               <th>Estado</th>
               <th>Acciones</th>
@@ -179,7 +177,7 @@
   </section>
 
   <!-- ============================================================
-       SECCIÓN: INGRESAR GASTOS
+       SECCION: INGRESAR GASTOS
        ============================================================ -->
   <section id="ingresar-gastos" class="section-panel">
     <div class="form-section">
@@ -198,17 +196,17 @@
             <label for="gasto-factura">N° Factura <span class="required">*</span></label>
             <input type="text" id="gasto-factura" placeholder="Ej: F-001254" required
                    maxlength="20" pattern="[A-Za-z0-9\-]+"
-                   title="Solo letras, números y guiones">
+                   title="Solo letras, numeros y guiones">
           </div>
           <div class="form-group full-width">
-            <label for="gasto-descripcion">Descripción <span class="required">*</span></label>
-            <input type="text" id="gasto-descripcion" placeholder="Ej: Cable eléctrico THW 12 AWG" required
+            <label for="gasto-descripcion">Descripcion <span class="required">*</span></label>
+            <input type="text" id="gasto-descripcion" placeholder="Ej: Cable electrico THW 12 AWG" required
                    maxlength="200">
           </div>
           <div class="form-group">
-            <label for="gasto-categoria">Categoría <span class="required">*</span></label>
+            <label for="gasto-categoria">Categoria <span class="required">*</span></label>
             <select id="gasto-categoria" required>
-              <option value="">Selecciona una categoría</option>
+              <option value="">Selecciona una categoria</option>
               <option value="materiales">Materiales</option>
               <option value="operativo">Operativo</option>
               <option value="mano-obra">Mano de Obra</option>
@@ -231,7 +229,7 @@
   </section>
 
   <!-- ============================================================
-       SECCIÓN: INGRESAR PAGOS
+       SECCION: INGRESAR PAGOS
        ============================================================ -->
   <section id="ingresar-pagos" class="section-panel">
     <div class="form-section">
@@ -248,18 +246,18 @@
           </div>
           <div class="form-group">
             <label for="pago-cliente">Nombre del Cliente <span class="required">*</span></label>
-            <input type="text" id="pago-cliente" placeholder="Ej: Constructora del Pacífico" required
+            <input type="text" id="pago-cliente" placeholder="Ej: Constructora del Pacifico" required
                    maxlength="100">
           </div>
           <div class="form-group full-width">
             <label for="pago-proyecto">Proyecto / Servicio <span class="required">*</span></label>
-            <input type="text" id="pago-proyecto" placeholder="Ej: Instalación eléctrica bodega #3" required
+            <input type="text" id="pago-proyecto" placeholder="Ej: Instalacion electrica bodega #3" required
                    maxlength="200">
           </div>
           <div class="form-group">
-            <label for="pago-metodo">Método de Pago <span class="required">*</span></label>
+            <label for="pago-metodo">Metodo de Pago <span class="required">*</span></label>
             <select id="pago-metodo" required>
-              <option value="">Selecciona método</option>
+              <option value="">Selecciona metodo</option>
               <option value="transferencia">Transferencia Bancaria</option>
               <option value="efectivo">Efectivo</option>
               <option value="cheque">Cheque</option>
@@ -282,7 +280,7 @@
           </div>
           <div class="form-group full-width">
             <label for="pago-notas">Notas / Referencia</label>
-            <input type="text" id="pago-notas" placeholder="Número de referencia, banco, etc." maxlength="300">
+            <input type="text" id="pago-notas" placeholder="Numero de referencia, banco, etc." maxlength="300">
           </div>
         </div>
         <div class="form-actions">
@@ -296,7 +294,7 @@
   </section>
 
   <!-- ============================================================
-       SECCIÓN: REGISTROS COMPLETOS
+       SECCION: REGISTROS COMPLETOS
        ============================================================ -->
   <section id="registros" class="section-panel">
     <div class="section">
@@ -314,7 +312,7 @@
           <table>
             <thead>
               <tr>
-                <th>No.</th><th>Fecha</th><th>Factura</th><th>Descripción</th><th>Categoría</th><th>Total</th>
+                <th>No.</th><th>Fecha</th><th>Factura</th><th>Descripcion</th><th>Categoria</th><th>Total</th>
               </tr>
             </thead>
             <tbody id="tbodyRegGastos"></tbody>
@@ -327,7 +325,7 @@
           <table>
             <thead>
               <tr>
-                <th>No.</th><th>Fecha</th><th>Cliente</th><th>Proyecto</th><th>Método</th><th>Monto</th><th>Estado</th>
+                <th>No.</th><th>Fecha</th><th>Cliente</th><th>Proyecto</th><th>Metodo</th><th>Monto</th><th>Estado</th>
               </tr>
             </thead>
             <tbody id="tbodyRegPagos"></tbody>
