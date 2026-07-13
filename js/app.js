@@ -9,7 +9,12 @@ var chartInstances = {};
 // ============================================================
 document.addEventListener('DOMContentLoaded', function() {
   inicializarStorage();
-  
+    // Inicializar catálogo si estamos en esa sección
+  if (document.getElementById('tbodyItems')) {
+    inicializarCatalogo();
+    renderItems();
+    actualizarVistaJSON();
+  }
   var periodoEl = document.getElementById('periodo-actual');
   if (periodoEl) periodoEl.textContent = periodoActual;
 
