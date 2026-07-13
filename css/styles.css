@@ -367,3 +367,30 @@ tbody tr:last-child td { border-bottom: none; }
   .section, .chart-card, .kpi-card { background: white; border: 1px solid #ddd; color: black; break-inside: avoid; }
   .section-title, .chart-title, .kpi-value, .kpi-label { color: black !important; }
 }
+/* ===== CATALOGO DE ITEMS ===== */
+#catalogo-items .form-section { max-width: 900px; }
+
+#tablaItems td:nth-child(3) { max-width: 400px; white-space: normal; line-height: 1.4; }
+
+.cat-electricidad { background: rgba(107,189,69,0.12); color: #6bbd45; }
+.cat-plomeria { background: rgba(36,59,134,0.2); color: #6b8cff; }
+.cat-pintura { background: rgba(245,185,35,0.12); color: #f5b923; }
+.cat-construccion { background: rgba(231,76,60,0.12); color: #e74c3c; }
+.cat-mantenimiento { background: rgba(155,89,182,0.12); color: #bb8fce; }
+.cat-iluminacion { background: rgba(243,156,18,0.12); color: #f39c12; }
+.cat-sistemas-aci { background: rgba(26,188,156,0.12); color: #1abc9c; }
+.cat-bombeo { background: rgba(52,152,219,0.12); color: #5dade2; }
+.cat-ventilacion { background: rgba(149,165,166,0.12); color: #bdc3c7; }
+.cat-techo { background: rgba(211,84,0,0.12); color: #e67e22; }
+.cat-puertas { background: rgba(192,57,43,0.12); color: #ec7063; }
+.cat-otros { background: rgba(127,140,141,0.12); color: #aab7b8; }
+
+#json-preview::-webkit-scrollbar { width: 8px; }
+#json-preview::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 4px; }
+#json-preview::-webkit-scrollbar-thumb { background: rgba(107,189,69,0.3); border-radius: 4px; }
+
+/* Responsive nav-tabs */
+@media (max-width: 1024px) {
+  .nav-tabs { flex-wrap: wrap; }
+  .nav-tab { font-size: 12px; padding: 10px 16px; }
+}
