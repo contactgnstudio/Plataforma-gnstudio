@@ -1,433 +1,290 @@
 // ============================================================
-// js/app.js - Logica principal del Dashboard Financiero Proyintel
+// js/app.js — Lógica principal y navegación
 // ============================================================
 
-var chartInstances = {};
-
-// ============================================================
-// INICIALIZACION
-// ============================================================
 document.addEventListener('DOMContentLoaded', function() {
-  inicializarStorage();
-    // Inicializar catálogo si estamos en esa sección
-  if (document.getElementById('tbodyItems')) {
-    inicializarCatalogo();
-    renderItems();
-    actualizarVistaJSON();
-  }
-  var periodoEl = document.getElementById('periodo-actual');
-  if (periodoEl) periodoEl.textContent = periodoActual;
+  inicializarCatalogo();
+  inicializarClientes();
+  inicializarCotizaciones();
+  inicializarCharts();
 
-  renderKPIs();
-  renderTablaGastos();
-  renderTablaPagos();
-  renderResumen();
-  renderResumenPagos();
+  renderServicios();
+  actualizarVistaJSON();
+  renderClientes();
+  actualizarSelectClientes();
+  renderCotizacionesGuardadas();
+  renderProyectos();
   renderRegistros();
-  inicializarGraficas();
+  actualizarKPIs();
 
-  // Set fecha actual en formularios
   var hoy = new Date().toISOString().split('T')[0];
-  var fechaGasto = document.getElementById('gasto-fecha');
-  var fechaPago = document.getElementById('pago-fecha');
-  if (fechaGasto) fechaGasto.value = hoy;
-  if (fechaPago) fechaPago.value = hoy;
+  var gf = document.getElementById('gasto-fecha');
+  var pf = document.getElementById('pago-fecha');
+  if (gf) gf.value = hoy;
+  if (pf) pf.value = hoy;
 });
 
 // ============================================================
-// NAVEGACION DE SECCIONES
+// NAVEGACIÓN
 // ============================================================
 function switchSection(sectionId) {
   var panels = document.querySelectorAll('.section-panel');
   for (var i = 0; i < panels.length; i++) {
     panels[i].classList.remove('active');
   }
-  
-  var tabs = document.querySelectorAll('.nav-tab');
-  for (var i = 0; i < tabs.length; i++) {
-    tabs[i].classList.remove('active');
+
+  var target = document.getElementById(sectionId);
+  if (target) target.classList.add('active');
+
+  var links = document.querySelectorAll('.nav-link');
+  for (var i = 0; i < links.length; i++) {
+    links[i].classList.remove('active');
+    if (links[i].getAttribute('data-section') === sectionId) {
+      links[i].classList.add('active');
+    }
   }
 
-  var panel = document.getElementById(sectionId);
-  var tab = document.querySelector('.nav-tab[data-section="' + sectionId + '"]');
-  if (panel) panel.classList.add('active');
-  if (tab) tab.classList.add('active');
+  var titulos = {
+    'dashboard': 'Dashboard',
+    'catalogo-servicios': 'Catálogo de Servicios',
+    'clientes': 'Clientes',
+    'cotizaciones': 'Cotizaciones',
+    'proyectos': 'Proyectos',
+    'ingresar-gastos': 'Registrar Gasto',
+    'ingresar-pagos': 'Registrar Pago',
+    'registros': 'Registros'
+  };
+  var pageTitle = document.getElementById('page-title');
+  if (pageTitle) pageTitle.textContent = titulos[sectionId] || 'Dashboard';
 
-  // Re-renderizar al volver al dashboard
-  if (sectionId === 'dashboard') {
-    renderTablaGastos();
-    renderTablaPagos();
-    renderResumen();
-    renderResumenPagos();
-    actualizarGraficas();
-  }
+  var mobileNav = document.querySelector('.mobile-nav-overlay');
+  if (mobileNav) mobileNav.classList.remove('open');
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function switchRegTab(tabId) {
-  var panels = document.querySelectorAll('.reg-panel');
-  for (var i = 0; i < panels.length; i++) {
-    panels[i].classList.remove('active');
+function toggleMobileNav() {
+  var overlay = document.querySelector('.mobile-nav-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.className = 'mobile-nav-overlay';
+    var navLinks = document.querySelector('.nav-links');
+    if (navLinks) {
+      var links = navLinks.querySelectorAll('.nav-link');
+      for (var i = 0; i < links.length; i++) {
+        overlay.appendChild(links[i].cloneNode(true));
+      }
+    }
+    document.body.appendChild(overlay);
   }
-  
-  var tabs = document.querySelectorAll('.reg-tab');
-  for (var i = 0; i < tabs.length; i++) {
-    tabs[i].classList.remove('active');
+  overlay.classList.toggle('open');
+}
+
+// ============================================================
+// GASTOS
+// ============================================================
+function guardarGasto(event) {
+  event.preventDefault();
+  var feedback = document.getElementById('feedback-gasto');
+
+  var gasto = {
+    id: generarId(),
+    tipo: 'gasto',
+    fecha: document.getElementById('gasto-fecha').value,
+    categoria: document.getElementById('gasto-categoria').value,
+    descripcion: document.getElementById('gasto-descripcion').value.trim(),
+    monto: parseFloat(document.getElementById('gasto-monto').value),
+    metodo: document.getElementById('gasto-metodo').value,
+    creadoEn: new Date().toISOString()
+  };
+
+  addItem(STORAGE_KEYS.GASTOS, gasto);
+
+  feedback.className = 'form-feedback success';
+  feedback.textContent = '✅ Gasto guardado: ' + formatMoney(gasto.monto);
+  document.getElementById('formGasto').reset();
+  document.getElementById('gasto-fecha').value = new Date().toISOString().split('T')[0];
+
+  renderRegistros();
+  actualizarKPIs();
+  renderChartBalance();
+  renderChartGastos();
+  return false;
+}
+
+// ============================================================
+// PAGOS
+// ============================================================
+function guardarPago(event) {
+  event.preventDefault();
+  var feedback = document.getElementById('feedback-pago');
+
+  var pago = {
+    id: generarId(),
+    tipo: 'pago',
+    fecha: document.getElementById('pago-fecha').value,
+    cliente: document.getElementById('pago-cliente').value.trim(),
+    concepto: document.getElementById('pago-concepto').value.trim(),
+    monto: parseFloat(document.getElementById('pago-monto').value),
+    metodo: document.getElementById('pago-metodo').value,
+    estado: document.getElementById('pago-estado').value,
+    creadoEn: new Date().toISOString()
+  };
+
+  addItem(STORAGE_KEYS.PAGOS, pago);
+
+  feedback.className = 'form-feedback success';
+  feedback.textContent = '✅ Pago registrado: ' + formatMoney(pago.monto);
+  document.getElementById('formPago').reset();
+  document.getElementById('pago-fecha').value = new Date().toISOString().split('T')[0];
+
+  renderRegistros();
+  actualizarKPIs();
+  renderChartBalance();
+  return false;
+}
+
+// ============================================================
+// PROYECTOS
+// ============================================================
+function renderProyectos() {
+  var tbody = document.getElementById('tbodyProyectos');
+  if (!tbody) return;
+
+  var proyectos = getData(STORAGE_KEYS.PROYECTOS);
+  proyectos.sort(function(a, b) { return new Date(b.creadoEn) - new Date(a.creadoEn); });
+
+  var html = '';
+  for (var i = 0; i < proyectos.length; i++) {
+    var p = proyectos[i];
+    var avancePct = Math.round(p.avance || 0);
+    var estadoClass = p.estado === 'en_progreso' ? 'estado-cotizado' : 
+                      p.estado === 'completado' ? 'estado-aprobado' : 'estado-vencido';
+    var estadoText = p.estado === 'en_progreso' ? 'En Progreso' :
+                     p.estado === 'completado' ? 'Completado' : 'Pausado';
+
+    html += '<tr>' +
+      '<td><strong style="color:#a855f7">#' + (i + 1) + '</strong></td>' +
+      '<td>' + (p.clienteNombre || '—') + '</td>' +
+      '<td>' + p.nombre + '</td>' +
+      '<td class="td-monto">' + formatMoney(p.presupuesto) + '</td>' +
+      '<td>' +
+        '<div style="background:rgba(255,255,255,0.05);border-radius:4px;height:8px;overflow:hidden;">' +
+          '<div style="background:linear-gradient(90deg,#6bbd45,#4f8cff);height:100%;width:' + avancePct + '%;border-radius:4px;transition:width 0.5s;"></div>' +
+        '</div>' +
+        '<span style="font-size:11px;color:#8a8a96;margin-top:4px;display:block;">' + avancePct + '%</span>' +
+      '</td>' +
+      '<td><span class="estado-badge ' + estadoClass + '">' + estadoText + '</span></td>' +
+      '<td>' + formatDate(p.fechaInicio) + '</td>' +
+      '<td class="td-actions">' +
+        '<button class="btn-icon" onclick="avanzarProyecto(\'' + p.id + '\')" title="Avanzar" style="background:rgba(107,189,69,0.1);color:#6bbd45;">▲</button>' +
+        '<button class="btn-icon" onclick="eliminarProyecto(\'' + p.id + '\')" title="Eliminar" style="margin-left:4px;">🗑</button>' +
+      '</td>' +
+      '</tr>';
   }
 
-  var panel = document.getElementById(tabId);
-  if (event && event.target) event.target.classList.add('active');
-  if (panel) panel.classList.add('active');
+  tbody.innerHTML = html;
+}
+
+function avanzarProyecto(id) {
+  var proyecto = findItem(STORAGE_KEYS.PROYECTOS, id);
+  if (!proyecto) return;
+  var nuevoAvance = Math.min((proyecto.avance || 0) + 25, 100);
+  var nuevoEstado = nuevoAvance >= 100 ? 'completado' : proyecto.estado;
+  updateItem(STORAGE_KEYS.PROYECTOS, id, { avance: nuevoAvance, estado: nuevoEstado });
+  renderProyectos();
+  actualizarKPIs();
+}
+
+function eliminarProyecto(id) {
+  if (!confirm('¿Eliminar este proyecto?')) return;
+  deleteItem(STORAGE_KEYS.PROYECTOS, id);
+  renderProyectos();
+  actualizarKPIs();
+}
+
+// ============================================================
+// REGISTROS
+// ============================================================
+function renderRegistros(filtro) {
+  var tbody = document.getElementById('tbodyRegistros');
+  if (!tbody) return;
+
+  var gastos = getData(STORAGE_KEYS.GASTOS);
+  var pagos = getData(STORAGE_KEYS.PAGOS);
+  var todos = [];
+
+  for (var i = 0; i < gastos.length; i++) {
+    todos.push(Object.assign({}, gastos[i], { tipoLabel: 'Gasto', categoriaLabel: GASTO_LABELS[gastos[i].categoria] || gastos[i].categoria }));
+  }
+  for (var i = 0; i < pagos.length; i++) {
+    todos.push(Object.assign({}, pagos[i], { tipoLabel: 'Pago', categoriaLabel: pagos[i].concepto }));
+  }
+
+  todos.sort(function(a, b) { return new Date(b.fecha) - new Date(a.fecha); });
+
+  if (filtro && filtro !== 'todos') {
+    todos = todos.filter(function(r) { return r.tipo === filtro; });
+  }
+
+  var html = '';
+  for (var i = 0; i < todos.length; i++) {
+    var r = todos[i];
+    var tipoColor = r.tipo === 'gasto' ? '#ef4444' : '#6bbd45';
+    html += '<tr>' +
+      '<td>' + formatDate(r.fecha) + '</td>' +
+      '<td><span style="color:' + tipoColor + ';font-weight:600;font-size:11px;text-transform:uppercase;">' + r.tipoLabel + '</span></td>' +
+      '<td>' + (r.categoriaLabel || '—') + '</td>' +
+      '<td>' + r.descripcion + '</td>' +
+      '<td class="td-monto" style="color:' + tipoColor + '">' + (r.tipo === 'gasto' ? '-' : '+') + formatMoney(r.monto) + '</td>' +
+      '<td>' + (r.metodo || '—') + '</td>' +
+      '</tr>';
+  }
+
+  tbody.innerHTML = html;
+}
+
+function filtrarRegistros(tipo) {
+  renderRegistros(tipo);
 }
 
 // ============================================================
 // KPIs
 // ============================================================
-function renderKPIs() {
-  var gastos = obtenerGastos();
-  var pagos = obtenerPagos();
+function actualizarKPIs() {
+  var gastos = getData(STORAGE_KEYS.GASTOS);
+  var pagos = getData(STORAGE_KEYS.PAGOS);
+  var cotizaciones = getData(STORAGE_KEYS.COTIZACIONES);
+  var proyectos = getData(STORAGE_KEYS.PROYECTOS);
+  var clientes = getData(STORAGE_KEYS.CLIENTES);
 
   var totalGastos = 0;
-  for (var i = 0; i < gastos.length; i++) totalGastos += gastos[i].total;
-  
+  for (var i = 0; i < gastos.length; i++) totalGastos += parseFloat(gastos[i].monto) || 0;
+
   var totalPagos = 0;
-  for (var i = 0; i < pagos.length; i++) totalPagos += pagos[i].monto;
+  for (var i = 0; i < pagos.length; i++) totalPagos += parseFloat(pagos[i].monto) || 0;
 
-  var totalMateriales = 0;
-  var totalOperativo = 0;
-  var totalMO = 0;
-  for (var i = 0; i < gastos.length; i++) {
-    if (gastos[i].categoria === 'materiales') totalMateriales += gastos[i].total;
-    else if (gastos[i].categoria === 'operativo') totalOperativo += gastos[i].total;
-    else if (gastos[i].categoria === 'mano-obra') totalMO += gastos[i].total;
+  var cotizacionesActivas = 0;
+  for (var i = 0; i < cotizaciones.length; i++) {
+    if (cotizaciones[i].estado === 'cotizado') cotizacionesActivas++;
   }
 
-  var balance = totalPagos - totalGastos;
-
-  var kpis = [
-    { label: 'Total Gastos', value: totalGastos, change: 'Gastos acumulados', positive: true, color: 'rojo' },
-    { label: 'Total Ingresos', value: totalPagos, change: 'Pagos recibidos', positive: true, color: 'verde' },
-    { label: 'Balance', value: balance, change: balance >= 0 ? 'Ganancia neta' : 'Perdida neta', positive: balance >= 0, color: balance >= 0 ? 'verde' : 'rojo' },
-    { label: 'Mano de Obra', value: totalMO, change: 'Mayor categoria', positive: true, color: 'amarillo' }
-  ];
-
-  var container = document.getElementById('kpi-container');
-  if (!container) return;
-
-  var html = '';
-  for (var i = 0; i < kpis.length; i++) {
-    var k = kpis[i];
-    html += '<div class="kpi-card ' + k.color + '">' +
-      '<div class="kpi-label">' + k.label + '</div>' +
-      '<div class="kpi-value">' + fmt.format(k.value) + '</div>' +
-      '<span class="kpi-change ' + (k.positive ? 'positive' : 'negative') + '">' + k.change + '</span>' +
-      '</div>';
-  }
-  container.innerHTML = html;
-}
-
-// ============================================================
-// TABLA DE GASTOS
-// ============================================================
-function renderTablaGastos(filtro) {
-  filtro = filtro || 'todos';
-  var tbody = document.getElementById('tbodyGastos');
-  if (!tbody) return;
-
-  var gastos = obtenerGastos();
-  if (filtro !== 'todos') {
-    var filtrados = [];
-    for (var i = 0; i < gastos.length; i++) {
-      if (gastos[i].categoria === filtro) filtrados.push(gastos[i]);
-    }
-    gastos = filtrados;
+  var proyectosEnCurso = 0;
+  for (var i = 0; i < proyectos.length; i++) {
+    if (proyectos[i].estado === 'en_progreso') proyectosEnCurso++;
   }
 
-  var html = '';
-  for (var i = 0; i < gastos.length; i++) {
-    var g = gastos[i];
-    var catClass = g.categoria === 'materiales' ? 'cat-materiales' : g.categoria === 'operativo' ? 'cat-operativo' : 'cat-mano-obra';
-    var catLabel = g.categoria === 'materiales' ? 'Materiales' : g.categoria === 'operativo' ? 'Operativo' : 'Mano de Obra';
-    html += '<tr>' +
-      '<td>' + g.no + '</td>' +
-      '<td>' + g.fecha + '</td>' +
-      '<td>' + g.factura + '</td>' +
-      '<td>' + g.descripcion + '</td>' +
-      '<td><span class="td-categoria ' + catClass + '">' + catLabel + '</span></td>' +
-      '<td class="td-monto">' + fmt.format(g.total) + '</td>' +
-      '<td class="td-actions">' +
-        '<button class="btn-icon" onclick="eliminarGastoConfirm(' + g.no + ')" title="Eliminar">🗑</button>' +
-      '</td>' +
-      '</tr>';
-  }
-  tbody.innerHTML = html;
-}
+  var kpiIngresos = document.getElementById('kpi-ingresos');
+  var kpiGastos = document.getElementById('kpi-gastos');
+  var kpiBalance = document.getElementById('kpi-balance');
+  var kpiCot = document.getElementById('kpi-cotizaciones');
+  var kpiProy = document.getElementById('kpi-proyectos');
+  var kpiCli = document.getElementById('kpi-clientes');
 
-function filtrarTablaGastos(cat) {
-  var btns = document.querySelectorAll('.section-actions .filter-btn');
-  for (var i = 0; i < btns.length; i++) {
-    btns[i].classList.remove('active');
-  }
-  if (event && event.target) event.target.classList.add('active');
-  renderTablaGastos(cat);
-}
-
-function eliminarGastoConfirm(no) {
-  if (confirm('¿Eliminar este gasto?')) {
-    eliminarGasto(no);
-    renderTablaGastos();
-    renderKPIs();
-    renderResumen();
-    actualizarGraficas();
-    renderRegistros();
-  }
-}
-
-// ============================================================
-// TABLA DE PAGOS
-// ============================================================
-function renderTablaPagos(filtro) {
-  filtro = filtro || 'todos';
-  var tbody = document.getElementById('tbodyPagos');
-  if (!tbody) return;
-
-  var pagos = obtenerPagos();
-  if (filtro !== 'todos') {
-    var filtrados = [];
-    for (var i = 0; i < pagos.length; i++) {
-      if (pagos[i].estado === filtro) filtrados.push(pagos[i]);
-    }
-    pagos = filtrados;
-  }
-
-  var metodoMap = { transferencia: 'Transferencia', efectivo: 'Efectivo', cheque: 'Cheque', yappy: 'Yappy', otro: 'Otro' };
-
-  var html = '';
-  for (var i = 0; i < pagos.length; i++) {
-    var p = pagos[i];
-    var estadoClass = p.estado === 'completado' ? 'cat-completado' : p.estado === 'pendiente' ? 'cat-pendiente' : 'cat-parcial';
-    var estadoLabel = p.estado === 'completado' ? 'Completado' : p.estado === 'pendiente' ? 'Pendiente' : 'Parcial';
-    html += '<tr>' +
-      '<td>' + p.no + '</td>' +
-      '<td>' + p.fecha + '</td>' +
-      '<td>' + p.cliente + '</td>' +
-      '<td>' + p.proyecto + '</td>' +
-      '<td>' + (metodoMap[p.metodo] || p.metodo) + '</td>' +
-      '<td class="td-monto">' + fmt.format(p.monto) + '</td>' +
-      '<td><span class="td-categoria ' + estadoClass + '">' + estadoLabel + '</span></td>' +
-      '<td class="td-actions">' +
-        '<button class="btn-icon" onclick="eliminarPagoConfirm(' + p.no + ')" title="Eliminar">🗑</button>' +
-      '</td>' +
-      '</tr>';
-  }
-  tbody.innerHTML = html;
-}
-
-function filtrarTablaPagos(estado) {
-  var btns = document.querySelectorAll('#tablaPagos ~ .section-actions .filter-btn, .section-actions .filter-btn');
-  for (var i = 0; i < btns.length; i++) {
-    btns[i].classList.remove('active');
-  }
-  if (event && event.target) event.target.classList.add('active');
-  renderTablaPagos(estado);
-}
-
-function eliminarPagoConfirm(no) {
-  if (confirm('¿Eliminar este pago?')) {
-    eliminarPago(no);
-    renderTablaPagos();
-    renderKPIs();
-    renderResumenPagos();
-    renderRegistros();
-  }
-}
-
-// ============================================================
-// RESUMEN FINANCIERO - GASTOS
-// ============================================================
-function renderResumen() {
-  var gastos = obtenerGastos();
-  
-  var totalMat = 0, totalOp = 0, totalMO = 0;
-  for (var i = 0; i < gastos.length; i++) {
-    if (gastos[i].categoria === 'materiales') totalMat += gastos[i].total;
-    else if (gastos[i].categoria === 'operativo') totalOp += gastos[i].total;
-    else if (gastos[i].categoria === 'mano-obra') totalMO += gastos[i].total;
-  }
-  var total = totalMat + totalOp + totalMO;
-
-  var desglose = document.getElementById('desgloseCategorias');
-  if (desglose) {
-    desglose.innerHTML =
-      '<div class="resumen-row"><span class="resumen-label">Materiales</span><span class="resumen-value">' + fmt.format(totalMat) + '</span></div>' +
-      '<div class="resumen-row"><span class="resumen-label">Operativo</span><span class="resumen-value">' + fmt.format(totalOp) + '</span></div>' +
-      '<div class="resumen-row"><span class="resumen-label">Mano de Obra</span><span class="resumen-value">' + fmt.format(totalMO) + '</span></div>' +
-      '<div class="resumen-row total"><span class="resumen-label" style="color:var(--verde);font-weight:600">TOTAL</span><span class="resumen-value total-val">' + fmt.format(total) + '</span></div>';
-  }
-
-  var progreso = document.getElementById('progresoPresupuesto');
-  if (progreso) {
-    var cats = [
-      { label: 'Materiales', val: totalMat, pres: presupuestos.materiales, cls: 'fill-verde' },
-      { label: 'Operativo', val: totalOp, pres: presupuestos.operativo, cls: 'fill-azul' },
-      { label: 'Mano de Obra', val: totalMO, pres: presupuestos['mano-obra'], cls: 'fill-amarillo' }
-    ];
-
-    var html = '';
-    for (var i = 0; i < cats.length; i++) {
-      var c = cats[i];
-      var pct = Math.min((c.val / c.pres) * 100, 100);
-      html += '<div class="progress-item">' +
-        '<div class="progress-header"><span>' + c.label + '</span><span>' + pct.toFixed(1) + '% · ' + fmt.format(c.val) + ' / ' + fmt.format(c.pres) + '</span></div>' +
-        '<div class="progress-bar"><div class="progress-fill ' + c.cls + '" style="width:' + pct + '%"></div></div>' +
-        '</div>';
-    }
-    progreso.innerHTML = html;
-  }
-}
-
-// ============================================================
-// RESUMEN DE PAGOS
-// ============================================================
-function renderResumenPagos() {
-  var pagos = obtenerPagos();
-  
-  var total = 0, completados = 0, pendientes = 0, parciales = 0;
-  for (var i = 0; i < pagos.length; i++) {
-    total += pagos[i].monto;
-    if (pagos[i].estado === 'completado') completados += pagos[i].monto;
-    else if (pagos[i].estado === 'pendiente') pendientes += pagos[i].monto;
-    else if (pagos[i].estado === 'parcial') parciales += pagos[i].monto;
-  }
-
-  var container = document.getElementById('resumenPagos');
-  if (!container) return;
-
-  container.innerHTML =
-    '<div class="resumen-pago-card"><div class="rp-label">Total Recibido</div><div class="rp-value" style="color:#6bbd45">' + fmt.format(total) + '</div></div>' +
-    '<div class="resumen-pago-card"><div class="rp-label">Completados</div><div class="rp-value" style="color:#6bbd45">' + fmt.format(completados) + '</div></div>' +
-    '<div class="resumen-pago-card"><div class="rp-label">Pendientes</div><div class="rp-value" style="color:#e74c3c">' + fmt.format(pendientes) + '</div></div>';
-}
-
-// ============================================================
-// REGISTROS COMPLETOS
-// ============================================================
-function renderRegistros() {
-  var tbodyG = document.getElementById('tbodyRegGastos');
-  var tbodyP = document.getElementById('tbodyRegPagos');
-
-  if (tbodyG) {
-    var gastos = obtenerGastos();
-    var html = '';
-    for (var i = 0; i < gastos.length; i++) {
-      var g = gastos[i];
-      var catLabel = g.categoria === 'materiales' ? 'Materiales' : g.categoria === 'operativo' ? 'Operativo' : 'Mano de Obra';
-      html += '<tr><td>' + g.no + '</td><td>' + g.fecha + '</td><td>' + g.factura + '</td><td>' + g.descripcion + '</td><td>' + catLabel + '</td><td>' + fmt.format(g.total) + '</td></tr>';
-    }
-    tbodyG.innerHTML = html;
-  }
-
-  if (tbodyP) {
-    var pagos = obtenerPagos();
-    var metodoMap = { transferencia: 'Transferencia', efectivo: 'Efectivo', cheque: 'Cheque', yappy: 'Yappy', otro: 'Otro' };
-    var html = '';
-    for (var i = 0; i < pagos.length; i++) {
-      var p = pagos[i];
-      var estadoLabel = p.estado === 'completado' ? 'Completado' : p.estado === 'pendiente' ? 'Pendiente' : 'Parcial';
-      html += '<tr><td>' + p.no + '</td><td>' + p.fecha + '</td><td>' + p.cliente + '</td><td>' + p.proyecto + '</td><td>' + (metodoMap[p.metodo] || p.metodo) + '</td><td>' + fmt.format(p.monto) + '</td><td>' + estadoLabel + '</td></tr>';
-    }
-    tbodyP.innerHTML = html;
-  }
-}
-
-// ============================================================
-// GRAFICAS
-// ============================================================
-function inicializarGraficas() {
-  chartInstances.evolucion = crearChartEvolucion();
-  chartInstances.distribucion = crearChartDistribucion();
-  chartInstances.barras = crearChartBarras();
-  chartInstances.topGastos = crearChartTopGastos();
-}
-
-function actualizarGraficas() {
-  var keys = Object.keys(chartInstances);
-  for (var i = 0; i < keys.length; i++) {
-    var chart = chartInstances[keys[i]];
-    if (chart) chart.destroy();
-  }
-  inicializarGraficas();
-}
-
-// ============================================================
-// FORMULARIO: GUARDAR GASTO
-// ============================================================
-function guardarGasto(event) {
-  event.preventDefault();
-
-  var feedback = document.getElementById('feedback-gasto');
-  if (!feedback) return false;
-
-  var gasto = {
-    fecha: document.getElementById('gasto-fecha').value,
-    factura: document.getElementById('gasto-factura').value,
-    descripcion: document.getElementById('gasto-descripcion').value,
-    categoria: document.getElementById('gasto-categoria').value,
-    total: document.getElementById('gasto-total').value
-  };
-
-  var resultado = guardarGastoEnStorage(gasto);
-
-  if (resultado.exito) {
-    feedback.className = 'form-feedback success';
-    feedback.textContent = '✅ Gasto guardado correctamente. N° ' + resultado.gasto.no;
-    document.getElementById('formGasto').reset();
-    document.getElementById('gasto-fecha').value = new Date().toISOString().split('T')[0];
-
-    renderKPIs();
-    renderResumen();
-    actualizarGraficas();
-  } else {
-    feedback.className = 'form-feedback error';
-    feedback.textContent = '❌ ' + resultado.errores.join(', ');
-  }
-
-  return false;
-}
-
-// ============================================================
-// FORMULARIO: GUARDAR PAGO
-// ============================================================
-function guardarPago(event) {
-  event.preventDefault();
-
-  var feedback = document.getElementById('feedback-pago');
-  if (!feedback) return false;
-
-  var pago = {
-    fecha: document.getElementById('pago-fecha').value,
-    cliente: document.getElementById('pago-cliente').value,
-    proyecto: document.getElementById('pago-proyecto').value,
-    metodo: document.getElementById('pago-metodo').value,
-    monto: document.getElementById('pago-monto').value,
-    estado: document.getElementById('pago-estado').value,
-    notas: document.getElementById('pago-notas').value
-  };
-
-  var resultado = guardarPagoEnStorage(pago);
-
-  if (resultado.exito) {
-    feedback.className = 'form-feedback success';
-    feedback.textContent = '✅ Pago guardado correctamente. N° ' + resultado.pago.no;
-    document.getElementById('formPago').reset();
-    document.getElementById('pago-fecha').value = new Date().toISOString().split('T')[0];
-
-    renderKPIs();
-    renderResumenPagos();
-    renderTablaPagos();
-  } else {
-    feedback.className = 'form-feedback error';
-    feedback.textContent = '❌ ' + resultado.errores.join(', ');
-  }
-
-  return false;
+  if (kpiIngresos) kpiIngresos.textContent = formatMoney(totalPagos);
+  if (kpiGastos) kpiGastos.textContent = formatMoney(totalGastos);
+  if (kpiBalance) kpiBalance.textContent = formatMoney(totalPagos - totalGastos);
+  if (kpiCot) kpiCot.textContent = cotizacionesActivas;
+  if (kpiProy) kpiProy.textContent = proyectosEnCurso;
+  if (kpiCli) kpiCli.textContent = clientes.length;
 }
