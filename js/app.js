@@ -1,5 +1,5 @@
 // ============================================================
-// js/app.js — Lógica principal y navegación
+// js/app.js — Lógica principal y navegación (CORREGIDO)
 // ============================================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -17,11 +17,20 @@ document.addEventListener('DOMContentLoaded', function() {
   renderRegistros();
   actualizarKPIs();
 
-  var hoy = new Date().toISOString().split('T')[0];
+  // Fecha actual en formato YYYY-MM-DD para inputs type="date"
+  var hoy = new Date();
+  var yyyy = hoy.getFullYear();
+  var mm = String(hoy.getMonth() + 1).padStart(2, '0');
+  var dd = String(hoy.getDate()).padStart(2, '0');
+  var fechaHoy = yyyy + '-' + mm + '-' + dd;
+
   var gf = document.getElementById('gasto-fecha');
   var pf = document.getElementById('pago-fecha');
-  if (gf) gf.value = hoy;
-  if (pf) pf.value = hoy;
+  var cf = document.getElementById('cot-fecha');
+
+  if (gf && !gf.value) gf.value = fechaHoy;
+  if (pf && !pf.value) pf.value = fechaHoy;
+  if (cf && !cf.value) cf.value = fechaHoy;
 });
 
 // ============================================================
@@ -103,7 +112,10 @@ function guardarGasto(event) {
   feedback.className = 'form-feedback success';
   feedback.textContent = '✅ Gasto guardado: ' + formatMoney(gasto.monto);
   document.getElementById('formGasto').reset();
-  document.getElementById('gasto-fecha').value = new Date().toISOString().split('T')[0];
+
+  var hoy = new Date();
+  var fechaHoy = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
+  document.getElementById('gasto-fecha').value = fechaHoy;
 
   renderRegistros();
   actualizarKPIs();
@@ -136,7 +148,10 @@ function guardarPago(event) {
   feedback.className = 'form-feedback success';
   feedback.textContent = '✅ Pago registrado: ' + formatMoney(pago.monto);
   document.getElementById('formPago').reset();
-  document.getElementById('pago-fecha').value = new Date().toISOString().split('T')[0];
+
+  var hoy = new Date();
+  var fechaHoy = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
+  document.getElementById('pago-fecha').value = fechaHoy;
 
   renderRegistros();
   actualizarKPIs();
@@ -153,6 +168,11 @@ function renderProyectos() {
 
   var proyectos = getData(STORAGE_KEYS.PROYECTOS);
   proyectos.sort(function(a, b) { return new Date(b.creadoEn) - new Date(a.creadoEn); });
+
+  if (proyectos.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="tabla-vacia"><div class="tabla-vacia-icon">🏗️</div>No hay proyectos registrados</td></tr>';
+    return;
+  }
 
   var html = '';
   for (var i = 0; i < proyectos.length; i++) {
@@ -225,6 +245,11 @@ function renderRegistros(filtro) {
 
   if (filtro && filtro !== 'todos') {
     todos = todos.filter(function(r) { return r.tipo === filtro; });
+  }
+
+  if (todos.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="tabla-vacia"><div class="tabla-vacia-icon">📑</div>No hay registros</td></tr>';
+    return;
   }
 
   var html = '';
