@@ -9,663 +9,720 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="app-wrapper">
+  
+  <!-- ============================================================
+       TOP NAVBAR MODERNO
+       ============================================================ -->
+  <nav class="top-navbar">
+    <div class="nav-brand">
+      <div class="logo-box">
+        <span class="logo-g">G</span>
+        <span class="logo-n">N</span>
+      </div>
+      <div class="logo-text">
+        <span class="logo-brand">GN Studio</span>
+        <span class="logo-tagline">Dashboard</span>
+      </div>
+    </div>
     
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <div class="logo-box">
-          <span class="logo-g">G</span>
-          <span class="logo-n">N</span>
+    <div class="nav-links">
+      <a class="nav-link active" data-section="dashboard" onclick="switchSection('dashboard')">
+        <span class="nav-icon">📊</span>
+        <span>Dashboard</span>
+      </a>
+      <a class="nav-link" data-section="catalogo-servicios" onclick="switchSection('catalogo-servicios')">
+        <span class="nav-icon">📋</span>
+        <span>Servicios</span>
+      </a>
+      <a class="nav-link" data-section="clientes" onclick="switchSection('clientes')">
+        <span class="nav-icon">🏢</span>
+        <span>Clientes</span>
+      </a>
+      <a class="nav-link" data-section="cotizaciones" onclick="switchSection('cotizaciones')">
+        <span class="nav-icon">📄</span>
+        <span>Cotizaciones</span>
+      </a>
+      <a class="nav-link" data-section="proyectos" onclick="switchSection('proyectos')">
+        <span class="nav-icon">🏗️</span>
+        <span>Proyectos</span>
+      </a>
+      <a class="nav-link" data-section="ingresar-gastos" onclick="switchSection('ingresar-gastos')">
+        <span class="nav-icon">➕</span>
+        <span>Gastos</span>
+      </a>
+      <a class="nav-link" data-section="ingresar-pagos" onclick="switchSection('ingresar-pagos')">
+        <span class="nav-icon">💰</span>
+        <span>Pagos</span>
+      </a>
+      <a class="nav-link" data-section="registros" onclick="switchSection('registros')">
+        <span class="nav-icon">📑</span>
+        <span>Registros</span>
+      </a>
+    </div>
+    
+    <div class="nav-actions">
+      <button class="btn-header" onclick="exportarTodo()" title="Exportar todo">⬇️</button>
+      <button class="btn-header" onclick="window.print()" title="Imprimir">🖨️</button>
+    </div>
+    
+    <button class="nav-mobile-toggle" onclick="toggleMobileNav()">☰</button>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+    
+    <!-- HEADER -->
+    <header class="top-header">
+      <h1 class="page-title" id="page-title">Dashboard</h1>
+    </header>
+
+    <!-- ============================================================
+         SECCION: DASHBOARD
+         ============================================================ -->
+    <section id="dashboard" class="section-panel active">
+      
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:rgba(107,189,69,0.12);color:#6bbd45;">💰</div>
+          <div class="kpi-info">
+            <span class="kpi-value" id="kpi-ingresos">$0.00</span>
+            <span class="kpi-label">Ingresos Totales</span>
+          </div>
         </div>
-        <div class="logo-text">
-          <span class="logo-brand">GN Studio</span>
-          <span class="logo-tagline">Dashboard</span>
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:rgba(231,76,60,0.12);color:#e74c3c;">💸</div>
+          <div class="kpi-info">
+            <span class="kpi-value" id="kpi-gastos">$0.00</span>
+            <span class="kpi-label">Gastos Totales</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:rgba(79,140,255,0.12);color:#4f8cff;">📈</div>
+          <div class="kpi-info">
+            <span class="kpi-value" id="kpi-balance">$0.00</span>
+            <span class="kpi-label">Balance Neto</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:rgba(245,185,35,0.12);color:#f5b923;">📄</div>
+          <div class="kpi-info">
+            <span class="kpi-value" id="kpi-cotizaciones">0</span>
+            <span class="kpi-label">Cotizaciones Activas</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:rgba(168,85,247,0.12);color:#a855f7;">🏗️</div>
+          <div class="kpi-info">
+            <span class="kpi-value" id="kpi-proyectos">0</span>
+            <span class="kpi-label">Proyectos en Curso</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon" style="background:rgba(20,184,166,0.12);color:#14b8a6;">🏢</div>
+          <div class="kpi-info">
+            <span class="kpi-value" id="kpi-clientes">0</span>
+            <span class="kpi-label">Clientes Registrados</span>
+          </div>
         </div>
       </div>
-      
-      <nav class="sidebar-nav">
-        <button class="nav-item active" data-section="dashboard" onclick="switchSection('dashboard')">
-          <span class="nav-icon">📊</span>
-          <span class="nav-label">Dashboard</span>
-        </button>
-        <button class="nav-item" data-section="catalogo-servicios" onclick="switchSection('catalogo-servicios')">
-          <span class="nav-icon">📋</span>
-          <span class="nav-label">Catálogo de Servicios</span>
-        </button>
-        <button class="nav-item" data-section="clientes" onclick="switchSection('clientes')">
-          <span class="nav-icon">🏢</span>
-          <span class="nav-label">Clientes</span>
-        </button>
-        <button class="nav-item" data-section="cotizaciones" onclick="switchSection('cotizaciones')">
-          <span class="nav-icon">📄</span>
-          <span class="nav-label">Cotizaciones</span>
-        </button>
-        <button class="nav-item" data-section="proyectos" onclick="switchSection('proyectos')">
-          <span class="nav-icon">🏗️</span>
-          <span class="nav-label">Proyectos</span>
-        </button>
-        <button class="nav-item" data-section="ingresar-gastos" onclick="switchSection('ingresar-gastos')">
-          <span class="nav-icon">➕</span>
-          <span class="nav-label">Gastos</span>
-        </button>
-        <button class="nav-item" data-section="ingresar-pagos" onclick="switchSection('ingresar-pagos')">
-          <span class="nav-icon">💰</span>
-          <span class="nav-label">Pagos</span>
-        </button>
-        <button class="nav-item" data-section="registros" onclick="switchSection('registros')">
-          <span class="nav-icon">📑</span>
-          <span class="nav-label">Registros</span>
-        </button>
-      </nav>
-      
-      <div class="sidebar-footer">
-        <span>GN Studio © 2026</span>
+
+      <div class="charts-row">
+        <div class="chart-card">
+          <h3 class="chart-title">Ingresos vs Gastos (Mensual)</h3>
+          <canvas id="chartBalance"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3 class="chart-title">Distribución de Gastos</h3>
+          <canvas id="chartGastos"></canvas>
+        </div>
       </div>
-    </aside>
 
-    <!-- MAIN CONTENT -->
-    <main class="main-content">
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title">📄 Cotizaciones Recientes</h2>
+        </div>
+        <div class="table-wrap">
+          <table id="tablaCotizacionesDashboard">
+            <thead>
+              <tr>
+                <th>Número</th>
+                <th>Cliente</th>
+                <th>Proyecto</th>
+                <th>Total</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyCotizacionesDashboard"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SECCION: CATALOGO DE SERVICIOS
+         ============================================================ -->
+    <section id="catalogo-servicios" class="section-panel">
       
-      <!-- HEADER -->
-      <header class="top-header">
-        <h1 class="page-title" id="page-title">Dashboard</h1>
-        <div class="header-actions">
-          <button class="btn-header" onclick="exportarTodo()" title="Exportar todo">⬇️ Backup</button>
-          <button class="btn-header" onclick="window.print()" title="Imprimir">🖨️</button>
-        </div>
-      </header>
-
-      <!-- ============================================================
-           SECCION: DASHBOARD
-           ============================================================ -->
-      <section id="dashboard" class="section-panel active">
-        
-        <div class="kpi-grid">
-          <div class="kpi-card">
-            <div class="kpi-icon" style="background:rgba(107,189,69,0.12);color:#6bbd45;">💰</div>
-            <div class="kpi-info">
-              <span class="kpi-value" id="kpi-ingresos">$0.00</span>
-              <span class="kpi-label">Ingresos Totales</span>
-            </div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-icon" style="background:rgba(231,76,60,0.12);color:#e74c3c;">💸</div>
-            <div class="kpi-info">
-              <span class="kpi-value" id="kpi-gastos">$0.00</span>
-              <span class="kpi-label">Gastos Totales</span>
-            </div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-icon" style="background:rgba(36,59,134,0.2);color:#6b8cff;">📈</div>
-            <div class="kpi-info">
-              <span class="kpi-value" id="kpi-balance">$0.00</span>
-              <span class="kpi-label">Balance Neto</span>
-            </div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-icon" style="background:rgba(245,185,35,0.12);color:#f5b923;">📄</div>
-            <div class="kpi-info">
-              <span class="kpi-value" id="kpi-cotizaciones">0</span>
-              <span class="kpi-label">Cotizaciones Activas</span>
-            </div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-icon" style="background:rgba(155,89,182,0.12);color:#bb8fce;">🏗️</div>
-            <div class="kpi-info">
-              <span class="kpi-value" id="kpi-proyectos">0</span>
-              <span class="kpi-label">Proyectos en Curso</span>
-            </div>
-          </div>
-          <div class="kpi-card">
-            <div class="kpi-icon" style="background:rgba(26,188,156,0.12);color:#1abc9c;">🏢</div>
-            <div class="kpi-info">
-              <span class="kpi-value" id="kpi-clientes">0</span>
-              <span class="kpi-label">Clientes Registrados</span>
-            </div>
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title">🎨 Gestión del Catálogo de Servicios</h2>
+          <div class="section-actions">
+            <button class="btn-secondary" onclick="exportarCatalogoJSON()">⬇️ Exportar JSON</button>
+            <button class="btn-secondary" onclick="document.getElementById('import-json').click()">⬆️ Importar JSON</button>
+            <input type="file" id="import-json" accept=".json" style="display:none" onchange="importarCatalogoJSON(this)">
           </div>
         </div>
+        <p class="section-desc">
+          Catálogo de servicios digitales con precios unitarios. Exporta a JSON para respaldar o importa para añadir nuevos servicios.
+        </p>
+      </div>
 
-        <div class="charts-row">
-          <div class="chart-card">
-            <h3 class="chart-title">Ingresos vs Gastos (Mensual)</h3>
-            <canvas id="chartBalance"></canvas>
+      <div class="form-section">
+        <div class="form-header">
+          <h2 class="section-title">➕ Añadir Nuevo Servicio</h2>
+        </div>
+        <form id="formServicio" onsubmit="return guardarServicio(event)">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="serv-codigo">Código <span class="required">*</span></label>
+              <input type="text" id="serv-codigo" placeholder="Ej: WEB-001" required maxlength="30">
+            </div>
+            <div class="form-group">
+              <label for="serv-categoria">Categoría <span class="required">*</span></label>
+              <select id="serv-categoria" required>
+                <option value="">Selecciona</option>
+                <option value="diseno_web">Diseño Web</option>
+                <option value="desarrollo">Desarrollo</option>
+                <option value="branding">Branding & Identidad</option>
+                <option value="marketing">Marketing Digital</option>
+                <option value="social_media">Social Media</option>
+                <option value="seo">SEO & Posicionamiento</option>
+                <option value="fotografia">Fotografía & Video</option>
+                <option value="consultoria">Consultoría</option>
+                <option value="mantenimiento">Mantenimiento Web</option>
+                <option value="hosting">Hosting & Dominio</option>
+                <option value="otros">Otros</option>
+              </select>
+            </div>
+            <div class="form-group full-width">
+              <label for="serv-descripcion">Descripción del Servicio <span class="required">*</span></label>
+              <input type="text" id="serv-descripcion" placeholder="Ej: Diseño de landing page de alto impacto" required maxlength="300">
+            </div>
+            <div class="form-group">
+              <label for="serv-unidad">Unidad <span class="required">*</span></label>
+              <select id="serv-unidad" required>
+                <option value="und">und - Unidad</option>
+                <option value="hr">hr - Hora</option>
+                <option value="dia">día - Día</option>
+                <option value="mes">mes - Mes</option>
+                <option value="pagina">página - Página</option>
+                <option value="proyecto">proyecto - Proyecto</option>
+                <option value="paquete">paquete - Paquete</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="serv-precio">Precio Unitario ($) <span class="required">*</span></label>
+              <input type="number" id="serv-precio" placeholder="0.00" required min="0.01" step="0.01" max="999999.99">
+            </div>
+            <div class="form-group">
+              <label for="serv-itbms">¿Aplica ITBMS?</label>
+              <select id="serv-itbms">
+                <option value="1">Sí (7%)</option>
+                <option value="0">No</option>
+              </select>
+            </div>
           </div>
-          <div class="chart-card">
-            <h3 class="chart-title">Distribución de Gastos</h3>
-            <canvas id="chartGastos"></canvas>
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">💾 Guardar Servicio</button>
+            <button type="reset" class="btn-secondary">🔄 Limpiar</button>
+          </div>
+        </form>
+        <div class="form-feedback" id="feedback-servicio"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title">📋 Servicios Registrados</h2>
+          <div class="section-actions">
+            <input type="text" id="buscar-servicio" placeholder="🔍 Buscar servicio..." onkeyup="filtrarServicios()" 
+                   class="search-input">
+            <button class="filter-btn active" onclick="filtrarServiciosCategoria('todos')">Todos</button>
+            <button class="filter-btn" onclick="filtrarServiciosCategoria('diseno_web')">Diseño Web</button>
+            <button class="filter-btn" onclick="filtrarServiciosCategoria('desarrollo')">Desarrollo</button>
+            <button class="filter-btn" onclick="filtrarServiciosCategoria('branding')">Branding</button>
+            <button class="filter-btn" onclick="filtrarServiciosCategoria('marketing')">Marketing</button>
+            <button class="filter-btn" onclick="filtrarServiciosCategoria('social_media')">Social Media</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table id="tablaServicios">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Categoría</th>
+                <th>Descripción</th>
+                <th>Unidad</th>
+                <th>Precio Unit.</th>
+                <th>ITBMS</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyServicios"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title">📝 Vista del JSON</h2>
+        </div>
+        <pre id="json-preview" class="json-preview"></pre>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SECCION: CLIENTES
+         ============================================================ -->
+    <section id="clientes" class="section-panel">
+      <div class="form-section">
+        <div class="form-header">
+          <h2 class="section-title">➕ Nuevo Cliente</h2>
+        </div>
+        <form id="formCliente" onsubmit="return guardarCliente(event)">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="cli-codigo">Código/Nombre Corto <span class="required">*</span></label>
+              <input type="text" id="cli-codigo" placeholder="Ej: ACME-001" required maxlength="30">
+            </div>
+            <div class="form-group">
+              <label for="cli-nombre">Nombre/Razón Social <span class="required">*</span></label>
+              <input type="text" id="cli-nombre" placeholder="Ej: ACME Corporation" required maxlength="150">
+            </div>
+            <div class="form-group">
+              <label for="cli-contacto">Persona de Contacto</label>
+              <input type="text" id="cli-contacto" placeholder="Ej: Juan Pérez" maxlength="100">
+            </div>
+            <div class="form-group">
+              <label for="cli-telefono">Teléfono</label>
+              <input type="text" id="cli-telefono" placeholder="Ej: +507 6000-0000" maxlength="30">
+            </div>
+            <div class="form-group">
+              <label for="cli-email">Email</label>
+              <input type="email" id="cli-email" placeholder="Ej: contacto@empresa.com" maxlength="100">
+            </div>
+            <div class="form-group full-width">
+              <label for="cli-direccion">Dirección</label>
+              <input type="text" id="cli-direccion" placeholder="Dirección completa" maxlength="300">
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">💾 Guardar Cliente</button>
+            <button type="reset" class="btn-secondary">🔄 Limpiar</button>
+          </div>
+        </form>
+        <div class="form-feedback" id="feedback-cliente"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title">🏢 Clientes Registrados</h2>
+          <div class="section-actions">
+            <input type="text" id="buscar-cliente" placeholder="🔍 Buscar cliente..." onkeyup="filtrarClientes()" class="search-input">
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table id="tablaClientes">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Nombre</th>
+                <th>Contacto</th>
+                <th>Teléfono</th>
+                <th>Email</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyClientes"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SECCION: COTIZACIONES
+         ============================================================ -->
+    <section id="cotizaciones" class="section-panel">
+      
+      <!-- INFO DEL CLIENTE -->
+      <div class="form-section cotizacion-info">
+        <div class="form-header">
+          <h2 class="section-title">📄 Nueva Cotización</h2>
+        </div>
+        <form id="formCotizacionInfo" onsubmit="return false">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="cot-cliente">Cliente <span class="required">*</span></label>
+              <select id="cot-cliente" required onchange="actualizarInfoCliente()">
+                <option value="">Selecciona un cliente</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="cot-proyecto">Nombre del Proyecto <span class="required">*</span></label>
+              <input type="text" id="cot-proyecto" placeholder="Ej: Rediseño web corporativo" required>
+            </div>
+            <div class="form-group">
+              <label for="cot-atencion">Atención a</label>
+              <input type="text" id="cot-atencion" placeholder="Ej: Gerente de Marketing">
+            </div>
+            <div class="form-group">
+              <label for="cot-fecha">Fecha <span class="required">*</span></label>
+              <input type="date" id="cot-fecha" required>
+            </div>
+            <div class="form-group full-width">
+              <label for="cot-alcance">Alcance del Proyecto</label>
+              <textarea id="cot-alcance" rows="3" placeholder="Descripción general del alcance..."></textarea>
+            </div>
+            <div class="form-group">
+              <label for="cot-itbms">¿Aplica ITBMS?</label>
+              <select id="cot-itbms">
+                <option value="1">Sí (7%)</option>
+                <option value="0">No</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="cot-descuento">Descuento (%)</label>
+              <input type="number" id="cot-descuento" placeholder="0" min="0" max="100" step="0.01" value="0">
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- ITEMS DE COTIZACIÓN -->
+      <div class="form-section cotizacion-items">
+        <div class="form-header">
+          <h2 class="section-title">🛒 Items de la Cotización</h2>
+        </div>
+
+        <!-- OPCIÓN 1: DESDE CATÁLOGO -->
+        <div class="items-opcion">
+          <h4 class="opcion-titulo">📋 Agregar desde Catálogo</h4>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="cot-item-servicio">Servicio del Catálogo</label>
+              <select id="cot-item-servicio" onchange="cargarPrecioServicio()">
+                <option value="">Selecciona del catálogo</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="cot-item-cantidad-catalogo">Cantidad</label>
+              <input type="number" id="cot-item-cantidad-catalogo" placeholder="1" min="1" step="1" value="1">
+            </div>
+            <div class="form-group">
+              <label>&nbsp;</label>
+              <button type="button" class="btn-primary" onclick="agregarItemDesdeCatalogo()">➕ Agregar del Catálogo</button>
+            </div>
           </div>
         </div>
 
-        <div class="section">
-          <div class="section-header">
-            <h2 class="section-title">📄 Cotizaciones Recientes</h2>
+        <!-- SEPARADOR -->
+        <div class="items-separador">
+          <span>o</span>
+        </div>
+
+        <!-- OPCIÓN 2: MANUAL -->
+        <div class="items-opcion">
+          <h4 class="opcion-titulo">✏️ Agregar Manualmente</h4>
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label for="cot-item-desc-manual">Descripción del Servicio <span class="required">*</span></label>
+              <input type="text" id="cot-item-desc-manual" placeholder="Ej: Diseño de 5 banners para redes sociales">
+            </div>
+            <div class="form-group">
+              <label for="cot-item-cantidad-manual">Cantidad <span class="required">*</span></label>
+              <input type="number" id="cot-item-cantidad-manual" placeholder="1" min="1" step="1" value="1">
+            </div>
+            <div class="form-group">
+              <label for="cot-item-unidad-manual">Unidad</label>
+              <select id="cot-item-unidad-manual">
+                <option value="und">und</option>
+                <option value="hr">hr</option>
+                <option value="dia">día</option>
+                <option value="mes">mes</option>
+                <option value="pagina">página</option>
+                <option value="proyecto">proyecto</option>
+                <option value="paquete">paquete</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="cot-item-precio-manual">Precio Unitario ($) <span class="required">*</span></label>
+              <input type="number" id="cot-item-precio-manual" placeholder="0.00" min="0.01" step="0.01">
+            </div>
+            <div class="form-group">
+              <label for="cot-item-itbms-manual">¿Aplica ITBMS?</label>
+              <select id="cot-item-itbms-manual">
+                <option value="1">Sí (7%)</option>
+                <option value="0">No</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>&nbsp;</label>
+              <button type="button" class="btn-primary" onclick="agregarItemManual()">➕ Agregar Manual</button>
+            </div>
           </div>
+        </div>
+
+        <!-- TABLA DE ITEMS AGREGADOS -->
+        <div class="items-tabla">
+          <h4 class="sub-title">📋 Items Agregados</h4>
           <div class="table-wrap">
-            <table id="tablaCotizacionesDashboard">
+            <table id="tablaItemsCotizacion">
               <thead>
                 <tr>
-                  <th>Número</th>
-                  <th>Cliente</th>
-                  <th>Proyecto</th>
-                  <th>Total</th>
-                  <th>Estado</th>
-                  <th>Fecha</th>
-                </tr>
-              </thead>
-              <tbody id="tbodyCotizacionesDashboard"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- ============================================================
-           SECCION: CATALOGO DE SERVICIOS
-           ============================================================ -->
-      <section id="catalogo-servicios" class="section-panel">
-        
-        <div class="section">
-          <div class="section-header">
-            <h2 class="section-title">🎨 Gestión del Catálogo de Servicios</h2>
-            <div class="section-actions">
-              <button class="btn-secondary" onclick="exportarCatalogoJSON()">⬇️ Exportar JSON</button>
-              <button class="btn-secondary" onclick="document.getElementById('import-json').click()">⬆️ Importar JSON</button>
-              <input type="file" id="import-json" accept=".json" style="display:none" onchange="importarCatalogoJSON(this)">
-            </div>
-          </div>
-          <p class="section-desc">
-            Catálogo de servicios digitales con precios unitarios. Exporta a JSON para respaldar o importa para añadir nuevos servicios.
-          </p>
-        </div>
-
-        <div class="form-section">
-          <div class="form-header">
-            <h2 class="section-title">➕ Añadir Nuevo Servicio</h2>
-          </div>
-          <form id="formServicio" onsubmit="return guardarServicio(event)">
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="serv-codigo">Código <span class="required">*</span></label>
-                <input type="text" id="serv-codigo" placeholder="Ej: WEB-001" required maxlength="30">
-              </div>
-              <div class="form-group">
-                <label for="serv-categoria">Categoría <span class="required">*</span></label>
-                <select id="serv-categoria" required>
-                  <option value="">Selecciona</option>
-                  <option value="diseno_web">Diseño Web</option>
-                  <option value="desarrollo">Desarrollo</option>
-                  <option value="branding">Branding & Identidad</option>
-                  <option value="marketing">Marketing Digital</option>
-                  <option value="social_media">Social Media</option>
-                  <option value="seo">SEO & Posicionamiento</option>
-                  <option value="fotografia">Fotografía & Video</option>
-                  <option value="consultoria">Consultoría</option>
-                  <option value="mantenimiento">Mantenimiento Web</option>
-                  <option value="hosting">Hosting & Dominio</option>
-                  <option value="otros">Otros</option>
-                </select>
-              </div>
-              <div class="form-group full-width">
-                <label for="serv-descripcion">Descripción del Servicio <span class="required">*</span></label>
-                <input type="text" id="serv-descripcion" placeholder="Ej: Diseño de landing page de alto impacto" required maxlength="300">
-              </div>
-              <div class="form-group">
-                <label for="serv-unidad">Unidad <span class="required">*</span></label>
-                <select id="serv-unidad" required>
-                  <option value="und">und - Unidad</option>
-                  <option value="hr">hr - Hora</option>
-                  <option value="dia">día - Día</option>
-                  <option value="mes">mes - Mes</option>
-                  <option value="pagina">página - Página</option>
-                  <option value="proyecto">proyecto - Proyecto</option>
-                  <option value="paquete">paquete - Paquete</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="serv-precio">Precio Unitario ($) <span class="required">*</span></label>
-                <input type="number" id="serv-precio" placeholder="0.00" required min="0.01" step="0.01" max="999999.99">
-              </div>
-              <div class="form-group">
-                <label for="serv-itbms">¿Aplica ITBMS?</label>
-                <select id="serv-itbms">
-                  <option value="1">Sí (7%)</option>
-                  <option value="0">No</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-actions">
-              <button type="submit" class="btn-primary">💾 Guardar Servicio</button>
-              <button type="reset" class="btn-secondary">🔄 Limpiar</button>
-            </div>
-          </form>
-          <div class="form-feedback" id="feedback-servicio"></div>
-        </div>
-
-        <div class="section">
-          <div class="section-header">
-            <h2 class="section-title">📋 Servicios Registrados</h2>
-            <div class="section-actions">
-              <input type="text" id="buscar-servicio" placeholder="🔍 Buscar servicio..." onkeyup="filtrarServicios()" 
-                     class="search-input">
-              <button class="filter-btn active" onclick="filtrarServiciosCategoria('todos')">Todos</button>
-              <button class="filter-btn" onclick="filtrarServiciosCategoria('diseno_web')">Diseño Web</button>
-              <button class="filter-btn" onclick="filtrarServiciosCategoria('desarrollo')">Desarrollo</button>
-              <button class="filter-btn" onclick="filtrarServiciosCategoria('branding')">Branding</button>
-              <button class="filter-btn" onclick="filtrarServiciosCategoria('marketing')">Marketing</button>
-              <button class="filter-btn" onclick="filtrarServiciosCategoria('social_media')">Social Media</button>
-            </div>
-          </div>
-          <div class="table-wrap">
-            <table id="tablaServicios">
-              <thead>
-                <tr>
-                  <th>Código</th>
-                  <th>Categoría</th>
+                  <th>#</th>
                   <th>Descripción</th>
+                  <th>Cant.</th>
                   <th>Unidad</th>
                   <th>Precio Unit.</th>
-                  <th>ITBMS</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody id="tbodyServicios"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-header">
-            <h2 class="section-title">📝 Vista del JSON</h2>
-          </div>
-          <pre id="json-preview" class="json-preview"></pre>
-        </div>
-      </section>
-
-      <!-- ============================================================
-           SECCION: CLIENTES
-           ============================================================ -->
-      <section id="clientes" class="section-panel">
-        <div class="form-section">
-          <div class="form-header">
-            <h2 class="section-title">➕ Nuevo Cliente</h2>
-          </div>
-          <form id="formCliente" onsubmit="return guardarCliente(event)">
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="cli-codigo">Código/Nombre Corto <span class="required">*</span></label>
-                <input type="text" id="cli-codigo" placeholder="Ej: ACME-001" required maxlength="30">
-              </div>
-              <div class="form-group">
-                <label for="cli-nombre">Nombre/Razón Social <span class="required">*</span></label>
-                <input type="text" id="cli-nombre" placeholder="Ej: ACME Corporation" required maxlength="150">
-              </div>
-              <div class="form-group">
-                <label for="cli-contacto">Persona de Contacto</label>
-                <input type="text" id="cli-contacto" placeholder="Ej: Juan Pérez" maxlength="100">
-              </div>
-              <div class="form-group">
-                <label for="cli-telefono">Teléfono</label>
-                <input type="text" id="cli-telefono" placeholder="Ej: +507 6000-0000" maxlength="30">
-              </div>
-              <div class="form-group">
-                <label for="cli-email">Email</label>
-                <input type="email" id="cli-email" placeholder="Ej: contacto@empresa.com" maxlength="100">
-              </div>
-              <div class="form-group full-width">
-                <label for="cli-direccion">Dirección</label>
-                <input type="text" id="cli-direccion" placeholder="Dirección completa" maxlength="300">
-              </div>
-            </div>
-            <div class="form-actions">
-              <button type="submit" class="btn-primary">💾 Guardar Cliente</button>
-              <button type="reset" class="btn-secondary">🔄 Limpiar</button>
-            </div>
-          </form>
-          <div class="form-feedback" id="feedback-cliente"></div>
-        </div>
-
-        <div class="section">
-          <div class="section-header">
-            <h2 class="section-title">🏢 Clientes Registrados</h2>
-            <div class="section-actions">
-              <input type="text" id="buscar-cliente" placeholder="🔍 Buscar cliente..." onkeyup="filtrarClientes()" class="search-input">
-            </div>
-          </div>
-          <div class="table-wrap">
-            <table id="tablaClientes">
-              <thead>
-                <tr>
-                  <th>Código</th>
-                  <th>Nombre</th>
-                  <th>Contacto</th>
-                  <th>Teléfono</th>
-                  <th>Email</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody id="tbodyClientes"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- ============================================================
-           SECCION: COTIZACIONES
-           ============================================================ -->
-      <section id="cotizaciones" class="section-panel">
-        <div class="form-section">
-          <div class="form-header">
-            <h2 class="section-title">📄 Nueva Cotización</h2>
-          </div>
-          <form id="formCotizacion" onsubmit="return false">
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="cot-cliente">Cliente <span class="required">*</span></label>
-                <select id="cot-cliente" required onchange="actualizarInfoCliente()">
-                  <option value="">Selecciona un cliente</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="cot-proyecto">Nombre del Proyecto <span class="required">*</span></label>
-                <input type="text" id="cot-proyecto" placeholder="Ej: Rediseño web corporativo" required>
-              </div>
-              <div class="form-group">
-                <label for="cot-atencion">Atención a</label>
-                <input type="text" id="cot-atencion" placeholder="Ej: Gerente de Marketing">
-              </div>
-              <div class="form-group">
-                <label for="cot-fecha">Fecha <span class="required">*</span></label>
-                <input type="date" id="cot-fecha" required>
-              </div>
-              <div class="form-group full-width">
-                <label for="cot-alcance">Alcance del Proyecto</label>
-                <textarea id="cot-alcance" rows="3" placeholder="Descripción general del alcance..."></textarea>
-              </div>
-              <div class="form-group">
-                <label for="cot-itbms">¿Aplica ITBMS?</label>
-                <select id="cot-itbms">
-                  <option value="1">Sí (7%)</option>
-                  <option value="0">No</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="cot-descuento">Descuento (%)</label>
-                <input type="number" id="cot-descuento" placeholder="0" min="0" max="100" step="0.01" value="0">
-              </div>
-            </div>
-
-            <div class="items-cotizacion">
-              <h3 class="sub-title">🛒 Items de la Cotización</h3>
-              <div class="form-grid">
-                <div class="form-group">
-                  <label for="cot-item-servicio">Servicio</label>
-                  <select id="cot-item-servicio" onchange="cargarPrecioServicio()">
-                    <option value="">Selecciona del catálogo</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="cot-item-cantidad">Cantidad</label>
-                  <input type="number" id="cot-item-cantidad" placeholder="1" min="1" step="1" value="1">
-                </div>
-                <div class="form-group">
-                  <label for="cot-item-precio">Precio Unitario ($)</label>
-                  <input type="number" id="cot-item-precio" placeholder="0.00" step="0.01">
-                </div>
-                <div class="form-group">
-                  <label>&nbsp;</label>
-                  <button type="button" class="btn-primary" onclick="agregarItemCotizacion()">➕ Agregar Item</button>
-                </div>
-              </div>
-              
-              <div class="table-wrap">
-                <table id="tablaItemsCotizacion">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Descripción</th>
-                      <th>Cant.</th>
-                      <th>Unidad</th>
-                      <th>Precio Unit.</th>
-                      <th>Total</th>
-                      <th>ITBMS</th>
-                      <th>Acción</th>
-                    </tr>
-                  </thead>
-                  <tbody id="tbodyItemsCotizacion"></tbody>
-                  <tfoot>
-                    <tr class="total-row">
-                      <td colspan="5" style="text-align:right"><strong>Subtotal:</strong></td>
-                      <td id="cot-subtotal" class="td-monto">$0.00</td>
-                      <td colspan="2"></td>
-                    </tr>
-                    <tr class="total-row" id="row-itbms">
-                      <td colspan="5" style="text-align:right"><strong>ITBMS (7%):</strong></td>
-                      <td id="cot-itbms-monto" class="td-monto">$0.00</td>
-                      <td colspan="2"></td>
-                    </tr>
-                    <tr class="total-row" id="row-descuento">
-                      <td colspan="5" style="text-align:right"><strong>Descuento:</strong></td>
-                      <td id="cot-descuento-monto" class="td-monto">$0.00</td>
-                      <td colspan="2"></td>
-                    </tr>
-                    <tr class="total-row grand-total">
-                      <td colspan="5" style="text-align:right"><strong>TOTAL:</strong></td>
-                      <td id="cot-total" class="td-monto" style="color:#6bbd45;font-size:18px;">$0.00</td>
-                      <td colspan="2"></td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </div>
-
-            <div class="form-actions">
-              <button type="button" class="btn-primary" onclick="guardarCotizacion()">💾 Guardar Cotización</button>
-              <button type="button" class="btn-secondary" onclick="vistaPreviaCotizacion()">👁️ Vista Previa</button>
-              <button type="reset" class="btn-secondary" onclick="limpiarCotizacion()">🔄 Nueva</button>
-            </div>
-          </form>
-          <div class="form-feedback" id="feedback-cotizacion"></div>
-        </div>
-
-        <div class="section">
-          <div class="section-header">
-            <h2 class="section-title">📋 Cotizaciones Guardadas</h2>
-            <div class="section-actions">
-              <input type="text" id="buscar-cotizacion" placeholder="🔍 Buscar..." onkeyup="filtrarCotizaciones()" class="search-input">
-            </div>
-          </div>
-          <div class="table-wrap">
-            <table id="tablaCotizaciones">
-              <thead>
-                <tr>
-                  <th>Número</th>
-                  <th>Cliente</th>
-                  <th>Proyecto</th>
                   <th>Total</th>
-                  <th>Estado</th>
-                  <th>Fecha</th>
-                  <th>Acciones</th>
+                  <th>ITBMS</th>
+                  <th>Acción</th>
                 </tr>
               </thead>
-              <tbody id="tbodyCotizaciones"></tbody>
+              <tbody id="tbodyItemsCotizacion"></tbody>
+              <tfoot>
+                <tr class="total-row">
+                  <td colspan="5" style="text-align:right"><strong>Subtotal:</strong></td>
+                  <td id="cot-subtotal" class="td-monto">$0.00</td>
+                  <td colspan="2"></td>
+                </tr>
+                <tr class="total-row" id="row-itbms">
+                  <td colspan="5" style="text-align:right"><strong>ITBMS (7%):</strong></td>
+                  <td id="cot-itbms-monto" class="td-monto">$0.00</td>
+                  <td colspan="2"></td>
+                </tr>
+                <tr class="total-row" id="row-descuento">
+                  <td colspan="5" style="text-align:right"><strong>Descuento:</strong></td>
+                  <td id="cot-descuento-monto" class="td-monto">$0.00</td>
+                  <td colspan="2"></td>
+                </tr>
+                <tr class="total-row grand-total">
+                  <td colspan="5" style="text-align:right"><strong>TOTAL:</strong></td>
+                  <td id="cot-total" class="td-monto" style="color:#6bbd45;font-size:18px;">$0.00</td>
+                  <td colspan="2"></td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>
-      </section>
 
-      <!-- ============================================================
-           SECCION: PROYECTOS
-           ============================================================ -->
-      <section id="proyectos" class="section-panel">
-        <div class="section">
-          <div class="section-header">
-            <h2 class="section-title">🏗️ Proyectos Activos</h2>
-          </div>
-          <div class="table-wrap">
-            <table id="tablaProyectos">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Cliente</th>
-                  <th>Proyecto</th>
-                  <th>Presupuesto</th>
-                  <th>Avance</th>
-                  <th>Estado</th>
-                  <th>Fecha Inicio</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody id="tbodyProyectos"></tbody>
-            </table>
+        <div class="form-actions">
+          <button type="button" class="btn-primary" onclick="guardarCotizacion()">💾 Guardar Cotización</button>
+          <button type="button" class="btn-secondary" onclick="vistaPreviaCotizacion()">👁️ Vista Previa</button>
+          <button type="button" class="btn-secondary" onclick="limpiarCotizacion()">🔄 Nueva Cotización</button>
+        </div>
+        <div class="form-feedback" id="feedback-cotizacion"></div>
+      </div>
+
+      <!-- COTIZACIONES GUARDADAS -->
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title">📋 Cotizaciones Guardadas</h2>
+          <div class="section-actions">
+            <input type="text" id="buscar-cotizacion" placeholder="🔍 Buscar..." onkeyup="filtrarCotizaciones()" class="search-input">
           </div>
         </div>
-      </section>
-
-      <!-- ============================================================
-           SECCION: INGRESAR GASTOS
-           ============================================================ -->
-      <section id="ingresar-gastos" class="section-panel">
-        <div class="form-section">
-          <div class="form-header">
-            <h2 class="section-title">➕ Registrar Gasto</h2>
-          </div>
-          <form id="formGasto" onsubmit="return guardarGasto(event)">
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="gasto-fecha">Fecha <span class="required">*</span></label>
-                <input type="date" id="gasto-fecha" required>
-              </div>
-              <div class="form-group">
-                <label for="gasto-categoria">Categoría <span class="required">*</span></label>
-                <select id="gasto-categoria" required>
-                  <option value="">Selecciona</option>
-                  <option value="software">Software & Herramientas</option>
-                  <option value="hosting">Hosting & Dominios</option>
-                  <option value="marketing">Marketing & Ads</option>
-                  <option value="equipo">Equipo & Hardware</option>
-                  <option value="oficina">Oficina & Suministros</option>
-                  <option value="transporte">Transporte & Logística</option>
-                  <option value="capacitacion">Capacitación</option>
-                  <option value="servicios">Servicios Profesionales</option>
-                  <option value="impuestos">Impuestos</option>
-                  <option value="otros">Otros</option>
-                </select>
-              </div>
-              <div class="form-group full-width">
-                <label for="gasto-descripcion">Descripción <span class="required">*</span></label>
-                <input type="text" id="gasto-descripcion" placeholder="Ej: Suscripción Adobe Creative Cloud" required>
-              </div>
-              <div class="form-group">
-                <label for="gasto-monto">Monto ($) <span class="required">*</span></label>
-                <input type="number" id="gasto-monto" placeholder="0.00" required min="0.01" step="0.01">
-              </div>
-              <div class="form-group">
-                <label for="gasto-metodo">Método de Pago</label>
-                <select id="gasto-metodo">
-                  <option value="efectivo">Efectivo</option>
-                  <option value="transferencia">Transferencia</option>
-                  <option value="tarjeta">Tarjeta</option>
-                  <option value="cheque">Cheque</option>
-                  <option value="otro">Otro</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-actions">
-              <button type="submit" class="btn-primary">💾 Guardar Gasto</button>
-              <button type="reset" class="btn-secondary">🔄 Limpiar</button>
-            </div>
-          </form>
-          <div class="form-feedback" id="feedback-gasto"></div>
+        <div class="table-wrap">
+          <table id="tablaCotizaciones">
+            <thead>
+              <tr>
+                <th>Número</th>
+                <th>Cliente</th>
+                <th>Proyecto</th>
+                <th>Total</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyCotizaciones"></tbody>
+          </table>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <!-- ============================================================
-           SECCION: INGRESAR PAGOS
-           ============================================================ -->
-      <section id="ingresar-pagos" class="section-panel">
-        <div class="form-section">
-          <div class="form-header">
-            <h2 class="section-title">💰 Registrar Pago (Ingreso)</h2>
-          </div>
-          <form id="formPago" onsubmit="return guardarPago(event)">
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="pago-fecha">Fecha <span class="required">*</span></label>
-                <input type="date" id="pago-fecha" required>
-              </div>
-              <div class="form-group">
-                <label for="pago-cliente">Cliente/Proyecto <span class="required">*</span></label>
-                <input type="text" id="pago-cliente" placeholder="Ej: Proyecto ACME Web" required>
-              </div>
-              <div class="form-group">
-                <label for="pago-concepto">Concepto <span class="required">*</span></label>
-                <input type="text" id="pago-concepto" placeholder="Ej: Pago inicial 50%" required>
-              </div>
-              <div class="form-group">
-                <label for="pago-monto">Monto ($) <span class="required">*</span></label>
-                <input type="number" id="pago-monto" placeholder="0.00" required min="0.01" step="0.01">
-              </div>
-              <div class="form-group">
-                <label for="pago-metodo">Método de Pago</label>
-                <select id="pago-metodo">
-                  <option value="transferencia">Transferencia</option>
-                  <option value="efectivo">Efectivo</option>
-                  <option value="tarjeta">Tarjeta</option>
-                  <option value="cheque">Cheque</option>
-                  <option value="otro">Otro</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="pago-estado">Estado</label>
-                <select id="pago-estado">
-                  <option value="recibido">Recibido</option>
-                  <option value="pendiente">Pendiente</option>
-                  <option value="procesando">Procesando</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-actions">
-              <button type="submit" class="btn-primary">💾 Guardar Pago</button>
-              <button type="reset" class="btn-secondary">🔄 Limpiar</button>
-            </div>
-          </form>
-          <div class="form-feedback" id="feedback-pago"></div>
+    <!-- ============================================================
+         SECCION: PROYECTOS
+         ============================================================ -->
+    <section id="proyectos" class="section-panel">
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title">🏗️ Proyectos Activos</h2>
         </div>
-      </section>
+        <div class="table-wrap">
+          <table id="tablaProyectos">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Cliente</th>
+                <th>Proyecto</th>
+                <th>Presupuesto</th>
+                <th>Avance</th>
+                <th>Estado</th>
+                <th>Fecha Inicio</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyProyectos"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
 
-      <!-- ============================================================
-           SECCION: REGISTROS
-           ============================================================ -->
-      <section id="registros" class="section-panel">
-        <div class="section">
-          <div class="section-header">
-            <h2 class="section-title">📑 Registros Completos</h2>
-            <div class="section-actions">
-              <button class="btn-secondary" onclick="filtrarRegistros('todos')">Todos</button>
-              <button class="btn-secondary" onclick="filtrarRegistros('gastos')">Gastos</button>
-              <button class="btn-secondary" onclick="filtrarRegistros('pagos')">Pagos</button>
+    <!-- ============================================================
+         SECCION: INGRESAR GASTOS
+         ============================================================ -->
+    <section id="ingresar-gastos" class="section-panel">
+      <div class="form-section">
+        <div class="form-header">
+          <h2 class="section-title">➕ Registrar Gasto</h2>
+        </div>
+        <form id="formGasto" onsubmit="return guardarGasto(event)">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="gasto-fecha">Fecha <span class="required">*</span></label>
+              <input type="date" id="gasto-fecha" required>
+            </div>
+            <div class="form-group">
+              <label for="gasto-categoria">Categoría <span class="required">*</span></label>
+              <select id="gasto-categoria" required>
+                <option value="">Selecciona</option>
+                <option value="software">Software & Herramientas</option>
+                <option value="hosting">Hosting & Dominios</option>
+                <option value="marketing">Marketing & Ads</option>
+                <option value="equipo">Equipo & Hardware</option>
+                <option value="oficina">Oficina & Suministros</option>
+                <option value="transporte">Transporte & Logística</option>
+                <option value="capacitacion">Capacitación</option>
+                <option value="servicios">Servicios Profesionales</option>
+                <option value="impuestos">Impuestos</option>
+                <option value="otros">Otros</option>
+              </select>
+            </div>
+            <div class="form-group full-width">
+              <label for="gasto-descripcion">Descripción <span class="required">*</span></label>
+              <input type="text" id="gasto-descripcion" placeholder="Ej: Suscripción Adobe Creative Cloud" required>
+            </div>
+            <div class="form-group">
+              <label for="gasto-monto">Monto ($) <span class="required">*</span></label>
+              <input type="number" id="gasto-monto" placeholder="0.00" required min="0.01" step="0.01">
+            </div>
+            <div class="form-group">
+              <label for="gasto-metodo">Método de Pago</label>
+              <select id="gasto-metodo">
+                <option value="efectivo">Efectivo</option>
+                <option value="transferencia">Transferencia</option>
+                <option value="tarjeta">Tarjeta</option>
+                <option value="cheque">Cheque</option>
+                <option value="otro">Otro</option>
+              </select>
             </div>
           </div>
-          <div class="table-wrap">
-            <table id="tablaRegistros">
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Tipo</th>
-                  <th>Categoría/Concepto</th>
-                  <th>Descripción</th>
-                  <th>Monto</th>
-                  <th>Método</th>
-                </tr>
-              </thead>
-              <tbody id="tbodyRegistros"></tbody>
-            </table>
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">💾 Guardar Gasto</button>
+            <button type="reset" class="btn-secondary">🔄 Limpiar</button>
+          </div>
+        </form>
+        <div class="form-feedback" id="feedback-gasto"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SECCION: INGRESAR PAGOS
+         ============================================================ -->
+    <section id="ingresar-pagos" class="section-panel">
+      <div class="form-section">
+        <div class="form-header">
+          <h2 class="section-title">💰 Registrar Pago (Ingreso)</h2>
+        </div>
+        <form id="formPago" onsubmit="return guardarPago(event)">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="pago-fecha">Fecha <span class="required">*</span></label>
+              <input type="date" id="pago-fecha" required>
+            </div>
+            <div class="form-group">
+              <label for="pago-cliente">Cliente/Proyecto <span class="required">*</span></label>
+              <input type="text" id="pago-cliente" placeholder="Ej: Proyecto ACME Web" required>
+            </div>
+            <div class="form-group">
+              <label for="pago-concepto">Concepto <span class="required">*</span></label>
+              <input type="text" id="pago-concepto" placeholder="Ej: Pago inicial 50%" required>
+            </div>
+            <div class="form-group">
+              <label for="pago-monto">Monto ($) <span class="required">*</span></label>
+              <input type="number" id="pago-monto" placeholder="0.00" required min="0.01" step="0.01">
+            </div>
+            <div class="form-group">
+              <label for="pago-metodo">Método de Pago</label>
+              <select id="pago-metodo">
+                <option value="transferencia">Transferencia</option>
+                <option value="efectivo">Efectivo</option>
+                <option value="tarjeta">Tarjeta</option>
+                <option value="cheque">Cheque</option>
+                <option value="otro">Otro</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="pago-estado">Estado</label>
+              <select id="pago-estado">
+                <option value="recibido">Recibido</option>
+                <option value="pendiente">Pendiente</option>
+                <option value="procesando">Procesando</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">💾 Guardar Pago</button>
+            <button type="reset" class="btn-secondary">🔄 Limpiar</button>
+          </div>
+        </form>
+        <div class="form-feedback" id="feedback-pago"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         SECCION: REGISTROS
+         ============================================================ -->
+    <section id="registros" class="section-panel">
+      <div class="section">
+        <div class="section-header">
+          <h2 class="section-title">📑 Registros Completos</h2>
+          <div class="section-actions">
+            <button class="btn-secondary" onclick="filtrarRegistros('todos')">Todos</button>
+            <button class="btn-secondary" onclick="filtrarRegistros('gastos')">Gastos</button>
+            <button class="btn-secondary" onclick="filtrarRegistros('pagos')">Pagos</button>
           </div>
         </div>
-      </section>
+        <div class="table-wrap">
+          <table id="tablaRegistros">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Categoría/Concepto</th>
+                <th>Descripción</th>
+                <th>Monto</th>
+                <th>Método</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyRegistros"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
 
-    </main>
-  </div>
+  </main>
 
   <!-- SCRIPTS -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
