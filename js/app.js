@@ -477,3 +477,103 @@ function exportarTodo() {
   a.click();
   URL.revokeObjectURL(url);
 }
+// ============================================================
+// MODALES GENÉRICOS
+// ============================================================
+
+function abrirModal(modalId) {
+  var modal = document.getElementById(modalId);
+  if (!modal) {
+    console.warn('No se encontró el modal:', modalId);
+    return false;
+  }
+
+  modal.style.display = 'flex';
+  modal.classList.add('open');
+  document.body.classList.add('modal-open');
+  return false;
+}
+
+function cerrarModal(modalId) {
+  var modal = document.getElementById(modalId);
+  if (!modal) return false;
+
+  modal.style.display = 'none';
+  modal.classList.remove('open');
+  document.body.classList.remove('modal-open');
+  return false;
+}
+
+function toggleModal(modalId) {
+  var modal = document.getElementById(modalId);
+  if (!modal) return false;
+
+  var visible = modal.classList.contains('open') || modal.style.display === 'flex';
+  if (visible) {
+    cerrarModal(modalId);
+  } else {
+    abrirModal(modalId);
+  }
+
+  return false;
+}
+
+// ============================================================
+// MODALES ESPECÍFICOS
+// ============================================================
+
+function abrirModalCliente() {
+  return abrirModal('modalCliente');
+}
+
+function cerrarModalCliente() {
+  return cerrarModal('modalCliente');
+}
+
+function abrirModalGrupo() {
+  return abrirModal('modalGrupo');
+}
+
+function cerrarModalGrupo() {
+  return cerrarModal('modalGrupo');
+}
+
+function abrirModalServicio() {
+  return abrirModal('modalServicio');
+}
+
+function cerrarModalServicio() {
+  return cerrarModal('modalServicio');
+}
+
+function abrirModalCotizacion() {
+  return abrirModal('modalCotizacion');
+}
+
+function cerrarModalCotizacion() {
+  return cerrarModal('modalCotizacion');
+}
+
+function abrirModalProyecto() {
+  return abrirModal('modalProyecto');
+}
+
+function cerrarModalProyecto() {
+  return cerrarModal('modalProyecto');
+}
+
+// ============================================================
+// CERRAR MODAL AL HACER CLICK AFUERA
+// ============================================================
+
+document.addEventListener('click', function(event) {
+  var target = event.target;
+
+  if (!target) return;
+
+  if (target.classList && target.classList.contains('modal')) {
+    target.style.display = 'none';
+    target.classList.remove('open');
+    document.body.classList.remove('modal-open');
+  }
+});
