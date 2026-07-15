@@ -15,7 +15,9 @@ var STORAGE_KEYS = {
 function getData(key) {
   try {
     var raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    var parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch (e) {
     console.error('Error leyendo ' + key + ':', e);
     return [];
@@ -24,88 +26,77 @@ function getData(key) {
 
 function setData(key, data) {
   try {
+    if (!Array.isArray(data) && typeof data !== 'object') {
+      throw new Error('Dato inválido para guardar en ' + key);
+    }
     localStorage.setItem(key, JSON.stringify(data));
+    return true;
   } catch (e) {
     console.error('Error guardando ' + key + ':', e);
+    return false;
   }
 }
 
 function addItem(key, item) {
   var data = getData(key);
   data.push(item);
-  setData(key, data);
+  return setData(key, data);
 }
 
 function findItem(key, id) {
   var data = getData(key);
   for (var i = 0; i < data.length; i++) {
-    if (data[i].id === id) return data[i];
+    if (data[i] && data[i].id === id) {
+      return data[i];
+    }
   }
   return null;
 }
 
 function updateItem(key, id, changes) {
   var data = getData(key);
+
   for (var i = 0; i < data.length; i++) {
-    if (data[i].id === id) {
+    if (data[i] && data[i].id === id) {
       for (var prop in changes) {
-        data[i][prop] = changes[prop];
+        if (Object.prototype.hasOwnProperty.call(changes, prop)) {
+          data[i][prop] = changes[prop];
+        }
       }
-      setData(key, data);
-      return true;
+      return setData(key, data);
     }
   }
+
   return false;
 }
 
 function deleteItem(key, id) {
   var data = getData(key);
   var filtered = [];
+
   for (var i = 0; i < data.length; i++) {
-    if (data[i].id !== id) filtered.push(data[i]);
+    if (data[i] && data[i].id !== id) {
+      filtered.push(data[i]);
+    }
   }
-  setData(key, filtered);
+
+  return setData(key, filtered);
 }
 
-function generarId() {
-  return 'id_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+function clearData(key) {
+  try {
+    localStorage.removeItem(key);
+    return true;
+  } catch (e) {
+    console.error('Error eliminando ' + key + ':', e);
+    return false;
+  }
 }
 
-function formatMoney(amount) {
-  var num = parseFloat(amount) || 0;
-  return '$' + num.toLocaleString('es-PA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function resetearDatos() {
+  var keys = Object.keys(STORAGE_KEYS);
+  for (var i = 0; i < keys.length; i++) {
+    clearData(STORAGE_KEYS[keys[i]]);
+  }
+  console.log('✅ Datos reiniciados');
 }
-
-function formatDate(dateStr) {
-  if (!dateStr) return '—';
-  var d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
-  return d.toLocaleDateString('es-PA', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-
-var CAT_LABELS = {
-  diseno_web: 'Diseño Web',
-  desarrollo: 'Desarrollo',
-  branding: 'Branding & Identidad',
-  marketing: 'Marketing Digital',
-  social_media: 'Social Media',
-  seo: 'SEO & Posicionamiento',
-  fotografia: 'Fotografía & Video',
-  consultoria: 'Consultoría',
-  mantenimiento: 'Mantenimiento Web',
-  hosting: 'Hosting & Dominio',
-  otros: 'Otros'
-};
-
-var GASTO_LABELS = {
-  software: 'Software & Herramientas',
-  hosting: 'Hosting & Dominios',
-  marketing: 'Marketing & Ads',
-  equipo: 'Equipo & Hardware',
-  oficina: 'Oficina & Suministros',
-  transporte: 'Transporte & Logística',
-  capacitacion: 'Capacitación',
-  servicios: 'Servicios Profesionales',
-  impuestos: 'Impuestos',
-  otros: 'Otros'
-};
