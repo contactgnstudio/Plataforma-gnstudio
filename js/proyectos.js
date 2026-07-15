@@ -3,6 +3,7 @@
 // ============================================================
 
 var PROYECTO_ACTUAL = null;
+var chartProyectoInstance = null;
 
 // ============================================================
 // VISTA LISTA
@@ -20,7 +21,7 @@ function renderProyectos(filtro) {
   proyectos.sort(function(a, b) { return new Date(b.creadoEn) - new Date(a.creadoEn); });
 
   if (proyectos.length === 0) {
-    grid.innerHTML = '<div class="tabla-vacia" style="grid-column:1/-1;"><div class="tabla-vacia-icon">🏗️</div>No hay proyectos</div>';
+    grid.innerHTML = '<div class="tabla-vacia" style="grid-column:1/-1;"><div class="tabla-vacia-icon">🏗️</div>No hay proyectos registrados</div>';
     return;
   }
 
@@ -75,7 +76,6 @@ function abrirProyecto(id) {
   document.getElementById('proyectos-lista').style.display = 'none';
   document.getElementById('proyecto-detalle').style.display = 'block';
   
-  // Llenar header
   document.getElementById('detalle-proyecto-nombre').textContent = proyecto.nombre;
   document.getElementById('detalle-proyecto-cliente').textContent = proyecto.clienteNombre || '—';
   document.getElementById('detalle-proyecto-fecha').textContent = formatDate(proyecto.fechaInicio);
@@ -85,10 +85,11 @@ function abrirProyecto(id) {
   estadoBadge.textContent = proyecto.estado === 'en_progreso' ? 'En Progreso' : proyecto.estado === 'completado' ? 'Completado' : 'Pausado';
   estadoBadge.className = 'estado-badge estado-' + (proyecto.estado === 'en_progreso' ? 'cotizado' : proyecto.estado === 'completado' ? 'aprobado' : 'vencido');
   
-  // Reset tabs
-  switchProyectoTab('resumen');
+  // Cargar notas si existen
+  var notasField = document.getElementById('proyecto-notas');
+  if (notasField) notasField.value = proyecto.notas || '';
   
-  // Cargar datos
+  switchProyectoTab('resumen');
   cargarResumenProyecto(proyecto);
   cargarFinancieroProyecto(proyecto);
   cargarTareasProyecto(proyecto);
@@ -111,8 +112,11 @@ function switchProyectoTab(tab) {
   for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove('active');
   for (var i = 0; i < contents.length; i++) contents[i].classList.remove('active');
   
-  document.querySelector('.proyecto-tab[onclick="switchProyectoTab(\'' + tab + '\')"]').classList.add('active');
-  document.getElementById('proyecto-tab-' + tab).classList.add('active');
+  var tabBtn = document.querySelector('.proyecto-tab[onclick="switchProyectoTab(\'' + tab + '\')"]');
+  if (tabBtn) tabBtn.classList.add('active');
+  
+  var content = document.getElementById('proyecto-tab-' + tab);
+  if (content) content.classList.add('active');
 }
 
 // ============================================================
@@ -120,7 +124,8 @@ function switchProyectoTab(tab) {
 // ============================================================
 function cargarResumenProyecto(proyecto) {
   var avance = proyecto.avance || 0;
-  document.getElementById('proyecto-progreso-pct').textContent = avance + '%';
+  var pctEl = document.getElementById('proyecto-progreso-pct');
+  if (pctEl) pctEl.textContent = avance + '%';
   
   var circle = document.querySelector('#proyecto-progreso-visual circle:last-child');
   if (circle) {
@@ -128,7 +133,6 @@ function cargarResumenProyecto(proyecto) {
     circle.setAttribute('stroke-dashoffset', offset);
   }
   
-  // Calcular financiero del proyecto
   var gastos = getData(STORAGE_KEYS.GASTOS).filter(function(g) { 
     return g.proyectoId === proyecto.id; 
   });
@@ -142,22 +146,31 @@ function cargarResumenProyecto(proyecto) {
   var totalPagos = 0;
   for (var i = 0; i < pagos.length; i++) totalPagos += parseFloat(pagos[i].monto) || 0;
   
-  var porCobrar = proyecto.presupuesto - totalPagos;
+  var porCobrar = Math.max(0, proyecto.presupuesto - totalPagos);
   var utilidad = totalPagos - totalGastos;
   
-  document.getElementById('resumen-presupuesto').textContent = formatMoney(proyecto.presupuesto);
-  document.getElementById('resumen-gastos').textContent = formatMoney(totalGastos);
-  document.getElementById('resumen-pagos').textContent = formatMoney(totalPagos);
-  document.getElementById('resumen-por-cobrar').textContent = formatMoney(porCobrar);
-  document.getElementById('resumen-utilidad').textContent = formatMoney(utilidad);
+  var rp = document.getElementById('resumen-presupuesto');
+  var rg = document.getElementById('resumen-gastos');
+  var rpa = document.getElementById('resumen-pagos');
+  var rpc = document.getElementById('resumen-por-cobrar');
+  var ru = document.getElementById('resumen-utilidad');
   
-  // Gráfica del proyecto
+  if (rp) rp.textContent = formatMoney(proyecto.presupuesto);
+  if (rg) rg.textContent = formatMoney(totalGastos);
+  if (rpa) rpa.textContent = formatMoney(totalPagos);
+  if (rpc) rpc.textContent = formatMoney(porCobrar);
+  if (ru) ru.textContent = formatMoney(utilidad);
+  
   renderChartProyecto(gastos, pagos);
 }
 
 function renderChartProyecto(gastos, pagos) {
   var ctx = document.getElementById('chartProyectoBalance');
   if (!ctx) return;
+  
+  if (chartProyectoInstance) {
+    chartProyectoInstance.destroy();
+  }
   
   var meses = {};
   for (var i = 5; i >= 0; i--) {
@@ -188,7 +201,7 @@ function renderChartProyecto(gastos, pagos) {
     pagosData.push(meses[key].pagos);
   }
   
-  new Chart(ctx, {
+  chartProyectoInstance = new Chart(ctx, {
     type: 'line',
     data: {
       labels: labels,
@@ -216,7 +229,6 @@ function cargarFinancieroProyecto(proyecto) {
   var gastos = getData(STORAGE_KEYS.GASTOS).filter(function(g) { return g.proyectoId === proyecto.id; });
   var pagos = getData(STORAGE_KEYS.PAGOS).filter(function(p) { return p.proyectoId === proyecto.id; });
   
-  // Gastos
   var tbodyG = document.getElementById('tbodyGastosProyecto');
   if (tbodyG) {
     var htmlG = '';
@@ -234,7 +246,6 @@ function cargarFinancieroProyecto(proyecto) {
     tbodyG.innerHTML = htmlG;
   }
   
-  // Pagos
   var tbodyP = document.getElementById('tbodyPagosProyecto');
   if (tbodyP) {
     var htmlP = '';
@@ -290,7 +301,8 @@ function cargarTareasProyecto(proyecto) {
     html += '</div></div>';
   }
   
-  document.getElementById('tareas-kanban').innerHTML = html;
+  var container = document.getElementById('tareas-kanban');
+  if (container) container.innerHTML = html;
 }
 
 function guardarTareaProyecto(event) {
@@ -322,22 +334,18 @@ function cargarTimelineProyecto(proyecto) {
   
   var eventos = [];
   
-  // Inicio del proyecto
   eventos.push({ fecha: proyecto.fechaInicio, tipo: 'inicio', texto: 'Proyecto iniciado', monto: null });
   
-  // Gastos
   var gastos = getData(STORAGE_KEYS.GASTOS).filter(function(g) { return g.proyectoId === proyecto.id; });
   for (var i = 0; i < gastos.length; i++) {
     eventos.push({ fecha: gastos[i].fecha, tipo: 'gasto', texto: gastos[i].descripcion, monto: -gastos[i].monto });
   }
   
-  // Pagos
   var pagos = getData(STORAGE_KEYS.PAGOS).filter(function(p) { return p.proyectoId === proyecto.id; });
   for (var i = 0; i < pagos.length; i++) {
     eventos.push({ fecha: pagos[i].fecha, tipo: 'pago', texto: pagos[i].concepto, monto: pagos[i].monto });
   }
   
-  // Tareas completadas
   var tareas = getData('gn_tareas').filter(function(t) { return t.proyectoId === proyecto.id && t.estado === 'completada'; });
   for (var i = 0; i < tareas.length; i++) {
     eventos.push({ fecha: tareas[i].creadoEn.split('T')[0], tipo: 'tarea', texto: 'Tarea completada: ' + tareas[i].titulo, monto: null });
@@ -358,7 +366,7 @@ function cargarTimelineProyecto(proyecto) {
     html += '</div>';
   }
   
-  container.innerHTML = html || '<p class="tabla-vacia">No hay actividad registrada</p>';
+  container.innerHTML = html || '<p class="tabla-vacia" style="padding:20px;">No hay actividad registrada</p>';
 }
 
 // ============================================================
@@ -368,32 +376,42 @@ function guardarNotasProyecto() {
   if (!PROYECTO_ACTUAL) return;
   var notas = document.getElementById('proyecto-notas').value;
   updateItem(STORAGE_KEYS.PROYECTOS, PROYECTO_ACTUAL.id, { notas: notas });
-  alert('✅ Notas guardadas');
+  
+  var feedback = document.createElement('div');
+  feedback.className = 'form-feedback success';
+  feedback.textContent = '✅ Notas guardadas';
+  feedback.style.display = 'block';
+  
+  var container = document.getElementById('proyecto-tab-documentos');
+  if (container) {
+    var existing = container.querySelector('.form-feedback');
+    if (existing) existing.remove();
+    container.appendChild(feedback);
+    setTimeout(function() { feedback.remove(); }, 3000);
+  }
 }
 
 // ============================================================
-// MODALES
+// UTILIDADES
 // ============================================================
 function abrirModalCliente() {
   switchSubSection('negocio', 'crm');
-  document.getElementById('cli-codigo').focus();
+  var input = document.getElementById('cli-codigo');
+  if (input) input.focus();
 }
 
 function abrirModalGrupo() {
   switchSubSection('negocio', 'catalogo');
-  document.getElementById('grp-codigo').focus();
+  var input = document.getElementById('grp-codigo');
+  if (input) input.focus();
 }
 
 function abrirModalGastoProyecto() {
   if (!PROYECTO_ACTUAL) return;
-  // Pre-llenar el proyecto en el form de gastos
-  switchSection('finanzas');
-  switchSubSection('finanzas', 'estado-cuenta');
-  // Aquí se podría abrir un modal específico
+  alert('🚧 Abrir modal de gasto para proyecto: ' + PROYECTO_ACTUAL.nombre + '\n(En desarrollo: vincular automáticamente el proyecto)');
 }
 
 function abrirModalPagoProyecto() {
   if (!PROYECTO_ACTUAL) return;
-  switchSection('finanzas');
-  switchSubSection('finanzas', 'estado-cuenta');
+  alert('🚧 Abrir modal de pago para proyecto: ' + PROYECTO_ACTUAL.nombre + '\n(En desarrollo: vincular automáticamente el proyecto)');
 }
