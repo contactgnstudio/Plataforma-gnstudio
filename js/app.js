@@ -701,5 +701,54 @@ function exportarTodo() {
   a.download = 'gn-studio-backup-' + new Date().toISOString().split('T')[0] + '.json';
   a.click();
 
+
+// ============================================================
+// OVERRIDE: Inicialización async para Supabase
+// ============================================================
+
+async function gnSafeCallAsync(fnName) {
+  if (typeof window[fnName] === 'function') {
+    return await window[fnName].apply(null, Array.prototype.slice.call(arguments, 1));
+  }
+  return null;
+}
+
+async function inicializarAppGNStudio() {
+  if (window.__gnAppInicializada) return;
+  window.__gnAppInicializada = true;
+
+  // Modulos async (Supabase)
+  await gnSafeCallAsync('inicializarCatalogo');
+  await gnSafeCallAsync('inicializarClientes');
+  await gnSafeCallAsync('inicializarGrupos');
+  await gnSafeCallAsync('inicializarCotizaciones');
+
+  // Charts y renders
+  gnSafeCall('inicializarCharts');
+  await gnSafeCallAsync('renderServicios');
+  await gnSafeCallAsync('renderClientes');
+  await gnSafeCallAsync('actualizarSelectClientes');
+  await gnSafeCallAsync('renderCotizacionesGuardadas');
+  await gnSafeCallAsync('actualizarSelectProyectosFinanzas');
+
+  // Dashboard
+  gnSafeCall('actualizarVistaJSON');
+  await gnSafeCallAsync('renderProyectos');
+  await gnSafeCallAsync('renderRegistros');
+  await gnSafeCallAsync('actualizarKPIs');
+  gnSafeCall('gnRenderDashboardExtras');
+  gnSafeCall('gnConfigurarFechasIniciales');
+  await gnSafeCallAsync('gnActualizarSelectProyectoEstadoCuenta');
+  await gnSafeCallAsync('generarEstadoCuenta');
+}
+
+// Sobreescribir el DOMContentLoaded con version async
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof gnAuthInit === 'function') {
+    gnAuthInit(inicializarAppGNStudio);
+  } else {
+    inicializarAppGNStudio();
+  }
+});
   URL.revokeObjectURL(url);
 }
