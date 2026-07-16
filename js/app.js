@@ -629,3 +629,341 @@ function escapeHtml(str) {
 function escapeAttr(str) {
   return String(str || '').replace(/'/g, '&#39;');
 }
+// ============================================================
+// COMPATIBILIDAD FALTANTE — errores globales actuales
+// Pegar al FINAL de js/app.js
+// ============================================================
+
+// ------------------------------------------------------------
+// 1) renderRegistros()
+// app.js la usa al iniciar, pero no existe siempre.
+// Fallback: si existe generarEstadoCuenta(), la reutilizamos.
+// ------------------------------------------------------------
+function renderRegistros() {
+  if (typeof generarEstadoCuenta === 'function') {
+    try {
+      return generarEstadoCuenta();
+    } catch (e) {
+      console.error('Error en renderRegistros/generarEstadoCuenta:', e);
+      return false;
+    }
+  }
+  return false;
+}
+
+// ------------------------------------------------------------
+// Helpers
+// ------------------------------------------------------------
+function obtenerClientePorId(clienteId) {
+  if (!clienteId) return null;
+  if (typeof getData !== 'function' || typeof STORAGE_KEYS === 'undefined') return null;
+
+  var clientes = getData(STORAGE_KEYS.CLIENTES) || [];
+  for (var i = 0; i < clientes.length; i++) {
+    if (clientes[i].id === clienteId) return clientes[i];
+  }
+  return null;
+}
+
+function textoDeSelect(selectId) {
+  var select = document.getElementById(selectId);
+  if (!select) return '';
+  if (select.selectedIndex < 0) return '';
+  return (select.options[select.selectedIndex] && select.options[select.selectedIndex].text) || '';
+}
+
+function valorTexto(id) {
+  var el = document.getElementById(id);
+  return el ? String(el.value || '').trim() : '';
+}
+
+function valorNumero(id) {
+  var el = document.getElementById(id);
+  var n = el ? parseFloat(el.value) : 0;
+  return isNaN(n) ? 0 : n;
+}
+
+function htmlEscape(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ------------------------------------------------------------
+// 2) actualizarInfoCliente()
+// index.html la llama en onchange del select de cotización.
+// ------------------------------------------------------------
+function actualizarInfoCliente() {
+  var clienteId = valorTexto('cot-cliente');
+  var cliente = obtenerClientePorId(clienteId);
+
+  var atencion = document.getElementById('cot-atencion');
+  if (atencion && cliente && !atencion.value.trim()) {
+    atencion.value = cliente.contacto || '';
+  }
+
+  var posiblesInfoIds = [
+    'cot-cliente-info',
+    'cot-info-cliente',
+    'info-cliente-cot',
+    'cliente-info-cot'
+  ];
+
+  var infoBox = null;
+  for (var i = 0; i < posiblesInfoIds.length; i++) {
+    var el = document.getElementById(posiblesInfoIds[i]);
+    if (el) {
+      infoBox = el;
+      break;
+    }
+  }
+
+  if (infoBox) {
+    if (!cliente) {
+      infoBox.innerHTML = '';
+      infoBox.style.display = 'none';
+    } else {
+      infoBox.style.display = 'block';
+      infoBox.innerHTML = ''
+        + '<div><strong>Cliente:</strong> ' + htmlEscape(cliente.nombre || '—') + '</div>'
+        + '<div><strong>Contacto:</strong> ' + htmlEscape(cliente.contacto || '—') + '</div>'
+        + '<div><strong>Teléfono:</strong> ' + htmlEscape(cliente.telefono || '—') + '</div>'
+        + '<div><strong>Email:</strong> ' + htmlEscape(cliente.email || '—') + '</div>'
+        + '<div><strong>Dirección:</strong> ' + htmlEscape(cliente.direccion || '—') + '</div>';
+    }
+  }
+
+  return false;
+}
+
+// ------------------------------------------------------------
+// Helpers de cotización
+// ------------------------------------------------------------
+function obtenerResumenCotizacionDesdeDOM() {
+  var subtotalTxt = document.getElementById('cot-subtotal');
+  var itbmsTxt = document.getElementById('cot-itbms-monto');
+  var descuentoTxt = document.getElementById('cot-descuento-monto');
+  var totalTxt = document.getElementById('cot-total');
+
+  return {
+    subtotal: subtotalTxt ? subtotalTxt.textContent : formatMoney(0),
+    itbms: itbmsTxt ? itbmsTxt.textContent : formatMoney(0),
+    descuento: descuentoTxt ? descuentoTxt.textContent : formatMoney(0),
+    total: totalTxt ? totalTxt.textContent : formatMoney(0)
+  };
+}
+
+function obtenerItemsCotizacionPreview() {
+  var filas = [];
+  var tbody = document.getElementById('tbodyItemsCotizacion');
+
+  if (tbody && tbody.querySelectorAll('tr').length > 0) {
+    var trs = tbody.querySelectorAll('tr');
+    for (var i = 0; i < trs.length; i++) {
+      var tds = trs[i].querySelectorAll('td');
+      if (tds.length >= 6) {
+        filas.push({
+          descripcion: tds[1] ? tds[1].textContent.trim() : '',
+          cantidad: tds[2] ? tds[2].textContent.trim() : '',
+          unidad: tds[3] ? tds[3].textContent.trim() : '',
+          precio: tds[4] ? tds[4].textContent.trim() : '',
+          total: tds[5] ? tds[5].textContent.trim() : ''
+        });
+      }
+    }
+  }
+
+  if (filas.length === 0 && typeof itemsCotizacionActual !== 'undefined' && Array.isArray(itemsCotizacionActual)) {
+    for (var j = 0; j < itemsCotizacionActual.length; j++) {
+      var item = itemsCotizacionActual[j];
+      filas.push({
+        descripcion: (item.codigo ? '[' + item.codigo + '] ' : '') + (item.descripcion || ''),
+        cantidad: item.cantidad || 0,
+        unidad: item.unidad || '',
+        precio: formatMoney(item.precioUnitario || 0),
+        total: formatMoney((item.cantidad || 0) * (item.precioUnitario || 0))
+      });
+    }
+  }
+
+  return filas;
+}
+
+// ------------------------------------------------------------
+// 3) vistaPreviaCotizacion()
+// index.html la llama desde el botón de vista previa.
+// ------------------------------------------------------------
+function vistaPreviaCotizacion() {
+  var clienteId = valorTexto('cot-cliente');
+  var cliente = obtenerClientePorId(clienteId);
+  var proyecto = valorTexto('cot-proyecto');
+  var atencion = valorTexto('cot-atencion');
+  var fecha = valorTexto('cot-fecha');
+  var alcance = valorTexto('cot-alcance');
+  var resumen = obtenerResumenCotizacionDesdeDOM();
+  var items = obtenerItemsCotizacionPreview();
+
+  if (!clienteId) {
+    alert('Selecciona un cliente antes de ver la vista previa');
+    return false;
+  }
+
+  if (!proyecto) {
+    alert('Ingresa el nombre del proyecto');
+    return false;
+  }
+
+  var rows = '';
+  for (var i = 0; i < items.length; i++) {
+    rows += ''
+      + '<tr>'
+      + '<td style="padding:8px;border:1px solid #ddd;">' + (i + 1) + '</td>'
+      + '<td style="padding:8px;border:1px solid #ddd;">' + htmlEscape(items[i].descripcion) + '</td>'
+      + '<td style="padding:8px;border:1px solid #ddd;text-align:center;">' + htmlEscape(items[i].cantidad) + '</td>'
+      + '<td style="padding:8px;border:1px solid #ddd;text-align:center;">' + htmlEscape(items[i].unidad) + '</td>'
+      + '<td style="padding:8px;border:1px solid #ddd;text-align:right;">' + htmlEscape(items[i].precio) + '</td>'
+      + '<td style="padding:8px;border:1px solid #ddd;text-align:right;">' + htmlEscape(items[i].total) + '</td>'
+      + '</tr>';
+  }
+
+  if (!rows) {
+    rows = '<tr><td colspan="6" style="padding:12px;border:1px solid #ddd;text-align:center;color:#666;">No hay items agregados</td></tr>';
+  }
+
+  var html = ''
+    + '<!DOCTYPE html>'
+    + '<html lang="es">'
+    + '<head>'
+    + '  <meta charset="UTF-8">'
+    + '  <title>Vista Previa Cotización</title>'
+    + '  <style>'
+    + '    body{font-family:Arial,sans-serif;margin:30px;color:#222;}'
+    + '    h1,h2,h3{margin:0 0 12px;}'
+    + '    .top{display:flex;justify-content:space-between;gap:20px;margin-bottom:24px;}'
+    + '    .box{margin-bottom:18px;}'
+    + '    table{width:100%;border-collapse:collapse;margin-top:16px;}'
+    + '    .totales{width:360px;margin-left:auto;margin-top:20px;border-collapse:collapse;}'
+    + '    .totales td{padding:8px;border:1px solid #ddd;}'
+    + '    .muted{color:#666;}'
+    + '    .actions{margin-bottom:20px;}'
+    + '    button{padding:10px 14px;margin-right:8px;border:none;border-radius:8px;cursor:pointer;}'
+    + '    .print{background:#6bbd45;color:#fff;}'
+    + '  </style>'
+    + '</head>'
+    + '<body>'
+    + '  <div class="actions"><button class="print" onclick="window.print()">Imprimir / PDF</button></div>'
+    + '  <div class="top">'
+    + '    <div>'
+    + '      <h1>GN Studio</h1>'
+    + '      <div class="muted">Vista previa de cotización</div>'
+    + '    </div>'
+    + '    <div>'
+    + '      <div><strong>Fecha:</strong> ' + htmlEscape(formatDate(fecha || new Date().toISOString().slice(0, 10))) + '</div>'
+    + '      <div><strong>Proyecto:</strong> ' + htmlEscape(proyecto) + '</div>'
+    + '    </div>'
+    + '  </div>'
+    + '  <div class="box">'
+    + '    <h3>Cliente</h3>'
+    + '    <div><strong>Nombre:</strong> ' + htmlEscape(cliente ? cliente.nombre : '—') + '</div>'
+    + '    <div><strong>Contacto:</strong> ' + htmlEscape(atencion || (cliente ? cliente.contacto : '—')) + '</div>'
+    + '    <div><strong>Teléfono:</strong> ' + htmlEscape(cliente ? cliente.telefono : '—') + '</div>'
+    + '    <div><strong>Email:</strong> ' + htmlEscape(cliente ? cliente.email : '—') + '</div>'
+    + '    <div><strong>Dirección:</strong> ' + htmlEscape(cliente ? cliente.direccion : '—') + '</div>'
+    + '  </div>'
+    + '  <div class="box">'
+    + '    <h3>Alcance</h3>'
+    + '    <div>' + htmlEscape(alcance || 'Sin descripción de alcance') + '</div>'
+    + '  </div>'
+    + '  <table>'
+    + '    <thead>'
+    + '      <tr>'
+    + '        <th style="padding:8px;border:1px solid #ddd;">#</th>'
+    + '        <th style="padding:8px;border:1px solid #ddd;">Descripción</th>'
+    + '        <th style="padding:8px;border:1px solid #ddd;">Cant.</th>'
+    + '        <th style="padding:8px;border:1px solid #ddd;">Unidad</th>'
+    + '        <th style="padding:8px;border:1px solid #ddd;">Precio Unit.</th>'
+    + '        <th style="padding:8px;border:1px solid #ddd;">Total</th>'
+    + '      </tr>'
+    + '    </thead>'
+    + '    <tbody>' + rows + '</tbody>'
+    + '  </table>'
+    + '  <table class="totales">'
+    + '    <tr><td><strong>Subtotal</strong></td><td style="text-align:right;">' + htmlEscape(resumen.subtotal) + '</td></tr>'
+    + '    <tr><td><strong>ITBMS</strong></td><td style="text-align:right;">' + htmlEscape(resumen.itbms) + '</td></tr>'
+    + '    <tr><td><strong>Descuento</strong></td><td style="text-align:right;">' + htmlEscape(resumen.descuento) + '</td></tr>'
+    + '    <tr><td><strong>TOTAL</strong></td><td style="text-align:right;color:#6bbd45;"><strong>' + htmlEscape(resumen.total) + '</strong></td></tr>'
+    + '  </table>'
+    + '</body>'
+    + '</html>';
+
+  var win = window.open('', '_blank');
+  if (!win) {
+    alert('El navegador bloqueó la ventana emergente de vista previa');
+    return false;
+  }
+
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+
+  return false;
+}
+
+// ------------------------------------------------------------
+// 4) abrirModalGastoProyecto()
+// Fallback: en lugar de modal inexistente, salta a Finanzas y
+// preselecciona el proyecto actual si existe.
+// ------------------------------------------------------------
+function abrirModalGastoProyecto() {
+  try {
+    switchSection('finanzas');
+  } catch (e) {
+    console.warn('No se pudo cambiar a Finanzas:', e);
+  }
+
+  try {
+    switchSubSection('finanzas', 'estado-cuenta');
+  } catch (e) {
+    console.warn('No se pudo cambiar sub-sección Finanzas:', e);
+  }
+
+  var proyectoId = null;
+  if (typeof PROYECTO_ACTUAL !== 'undefined' && PROYECTO_ACTUAL && PROYECTO_ACTUAL.id) {
+    proyectoId = PROYECTO_ACTUAL.id;
+  }
+
+  var gastoProyecto = document.getElementById('gasto-proyecto');
+  if (gastoProyecto && proyectoId) {
+    gastoProyecto.value = proyectoId;
+  }
+
+  var ecProyecto = document.getElementById('ec-proyecto');
+  if (ecProyecto && proyectoId) {
+    ecProyecto.value = proyectoId;
+  }
+
+  var gastoFecha = document.getElementById('gasto-fecha');
+  if (gastoFecha && !gastoFecha.value) {
+    var hoy = new Date();
+    gastoFecha.value = hoy.getFullYear()
+      + '-' + String(hoy.getMonth() + 1).padStart(2, '0')
+      + '-' + String(hoy.getDate()).padStart(2, '0');
+  }
+
+  var monto = document.getElementById('gasto-monto');
+  if (monto) {
+    setTimeout(function () {
+      monto.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      monto.focus();
+    }, 80);
+  }
+
+  return false;
+}
+
+function cerrarModalGastoProyecto() {
+  return false;
+}
