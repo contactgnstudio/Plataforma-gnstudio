@@ -3,9 +3,9 @@
 // ============================================================
 
 const SUPABASE_URL = 'https://TU-PROYECTO.supabase.co';
-const SUPABASE_ANON_KEY = 'TU_ANON_KEY_PUBLICA';
+const SUPABASE_ANON_KEY = 'TU_ANON_PUBLIC_KEY';
 
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 function gnGetOverlay() {
   return document.getElementById('gn-login-overlay');
@@ -61,6 +61,36 @@ function gnOcultarLogin() {
   document.body.classList.remove('gn-auth-locked');
 }
 
+function gnEsCorreoValido(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function gnTraducirError(error) {
+  const msg = (error && error.message ? error.message : '').toLowerCase();
+
+  if (msg.includes('failed to fetch')) {
+    return 'No se pudo conectar con Supabase. Revisa SUPABASE_URL, tu conexión, las Redirect URLs y prueba desactivar extensiones del navegador.';
+  }
+
+  if (msg.includes('invalid login credentials')) {
+    return 'Correo o contraseña incorrectos.';
+  }
+
+  if (msg.includes('email not confirmed')) {
+    return 'Tu correo todavía no está confirmado en Supabase.';
+  }
+
+  if (msg.includes('invalid api key')) {
+    return 'La anon key de Supabase es inválida o está mal copiada.';
+  }
+
+  if (msg.includes('network')) {
+    return 'Hay un problema de red al conectar con Supabase.';
+  }
+
+  return error && error.message ? error.message : 'Ocurrió un error inesperado.';
+}
+
 async function gnProcesarLogin(event, onSuccess) {
   if (event) event.preventDefault();
 
@@ -75,28 +105,41 @@ async function gnProcesarLogin(event, onSuccess) {
     return false;
   }
 
-  const { error } = await supabaseClient.auth.signInWithPassword({
-    email,
-    password
-  });
-
-  if (error) {
-    gnSetFeedback(error.message || 'No se pudo iniciar sesión.', 'error');
+  if (!gnEsCorreoValido(email)) {
+    gnSetFeedback('Escribe un correo válido.', 'error');
     return false;
   }
 
-  gnSetFeedback('Acceso correcto.', 'success');
-  gnOcultarLogin();
+  try {
+    const { error } = await supabaseClient.auth.signInWithPassword({
+      email,
+      password
+    });
 
-  if (typeof onSuccess === 'function') {
-    onSuccess();
+    if (error) {
+      gnSetFeedback(gnTraducirError(error), 'error');
+      return false;
+    }
+
+    gnSetFeedback('Acceso correcto.', 'success');
+    gnOcultarLogin();
+
+    if (typeof onSuccess === 'function') {
+      onSuccess();
+    }
+
+    return false;
+  } catch (error) {
+    gnSetFeedback(gnTraducirError(error), 'error');
+    return false;
   }
-
-  return false;
 }
 
 async function gnCerrarSesion() {
-  await supabaseClient.auth.signOut();
+  try {
+    await supabaseClient.auth.signOut();
+  } catch (error) {}
+
   gnMostrarLogin();
   gnSetFeedback('');
 
@@ -113,17 +156,27 @@ async function gnRecuperarPassword() {
     return false;
   }
 
-  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin + '/reset-password.html'
-  });
-
-  if (error) {
-    gnSetFeedback(error.message || 'No se pudo enviar el correo.', 'error');
+  if (!gnEsCorreoValido(email)) {
+    gnSetFeedback('Escribe un correo válido.', 'error');
     return false;
   }
 
-  gnSetFeedback('Te enviamos un enlace para cambiar tu contraseña.', 'success');
-  return false;
+  try {
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/reset-password.html'
+    });
+
+    if (error) {
+      gnSetFeedback(gnTraducirError(error), 'error');
+      return false;
+    }
+
+    gnSetFeedback('Te enviamos un enlace para cambiar tu contraseña.', 'success');
+    return false;
+  } catch (error) {
+    gnSetFeedback(gnTraducirError(error), 'error');
+    return false;
+  }
 }
 
 async function gnAuthInit(onAuthenticated) {
@@ -138,13 +191,24 @@ async function gnAuthInit(onAuthenticated) {
     form.dataset.authBound = '1';
   }
 
-  const { data } = await supabaseClient.auth.getSession();
+  try {
+    const { data, error } = await supabaseClient.auth.getSession();
 
-  if (data && data.session) {
-    gnOcultarLogin();
-    if (typeof onAuthenticated === 'function') onAuthenticated();
-    return;
+    if (error) {
+      gnSetFeedback(gnTraducirError(error), 'error');
+      gnMostrarLogin();
+      return;
+    }
+
+    if (data && data.session) {
+      gnOcultarLogin();
+      if (typeof onAuthenticated === 'function') onAuthenticated();
+      return;
+    }
+
+    gnMostrarLogin();
+  } catch (error) {
+    gnSetFeedback(gnTraducirError(error), 'error');
+    gnMostrarLogin();
   }
-
-  gnMostrarLogin();
 }
