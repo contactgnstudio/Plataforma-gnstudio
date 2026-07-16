@@ -16,38 +16,38 @@
     <div class="gn-login-card">
       <div class="gn-login-logo">GN Studio OS</div>
       <h2>Acceso privado</h2>
-      <p>Ingresa con el usuario autorizado para ver la información interna.</p>
-
-      <form id="login-form">
-        <div class="form-group">
-          <label for="login-usuario">Usuario</label>
-          <input
-            type="text"
-            id="login-usuario"
-            placeholder="admin"
-            autocomplete="username"
-          >
-        </div>
-
-        <div class="form-group">
-          <label for="login-password">Contraseña</label>
-          <input
-            type="password"
-            id="login-password"
-            placeholder="••••••••"
-            autocomplete="current-password"
-          >
-        </div>
-
-        <div id="feedback-login" class="form-feedback" style="display:block;"></div>
-
-        <div class="gn-login-actions">
-          <button type="submit" class="btn-primary">Entrar</button>
-          <a href="#" class="gn-login-link" onclick="return gnRecuperarPassword()">Olvidé mi contraseña</a>
-        </div>
-      </form>
-    </div>
+<p>Ingresa con tu correo y contraseña para ver la información interna.</p>
+      
+<form id="login-form" onsubmit="return false;">
+  <div class="form-group">
+    <label for="login-usuario">CORREO</label>
+    <input
+      type="email"
+      id="login-usuario"
+      placeholder="contact@gnstudio.space"
+      autocomplete="email"
+      required
+    >
   </div>
+
+  <div class="form-group">
+    <label for="login-password">CONTRASEÑA</label>
+    <input
+      type="password"
+      id="login-password"
+      placeholder="Tu contraseña"
+      autocomplete="current-password"
+      required
+    >
+  </div>
+
+  <div class="form-feedback" id="feedback-login"></div>
+
+  <div class="gn-login-actions">
+    <button type="submit" class="btn-primary">Entrar</button>
+    <a href="#" class="gn-login-link" onclick="return gnRecuperarPassword()">Olvidé mi contraseña</a>
+  </div>
+</form>
 
   <button
     id="gn-logout-btn"
