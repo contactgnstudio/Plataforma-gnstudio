@@ -47,7 +47,7 @@ async function guardarCliente(event) {
   limpiarFormularioCliente();
   await renderClientes();
   await actualizarSelectClientes();
-  alert('Cliente guardado exitosamente.');
+  cerrarModalCliente();   alert('Cliente guardado exitosamente.');
 }
 
 // Editar cliente existente
@@ -332,11 +332,3 @@ function cerrarModalCliente() {
   if (modal) modal.remove();
 }
 
-// Sobrescribir guardarCliente para cerrar modal al terminar
-var _guardarClienteOriginal = guardarCliente;
-async function guardarCliente(event) {
-  await _guardarClienteOriginal(event);
-  cerrarModalCliente();
-}
-  });
-}
