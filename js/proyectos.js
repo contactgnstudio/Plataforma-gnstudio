@@ -687,3 +687,321 @@ function buscarProyectos() {
   grid.innerHTML = html;
   return false;
 }
+// ============================================================
+// PARCHE DE DETALLE DE PROYECTOS
+// Pegar al final de js/proyectos.js
+// ============================================================
+
+function _proyGetAll() {
+  if (typeof getData !== 'function') return [];
+  var key = (typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS && STORAGE_KEYS.PROYECTOS)
+    ? STORAGE_KEYS.PROYECTOS
+    : 'gn_proyectos';
+  var data = getData(key);
+  return Array.isArray(data) ? data : [];
+}
+
+function _proyGetById(id) {
+  var proyectos = _proyGetAll();
+  for (var i = 0; i < proyectos.length; i++) {
+    if (proyectos[i].id === id) return proyectos[i];
+  }
+  return null;
+}
+
+function _proyMoney(value) {
+  var n = parseFloat(value) || 0;
+  return typeof formatMoney === 'function' ? formatMoney(n) : ('$' + n.toFixed(2));
+}
+
+function _proyDate(value) {
+  if (!value) return '—';
+  return typeof formatDate === 'function' ? formatDate(value) : value;
+}
+
+function _proyEsc(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function _proyEnsureDetailContainer() {
+  var existing = document.getElementById('proyecto-detalle');
+  if (existing) return existing;
+
+  var grid = document.getElementById('proyectos-grid');
+  if (!grid || !grid.parentNode) return null;
+
+  var wrap = document.createElement('div');
+  wrap.id = 'proyecto-detalle';
+  wrap.className = 'project-detail-panel';
+  wrap.style.marginTop = '20px';
+
+  grid.parentNode.insertBefore(wrap, grid.nextSibling);
+  return wrap;
+}
+
+function _proyGastos(id) {
+  if (typeof getData !== 'function') return [];
+  var key = (typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS && STORAGE_KEYS.GASTOS)
+    ? STORAGE_KEYS.GASTOS
+    : 'gn_gastos';
+  var data = getData(key);
+  data = Array.isArray(data) ? data : [];
+  return data.filter(function(g) {
+    return (g.proyectoId || '') === id;
+  });
+}
+
+function _proyPagos(id) {
+  if (typeof getData !== 'function') return [];
+  var key = (typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS && STORAGE_KEYS.PAGOS)
+    ? STORAGE_KEYS.PAGOS
+    : 'gn_pagos';
+  var data = getData(key);
+  data = Array.isArray(data) ? data : [];
+  return data.filter(function(p) {
+    return (p.proyectoId || '') === id;
+  });
+}
+
+function _proyTareas(id) {
+  if (typeof getData !== 'function') return [];
+  var data = getData('gn_tareas');
+  data = Array.isArray(data) ? data : [];
+  return data.filter(function(t) {
+    return (t.proyectoId || '') === id;
+  });
+}
+
+function _proyEstadoLabel(estado) {
+  var labels = {
+    en_progreso: 'En progreso',
+    completado: 'Completado',
+    pausado: 'Pausado',
+    cancelado: 'Cancelado',
+    pendiente: 'Pendiente'
+  };
+  return labels[estado] || 'En progreso';
+}
+
+function verProyecto(id) {
+  var proyecto = _proyGetById(id);
+  if (!proyecto) return false;
+
+  PROYECTO_ACTUAL = proyecto;
+  renderDetalleProyecto(proyecto);
+  return false;
+}
+
+function renderDetalleProyecto(proyecto) {
+  var container = _proyEnsureDetailContainer();
+  if (!container || !proyecto) return false;
+
+  var tareas = _proyTareas(proyecto.id);
+  var tareasHtml = '';
+
+  if (tareas.length === 0) {
+    tareasHtml = '<div class="empty-state">No hay tareas registradas</div>';
+  } else {
+    for (var i = 0; i < tareas.length; i++) {
+      tareasHtml += ''
+        + '<div style="border:1px solid rgba(255,255,255,0.08);padding:10px 12px;border-radius:12px;margin-bottom:8px;">'
+        + '<div style="font-weight:600;">' + _proyEsc(tareas[i].titulo || 'Tarea') + '</div>'
+        + '<div style="opacity:.8;margin-top:4px;">'
+        + _proyEsc(tareas[i].asignado || 'Sin asignar') + ' · '
+        + _proyEsc(tareas[i].estado || 'pendiente')
+        + '</div>'
+        + '</div>';
+    }
+  }
+
+  container.innerHTML = ''
+    + '<div style="border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:18px;">'
+    + '<div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap;">'
+    + '<div>'
+    + '<h3 style="margin:0 0 8px;">' + _proyEsc(proyecto.nombre) + '</h3>'
+    + '<div style="opacity:.8;">' + _proyEsc(proyecto.clienteNombre || 'Sin cliente') + '</div>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+    + '<button type="button" class="btn-secondary" onclick="abrirModalGastoProyecto()">Registrar gasto</button>'
+    + '<button type="button" class="btn-primary" onclick="abrirModalPagoProyecto()">Registrar pago</button>'
+    + '</div>'
+    + '</div>'
+
+    + '<div style="margin-top:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;">'
+    + '<div><strong>Estado</strong><br>' + _proyEsc(_proyEstadoLabel(proyecto.estado)) + '</div>'
+    + '<div><strong>Fecha de inicio</strong><br>' + _proyDate(proyecto.fechaInicio) + '</div>'
+    + '<div><strong>Presupuesto</strong><br>' + _proyMoney(proyecto.presupuesto) + '</div>'
+    + '<div><strong>Avance</strong><br>' + (parseInt(proyecto.avance) || 0) + '%</div>'
+    + '</div>'
+
+    + '<div style="margin-top:16px;">'
+    + '<strong>Alcance</strong>'
+    + '<div style="margin-top:6px;opacity:.9;">' + _proyEsc(proyecto.alcance || 'Sin alcance definido') + '</div>'
+    + '</div>'
+
+    + '<div style="margin-top:18px;">'
+    + '<strong>Resumen financiero</strong>'
+    + '<div id="proyecto-financiero" style="margin-top:10px;"></div>'
+    + '</div>'
+
+    + '<div style="margin-top:18px;">'
+    + '<strong>Timeline</strong>'
+    + '<div id="proyecto-timeline" style="margin-top:10px;"></div>'
+    + '</div>'
+
+    + '<div style="margin-top:18px;">'
+    + '<strong>Tareas</strong>'
+    + '<div style="margin-top:10px;">' + tareasHtml + '</div>'
+    + '</div>'
+
+    + '<div style="margin-top:18px;">'
+    + '<strong>Notas</strong>'
+    + '<textarea id="proyecto-notas" rows="5" style="width:100%;margin-top:10px;">' + _proyEsc(proyecto.notas || '') + '</textarea>'
+    + '<div style="margin-top:10px;">'
+    + '<button type="button" class="btn-primary" onclick="guardarNotasProyecto()">Guardar notas</button>'
+    + '</div>'
+    + '</div>'
+    + '</div>';
+
+  cargarFinancieroProyecto(proyecto);
+  cargarTimelineProyecto(proyecto);
+
+  setTimeout(function() {
+    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 60);
+
+  return false;
+}
+
+function cargarFinancieroProyecto(proyecto) {
+  var container = document.getElementById('proyecto-financiero');
+  if (!container || !proyecto) return false;
+
+  var pagos = _proyPagos(proyecto.id);
+  var gastos = _proyGastos(proyecto.id);
+  var ingresos = 0;
+  var egresos = 0;
+
+  for (var i = 0; i < pagos.length; i++) ingresos += parseFloat(pagos[i].monto) || 0;
+  for (var j = 0; j < gastos.length; j++) egresos += parseFloat(gastos[j].monto) || 0;
+
+  var presupuesto = parseFloat(proyecto.presupuesto) || 0;
+  var pendiente = presupuesto - ingresos;
+  var utilidad = ingresos - egresos;
+
+  container.innerHTML = ''
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;">'
+    + '<div style="border:1px solid rgba(255,255,255,0.08);padding:12px;border-radius:12px;"><strong>Ingresos</strong><br>' + _proyMoney(ingresos) + '</div>'
+    + '<div style="border:1px solid rgba(255,255,255,0.08);padding:12px;border-radius:12px;"><strong>Gastos</strong><br>' + _proyMoney(egresos) + '</div>'
+    + '<div style="border:1px solid rgba(255,255,255,0.08);padding:12px;border-radius:12px;"><strong>Pendiente</strong><br>' + _proyMoney(pendiente) + '</div>'
+    + '<div style="border:1px solid rgba(255,255,255,0.08);padding:12px;border-radius:12px;"><strong>Resultado</strong><br>' + _proyMoney(utilidad) + '</div>'
+    + '</div>';
+
+  return false;
+}
+
+function cargarTimelineProyecto(proyecto) {
+  var container = document.getElementById('proyecto-timeline');
+  if (!container || !proyecto) return false;
+
+  var movimientos = [];
+  var gastos = _proyGastos(proyecto.id);
+  var pagos = _proyPagos(proyecto.id);
+
+  for (var i = 0; i < pagos.length; i++) {
+    movimientos.push({
+      fecha: pagos[i].fecha,
+      tipo: 'Pago',
+      descripcion: pagos[i].concepto || 'Pago recibido',
+      monto: parseFloat(pagos[i].monto) || 0,
+      color: '#6bbd45'
+    });
+  }
+
+  for (var j = 0; j < gastos.length; j++) {
+    movimientos.push({
+      fecha: gastos[j].fecha,
+      tipo: 'Gasto',
+      descripcion: gastos[j].descripcion || 'Gasto registrado',
+      monto: parseFloat(gastos[j].monto) || 0,
+      color: '#ef4444'
+    });
+  }
+
+  movimientos.sort(function(a, b) {
+    return new Date(b.fecha) - new Date(a.fecha);
+  });
+
+  if (movimientos.length === 0) {
+    container.innerHTML = '<div class="empty-state">No hay actividad financiera registrada</div>';
+    return false;
+  }
+
+  var html = '';
+  for (var k = 0; k < movimientos.length; k++) {
+    html += ''
+      + '<div style="border-left:3px solid ' + movimientos[k].color + ';padding:10px 12px;margin-bottom:10px;background:rgba(255,255,255,0.03);border-radius:10px;">'
+      + '<div style="font-weight:600;">' + _proyEsc(movimientos[k].tipo) + ' · ' + _proyDate(movimientos[k].fecha) + '</div>'
+      + '<div style="opacity:.85;margin-top:4px;">' + _proyEsc(movimientos[k].descripcion) + '</div>'
+      + '<div style="margin-top:6px;color:' + movimientos[k].color + ';font-weight:700;">' + _proyMoney(movimientos[k].monto) + '</div>'
+      + '</div>';
+  }
+
+  container.innerHTML = html;
+  return false;
+}
+
+function guardarNotasProyecto() {
+  if (!PROYECTO_ACTUAL) return false;
+
+  var notasEl = document.getElementById('proyecto-notas');
+  var notas = notasEl ? notasEl.value : '';
+
+  if (typeof updateItem === 'function') {
+    var key = (typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS && STORAGE_KEYS.PROYECTOS)
+      ? STORAGE_KEYS.PROYECTOS
+      : 'gn_proyectos';
+    updateItem(key, PROYECTO_ACTUAL.id, { notas: notas });
+  } else {
+    var proyectos = _proyGetAll();
+    for (var i = 0; i < proyectos.length; i++) {
+      if (proyectos[i].id === PROYECTO_ACTUAL.id) {
+        proyectos[i].notas = notas;
+        break;
+      }
+    }
+    if (typeof setData === 'function') {
+      var key2 = (typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS && STORAGE_KEYS.PROYECTOS)
+        ? STORAGE_KEYS.PROYECTOS
+        : 'gn_proyectos';
+      setData(key2, proyectos);
+    }
+  }
+
+  PROYECTO_ACTUAL = _proyGetById(PROYECTO_ACTUAL.id);
+
+  var container = document.getElementById('proyecto-detalle');
+  if (container) {
+    var existing = container.querySelector('.form-feedback');
+    if (existing) existing.remove();
+
+    var feedback = document.createElement('div');
+    feedback.className = 'form-feedback success';
+    feedback.textContent = '✅ Notas guardadas';
+    feedback.style.display = 'block';
+    feedback.style.marginTop = '10px';
+
+    container.appendChild(feedback);
+
+    setTimeout(function() {
+      if (feedback.parentNode) feedback.parentNode.removeChild(feedback);
+    }, 3000);
+  }
+
+  return false;
+}
