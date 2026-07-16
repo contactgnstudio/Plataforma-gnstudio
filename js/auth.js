@@ -2,6 +2,7 @@
 // js/auth.js — GN Studio + Supabase Auth
 // ============================================================
 
+// REEMPLAZA ESTOS 2 VALORES CON LOS DE TU PROYECTO
 const SUPABASE_URL = 'https://TU-PROYECTO.supabase.co';
 const SUPABASE_ANON_KEY = 'TU_ANON_PUBLIC_KEY';
 
@@ -35,7 +36,98 @@ function gnSetFeedback(msg, type) {
   feedback.style.display = 'block';
 }
 
+function gnEsCorreoValido(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function gnTraducirError(error) {
+  const msg = (error && error.message ? error.message : '').toLowerCase();
+
+  if (msg.includes('failed to fetch')) {
+    return 'No se pudo conectar con Supabase. Revisa la SUPABASE_URL, la ANON KEY, tu conexión y prueba en incógnito.';
+  }
+
+  if (msg.includes('invalid login credentials')) {
+    return 'Correo o contraseña incorrectos.';
+  }
+
+  if (msg.includes('email not confirmed')) {
+    return 'Tu correo aún no está confirmado en Supabase.';
+  }
+
+  if (msg.includes('invalid api key')) {
+    return 'La ANON KEY de Supabase es inválida o está mal copiada.';
+  }
+
+  if (msg.includes('network')) {
+    return 'Hay un problema de red al conectar con Supabase.';
+  }
+
+  return error && error.message ? error.message : 'Ocurrió un error inesperado.';
+}
+
+function gnCrearOverlaySiNoExiste() {
+  let overlay = document.getElementById('gn-login-overlay');
+
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'gn-login-overlay';
+    overlay.className = 'gn-login-overlay';
+    overlay.innerHTML = `
+      <div class="gn-login-card">
+        <div class="gn-login-logo">GN Studio OS</div>
+        <h2>Acceso privado</h2>
+        <p>Ingresa con tu correo y contraseña para ver la información interna.</p>
+
+        <form id="login-form" onsubmit="return false;">
+          <div class="form-group">
+            <label for="login-usuario">CORREO</label>
+            <input
+              type="email"
+              id="login-usuario"
+              placeholder="contact@gnstudio.space"
+              autocomplete="email"
+              required
+            >
+          </div>
+
+          <div class="form-group">
+            <label for="login-password">CONTRASEÑA</label>
+            <input
+              type="password"
+              id="login-password"
+              placeholder="Tu contraseña"
+              autocomplete="current-password"
+              required
+            >
+          </div>
+
+          <div class="form-feedback" id="feedback-login"></div>
+
+          <div class="gn-login-actions">
+            <button type="submit" class="btn-primary">Entrar</button>
+            <a href="#" class="gn-login-link" onclick="return gnRecuperarPassword()">Olvidé mi contraseña</a>
+          </div>
+        </form>
+      </div>
+    `;
+    document.body.prepend(overlay);
+  }
+
+  let logoutBtn = document.getElementById('gn-logout-btn');
+  if (!logoutBtn) {
+    logoutBtn = document.createElement('button');
+    logoutBtn.id = 'gn-logout-btn';
+    logoutBtn.className = 'gn-logout-btn';
+    logoutBtn.textContent = 'Cerrar sesión';
+    logoutBtn.onclick = gnCerrarSesion;
+    document.body.appendChild(logoutBtn);
+  }
+}
+
 function gnMostrarLogin() {
+  gnCrearOverlaySiNoExiste();
+
   const overlay = gnGetOverlay();
   const logoutBtn = gnGetLogoutBtn();
 
@@ -45,6 +137,7 @@ function gnMostrarLogin() {
   }
 
   if (logoutBtn) logoutBtn.style.display = 'none';
+
   document.body.classList.add('gn-auth-locked');
 }
 
@@ -58,37 +151,8 @@ function gnOcultarLogin() {
   }
 
   if (logoutBtn) logoutBtn.style.display = 'inline-flex';
+
   document.body.classList.remove('gn-auth-locked');
-}
-
-function gnEsCorreoValido(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-function gnTraducirError(error) {
-  const msg = (error && error.message ? error.message : '').toLowerCase();
-
-  if (msg.includes('failed to fetch')) {
-    return 'No se pudo conectar con Supabase. Revisa SUPABASE_URL, tu conexión, las Redirect URLs y prueba desactivar extensiones del navegador.';
-  }
-
-  if (msg.includes('invalid login credentials')) {
-    return 'Correo o contraseña incorrectos.';
-  }
-
-  if (msg.includes('email not confirmed')) {
-    return 'Tu correo todavía no está confirmado en Supabase.';
-  }
-
-  if (msg.includes('invalid api key')) {
-    return 'La anon key de Supabase es inválida o está mal copiada.';
-  }
-
-  if (msg.includes('network')) {
-    return 'Hay un problema de red al conectar con Supabase.';
-  }
-
-  return error && error.message ? error.message : 'Ocurrió un error inesperado.';
 }
 
 async function gnProcesarLogin(event, onSuccess) {
@@ -180,6 +244,8 @@ async function gnRecuperarPassword() {
 }
 
 async function gnAuthInit(onAuthenticated) {
+  gnCrearOverlaySiNoExiste();
+
   const form = document.getElementById('login-form');
 
   gnSetFeedback('');
