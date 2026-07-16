@@ -3,12 +3,61 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
   <title>GN Studio OS — Gestión Integral</title>
   <link rel="stylesheet" href="css/styles.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
+
+  <!-- LOGIN OVERLAY -->
+  <div id="gn-login-overlay" class="gn-login-overlay" style="display:none;">
+    <div class="gn-login-card">
+      <div class="gn-login-logo">GN Studio OS</div>
+      <h2>Acceso privado</h2>
+      <p>Ingresa con el usuario autorizado para ver la información interna.</p>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label for="login-usuario">Usuario</label>
+          <input
+            type="text"
+            id="login-usuario"
+            placeholder="admin"
+            autocomplete="username"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="login-password">Contraseña</label>
+          <input
+            type="password"
+            id="login-password"
+            placeholder="••••••••"
+            autocomplete="current-password"
+          >
+        </div>
+
+        <div id="feedback-login" class="form-feedback" style="display:block;"></div>
+
+        <div class="gn-login-actions">
+          <button type="submit" class="btn-primary">Entrar</button>
+          <a href="#" class="gn-login-link" onclick="return gnRecuperarPassword()">Olvidé mi contraseña</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <button
+    id="gn-logout-btn"
+    class="gn-logout-btn"
+    type="button"
+    onclick="gnCerrarSesion()"
+    style="display:none;"
+  >
+    Cerrar sesión
+  </button>
   
   <!-- ============================================================
        TOP NAVBAR
@@ -998,8 +1047,8 @@
 
   <!-- SCRIPTS -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="js/data.js"></script>
   <script src="js/storage.js"></script>
+  <script src="js/data.js"></script>
   <script src="js/grupos.js"></script>
   <script src="js/catalogo.js"></script>
   <script src="js/clientes.js"></script>
@@ -1007,6 +1056,7 @@
   <script src="js/proyectos.js"></script>
   <script src="js/finanzas.js"></script>
   <script src="js/charts.js"></script>
+  <script src="js/auth.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
