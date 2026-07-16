@@ -1005,3 +1005,50 @@ function guardarNotasProyecto() {
 
   return false;
 }
+// ============================================================
+// PARCHE VISIBILIDAD DETALLE PROYECTO
+// ============================================================
+
+function _mostrarPanelDetalleProyecto() {
+  var panel = document.getElementById('proyecto-detalle');
+  if (!panel) return null;
+
+  panel.style.display = 'block';
+  panel.hidden = false;
+  panel.classList.add('active');
+
+  return panel;
+}
+
+(function () {
+  var _renderDetalleProyectoOriginal = typeof renderDetalleProyecto === 'function'
+    ? renderDetalleProyecto
+    : null;
+
+  if (_renderDetalleProyectoOriginal) {
+    renderDetalleProyecto = function (proyecto) {
+      var result = _renderDetalleProyectoOriginal(proyecto);
+      var panel = _mostrarPanelDetalleProyecto();
+
+      if (panel) {
+        setTimeout(function () {
+          panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 60);
+      }
+
+      return result;
+    };
+  }
+
+  var _verProyectoOriginal = typeof verProyecto === 'function'
+    ? verProyecto
+    : null;
+
+  if (_verProyectoOriginal) {
+    verProyecto = function (id) {
+      var result = _verProyectoOriginal(id);
+      _mostrarPanelDetalleProyecto();
+      return result;
+    };
+  }
+})();
