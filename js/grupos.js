@@ -6,56 +6,21 @@ var GRUPOS_KEY = 'gn_grupos_servicios';
 var GRUPO_SERVICIOS_KEY = 'gn_grupo_servicio_map';
 
 var COLORES_GRUPO = {
-  green:  { bg: 'rgba(107,189,69,0.15)', border: '#6bbd45', label: 'Verde', icon: '🟢' },
-  blue:   { bg: 'rgba(79,140,255,0.15)', border: '#4f8cff', label: 'Azul', icon: '🔵' },
-  purple: { bg: 'rgba(168,85,247,0.15)', border: '#a855f7', label: 'Púrpura', icon: '🟣' },
-  orange: { bg: 'rgba(245,158,11,0.15)', border: '#f59e0b', label: 'Naranja', icon: '🟠' },
-  red:    { bg: 'rgba(239,68,68,0.15)', border: '#ef4444', label: 'Rojo', icon: '🔴' },
-  teal:   { bg: 'rgba(20,184,166,0.15)', border: '#14b8a6', label: 'Turquesa', icon: '🩵' },
-  pink:   { bg: 'rgba(236,72,153,0.15)', border: '#ec4899', label: 'Rosa', icon: '🩷' },
-  gray:   { bg: 'rgba(100,116,139,0.15)', border: '#64748b', label: 'Gris', icon: '⚪' }
+  green:  { bg: 'rgba(107,189,69,0.15)',  border: '#6bbd45', label: 'Verde',     icon: '🟢' },
+  blue:   { bg: 'rgba(79,140,255,0.15)',  border: '#4f8cff', label: 'Azul',      icon: '🔵' },
+  purple: { bg: 'rgba(168,85,247,0.15)',  border: '#a855f7', label: 'Púrpura',   icon: '🟣' },
+  orange: { bg: 'rgba(245,158,11,0.15)',  border: '#f59e0b', label: 'Naranja',   icon: '🟠' },
+  red:    { bg: 'rgba(239,68,68,0.15)',   border: '#ef4444', label: 'Rojo',      icon: '🔴' },
+  teal:   { bg: 'rgba(20,184,166,0.15)',  border: '#14b8a6', label: 'Turquesa',  icon: '🩵' },
+  pink:   { bg: 'rgba(236,72,153,0.15)',  border: '#ec4899', label: 'Rosa',      icon: '🩷' },
+  gray:   { bg: 'rgba(100,116,139,0.15)', border: '#64748b', label: 'Gris',      icon: '⚪' }
 };
 
-function gsGet(key, fallback) {
-  var defaultValue = typeof fallback === 'undefined' ? [] : fallback;
-
-  try {
-    if (typeof getData === 'function') {
-      var result = getData(key, defaultValue);
-      return typeof result === 'undefined' || result === null ? defaultValue : result;
-    }
-
-    var raw = localStorage.getItem(key);
-    if (!raw) return defaultValue;
-    return JSON.parse(raw);
-  } catch (e) {
-    console.error('[grupos.js] Error leyendo "' + key + '"', e);
-    return defaultValue;
-  }
+function $grp(id) {
+  return document.getElementById(id);
 }
 
-function gsSet(key, value) {
-  try {
-    if (typeof setData === 'function') {
-      return setData(key, value);
-    }
-    localStorage.setItem(key, JSON.stringify(value));
-    return true;
-  } catch (e) {
-    console.error('[grupos.js] Error guardando "' + key + '"', e);
-    return false;
-  }
-}
-
-function gsArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function gsObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function escapeHtml(str) {
+function grupoEscapeHtml(str) {
   return String(str || '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -64,107 +29,36 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
-function getServiciosBase() {
-  if (typeof obtenerServicios === 'function') {
-    return gsArray(obtenerServicios());
-  }
-
-  if (typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS.SERVICIOS) {
-    return gsArray(gsGet(STORAGE_KEYS.SERVICIOS, []));
-  }
-
-  return gsArray(gsGet('gn_servicios', []));
-}
-
-function getGrupoColor(colorKey) {
-  return COLORES_GRUPO[colorKey] || COLORES_GRUPO.gray;
-}
-
-function obtenerGrupos() {
-  return gsArray(gsGet(GRUPOS_KEY, []));
-}
-
-function obtenerMapaGrupos() {
-  return gsObject(gsGet(GRUPO_SERVICIOS_KEY, {}));
-}
-
-function guardarMapaGrupos(map) {
-  return gsSet(GRUPO_SERVICIOS_KEY, gsObject(map));
-}
-
-function buscarGrupoPorId(id) {
-  var grupos = obtenerGrupos();
-  for (var i = 0; i < grupos.length; i++) {
-    if (grupos[i].id === id) return grupos[i];
+function contenedorPrimero(ids) {
+  for (var i = 0; i < ids.length; i++) {
+    var node = document.getElementById(ids[i]);
+    if (node) return node;
   }
   return null;
 }
 
-function obtenerGrupoDeServicio(servicioId) {
-  var map = obtenerMapaGrupos();
-  var grupoId = map[servicioId];
-  if (!grupoId) return null;
-  return buscarGrupoPorId(grupoId);
-}
+// ============================================================
+// INICIALIZAR
+// ============================================================
 
 function inicializarGrupos() {
-  var grupos = obtenerGrupos();
-
-  if (!grupos.length) {
+  var grupos = getData(GRUPOS_KEY);
+  if (!Array.isArray(grupos) || grupos.length === 0) {
     grupos = [
-      {
-        id: 'grp-desarrollo',
-        codigo: 'DESARROLLO',
-        nombre: 'Desarrollo Web',
-        descripcion: 'Programación, APIs, CMS y deploy',
-        color: 'green',
-        orden: 1,
-        creadoEn: new Date().toISOString()
-      },
-      {
-        id: 'grp-diseno',
-        codigo: 'DISENO',
-        nombre: 'Diseño Web',
-        descripcion: 'UI/UX, landing pages y responsive',
-        color: 'blue',
-        orden: 2,
-        creadoEn: new Date().toISOString()
-      },
-      {
-        id: 'grp-branding',
-        codigo: 'BRANDING',
-        nombre: 'Branding',
-        descripcion: 'Logotipos, manual de marca y papelería',
-        color: 'purple',
-        orden: 3,
-        creadoEn: new Date().toISOString()
-      },
-      {
-        id: 'grp-marketing',
-        codigo: 'MARKETING',
-        nombre: 'Marketing Digital',
-        descripcion: 'Ads, SEO y estrategia',
-        color: 'orange',
-        orden: 4,
-        creadoEn: new Date().toISOString()
-      },
-      {
-        id: 'grp-soporte',
-        codigo: 'SOPORTE',
-        nombre: 'Soporte & Hosting',
-        descripcion: 'Mantenimiento, hosting y dominios',
-        color: 'gray',
-        orden: 5,
-        creadoEn: new Date().toISOString()
-      }
+      { id: 'grp-desarrollo',  codigo: 'DESARROLLO',  nombre: 'Desarrollo Web',      descripcion: 'Programación, APIs, CMS y deploy', color: 'green',  orden: 1, creadoEn: new Date().toISOString() },
+      { id: 'grp-diseno',      codigo: 'DISENO',      nombre: 'Diseño Web',          descripcion: 'UI/UX, landing pages y responsive', color: 'blue',   orden: 2, creadoEn: new Date().toISOString() },
+      { id: 'grp-branding',    codigo: 'BRANDING',    nombre: 'Branding',            descripcion: 'Logotipos, manuales y papelería', color: 'purple', orden: 3, creadoEn: new Date().toISOString() },
+      { id: 'grp-marketing',   codigo: 'MARKETING',   nombre: 'Marketing Digital',   descripcion: 'Ads, SEO y automatización', color: 'orange', orden: 4, creadoEn: new Date().toISOString() },
+      { id: 'grp-social',      codigo: 'SOCIAL',      nombre: 'Social Media',        descripcion: 'Gestión de redes y contenido', color: 'pink',   orden: 5, creadoEn: new Date().toISOString() },
+      { id: 'grp-consultoria', codigo: 'CONSULTORIA', nombre: 'Consultoría',         descripcion: 'Estrategia, auditorías y asesoría', color: 'teal',  orden: 6, creadoEn: new Date().toISOString() },
+      { id: 'grp-soporte',     codigo: 'SOPORTE',     nombre: 'Soporte & Hosting',   descripcion: 'Mantenimiento, hosting y dominios', color: 'gray',  orden: 7, creadoEn: new Date().toISOString() }
     ];
-
-    gsSet(GRUPOS_KEY, grupos);
+    setData(GRUPOS_KEY, grupos);
   }
 
-  var map = obtenerMapaGrupos();
-  if (!map || Array.isArray(map)) {
-    guardarMapaGrupos({});
+  var map = getData(GRUPO_SERVICIOS_KEY);
+  if (!map || typeof map !== 'object' || Array.isArray(map)) {
+    setData(GRUPO_SERVICIOS_KEY, {});
   }
 
   renderGrupos();
@@ -174,36 +68,59 @@ function inicializarGrupos() {
   renderServiciosSinGrupo();
 }
 
+// ============================================================
+// DATOS
+// ============================================================
+
+function obtenerGrupos() {
+  var grupos = getData(GRUPOS_KEY);
+  grupos = Array.isArray(grupos) ? grupos : [];
+  grupos.sort(function(a, b) {
+    return (parseInt(a.orden) || 99) - (parseInt(b.orden) || 99);
+  });
+  return grupos;
+}
+
+function obtenerMapaGrupos() {
+  var map = getData(GRUPO_SERVICIOS_KEY);
+  return map && typeof map === 'object' && !Array.isArray(map) ? map : {};
+}
+
+function guardarMapaGrupos(map) {
+  setData(GRUPO_SERVICIOS_KEY, map || {});
+}
+
+function obtenerGrupoDeServicio(servicioId) {
+  var map = obtenerMapaGrupos();
+  var grupoId = map[servicioId];
+  if (!grupoId) return null;
+
+  var grupos = obtenerGrupos();
+  for (var i = 0; i < grupos.length; i++) {
+    if (grupos[i].id === grupoId) return grupos[i];
+  }
+
+  return null;
+}
+
+// ============================================================
+// CRUD
+// ============================================================
+
 function guardarGrupo(event) {
-  if (event && typeof event.preventDefault === 'function') {
-    event.preventDefault();
-  }
+  event.preventDefault();
 
-  var feedback = document.getElementById('feedback-grupo');
-  var codigoEl = document.getElementById('grp-codigo');
-  var nombreEl = document.getElementById('grp-nombre');
-  var descripcionEl = document.getElementById('grp-descripcion');
-  var colorEl = document.getElementById('grp-color');
-  var ordenEl = document.getElementById('grp-orden');
-
-  if (!codigoEl || !nombreEl) {
-    if (feedback) {
-      feedback.className = 'form-feedback error';
-      feedback.textContent = '❌ Faltan campos del formulario de grupos';
-    }
-    return false;
-  }
-
-  var codigo = codigoEl.value.trim().toUpperCase();
-  var nombre = nombreEl.value.trim();
-  var descripcion = descripcionEl ? descripcionEl.value.trim() : '';
-  var color = colorEl ? colorEl.value : 'gray';
-  var orden = ordenEl ? parseInt(ordenEl.value, 10) : 99;
+  var feedback = $grp('feedback-grupo');
+  var codigo = ($grp('grp-codigo') ? $grp('grp-codigo').value : '').trim().toUpperCase();
+  var nombre = ($grp('grp-nombre') ? $grp('grp-nombre').value : '').trim();
+  var descripcion = ($grp('grp-descripcion') ? $grp('grp-descripcion').value : '').trim();
+  var color = $grp('grp-color') ? $grp('grp-color').value : 'blue';
+  var orden = parseInt($grp('grp-orden') ? $grp('grp-orden').value : 99) || 99;
 
   if (!codigo || !nombre) {
     if (feedback) {
       feedback.className = 'form-feedback error';
-      feedback.textContent = '❌ Código y nombre son obligatorios';
+      feedback.textContent = '❌ Completa código y nombre del grupo';
     }
     return false;
   }
@@ -220,30 +137,28 @@ function guardarGrupo(event) {
     }
   }
 
-  var nuevoGrupo = {
-    id: typeof generarId === 'function' ? generarId() : 'grp-' + Date.now(),
+  grupos.push({
+    id: generarId(),
     codigo: codigo,
     nombre: nombre,
     descripcion: descripcion,
     color: color,
-    orden: isNaN(orden) ? 99 : orden,
+    orden: orden,
     creadoEn: new Date().toISOString()
-  };
-
-  grupos.push(nuevoGrupo);
-  grupos.sort(function(a, b) {
-    return (a.orden || 99) - (b.orden || 99);
   });
 
-  gsSet(GRUPOS_KEY, grupos);
+  grupos.sort(function(a, b) {
+    return (parseInt(a.orden) || 99) - (parseInt(b.orden) || 99);
+  });
+
+  setData(GRUPOS_KEY, grupos);
 
   if (feedback) {
     feedback.className = 'form-feedback success';
     feedback.textContent = '✅ Grupo "' + nombre + '" creado';
   }
 
-  var form = document.getElementById('formGrupo');
-  if (form) form.reset();
+  if ($grp('formGrupo')) $grp('formGrupo').reset();
 
   renderGrupos();
   renderGruposVisuales();
@@ -255,43 +170,88 @@ function guardarGrupo(event) {
 }
 
 function eliminarGrupo(id) {
-  if (!id) return;
+  if (!confirm('¿Eliminar este grupo? Los servicios asignados quedarán sin grupo.')) return;
 
-  if (!confirm('¿Eliminar este grupo? Los servicios asignados quedarán sin grupo.')) {
-    return;
-  }
-
-  var grupos = obtenerGrupos();
-  var filtrados = [];
-
-  for (var i = 0; i < grupos.length; i++) {
-    if (grupos[i].id !== id) {
-      filtrados.push(grupos[i]);
-    }
-  }
-
-  gsSet(GRUPOS_KEY, filtrados);
+  var grupos = obtenerGrupos().filter(function(g) {
+    return g.id !== id;
+  });
+  setData(GRUPOS_KEY, grupos);
 
   var map = obtenerMapaGrupos();
-  var nuevoMap = {};
-
-  for (var servicioId in map) {
-    if (Object.prototype.hasOwnProperty.call(map, servicioId) && map[servicioId] !== id) {
-      nuevoMap[servicioId] = map[servicioId];
-    }
+  for (var sid in map) {
+    if (map[sid] === id) delete map[sid];
   }
-
-  guardarMapaGrupos(nuevoMap);
+  guardarMapaGrupos(map);
 
   renderGrupos();
   renderGruposVisuales();
   actualizarSelectGrupos();
+  renderServicios();
   renderServiciosPorGrupo();
   renderServiciosSinGrupo();
 }
 
+// ============================================================
+// SELECTS
+// ============================================================
+
+function actualizarSelectGrupos() {
+  var grupos = obtenerGrupos();
+
+  var selects = [
+    $grp('serv-grupo'),
+    $grp('serv-categoria'),
+    $grp('filtro-grupo-servicio'),
+    $grp('filtro-servicio-grupo')
+  ];
+
+  for (var s = 0; s < selects.length; s++) {
+    var select = selects[s];
+    if (!select) continue;
+
+    var esFiltro = select.id.indexOf('filtro') !== -1;
+    var html = esFiltro
+      ? '<option value="todos">Todos los grupos</option>'
+      : '<option value="">Sin grupo</option>';
+
+    for (var i = 0; i < grupos.length; i++) {
+      html += '<option value="' + grupos[i].id + '">' + grupoEscapeHtml(grupos[i].nombre) + '</option>';
+    }
+
+    select.innerHTML = html;
+  }
+}
+
+// ============================================================
+// MAPEAR SERVICIOS
+// ============================================================
+
+function asignarServicioAGrupo(servicioId, grupoId) {
+  var map = obtenerMapaGrupos();
+
+  if (grupoId) {
+    map[servicioId] = grupoId;
+  } else {
+    delete map[servicioId];
+  }
+
+  guardarMapaGrupos(map);
+
+  renderServicios();
+  renderServiciosPorGrupo();
+  renderServiciosSinGrupo();
+}
+
+function quitarServicioDeGrupo(servicioId) {
+  asignarServicioAGrupo(servicioId, '');
+}
+
+// ============================================================
+// RENDER TABLA
+// ============================================================
+
 function renderGrupos(filtro) {
-  var tbody = document.getElementById('tbodyGrupos');
+  var tbody = $grp('tbodyGrupos');
   if (!tbody) return;
 
   var grupos = obtenerGrupos();
@@ -299,26 +259,20 @@ function renderGrupos(filtro) {
   var conteo = {};
 
   for (var sid in map) {
-    if (Object.prototype.hasOwnProperty.call(map, sid)) {
-      var gid = map[sid];
-      conteo[gid] = (conteo[gid] || 0) + 1;
-    }
+    var gid = map[sid];
+    conteo[gid] = (conteo[gid] || 0) + 1;
   }
 
   if (filtro) {
-    var term = String(filtro).toLowerCase();
+    var term = filtro.toLowerCase();
     grupos = grupos.filter(function(g) {
-      return String(g.nombre || '').toLowerCase().indexOf(term) !== -1 ||
-             String(g.codigo || '').toLowerCase().indexOf(term) !== -1;
+      return (g.nombre || '').toLowerCase().indexOf(term) !== -1
+        || (g.codigo || '').toLowerCase().indexOf(term) !== -1;
     });
   }
 
-  grupos.sort(function(a, b) {
-    return (a.orden || 99) - (b.orden || 99);
-  });
-
-  if (!grupos.length) {
-    tbody.innerHTML = '<tr><td colspan="6">No hay grupos registrados</td></tr>';
+  if (grupos.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No hay grupos registrados</td></tr>';
     return;
   }
 
@@ -326,177 +280,81 @@ function renderGrupos(filtro) {
 
   for (var i = 0; i < grupos.length; i++) {
     var g = grupos[i];
-    var color = getGrupoColor(g.color);
+    var color = COLORES_GRUPO[g.color] || COLORES_GRUPO.blue;
 
     html += ''
       + '<tr>'
-      +   '<td><strong>' + escapeHtml(g.codigo) + '</strong></td>'
-      +   '<td>' + escapeHtml(g.nombre) + '</td>'
-      +   '<td>' + escapeHtml(g.descripcion || '—') + '</td>'
-      +   '<td><span style="display:inline-block;padding:4px 10px;border-radius:999px;border:1px solid ' + color.border + ';background:' + color.bg + ';">' + escapeHtml(color.label) + '</span></td>'
-      +   '<td>' + (conteo[g.id] || 0) + '</td>'
-      +   '<td><button type="button" onclick="eliminarGrupo(\'' + escapeHtml(g.id) + '\')">Eliminar</button></td>'
+      + '<td>' + grupoEscapeHtml(g.codigo) + '</td>'
+      + '<td>' + grupoEscapeHtml(g.nombre) + '</td>'
+      + '<td>' + grupoEscapeHtml(g.descripcion || '—') + '</td>'
+      + '<td><span style="display:inline-block;padding:4px 8px;border-radius:999px;background:' + color.bg + ';border:1px solid ' + color.border + ';">' + color.icon + ' ' + color.label + '</span></td>'
+      + '<td>' + (conteo[g.id] || 0) + '</td>'
+      + '<td><button type="button" class="btn-table danger" onclick="eliminarGrupo(\'' + g.id + '\')">Eliminar</button></td>'
       + '</tr>';
   }
 
   tbody.innerHTML = html;
 }
 
-function renderGruposVisuales() {
-  var container =
-    document.getElementById('grupos-visuales') ||
-    document.getElementById('gruposVisuales') ||
-    document.getElementById('grupos-grid') ||
-    document.getElementById('gruposCards');
+// ============================================================
+// RENDER VISUAL
+// ============================================================
 
+function renderGruposVisuales() {
+  var container = $grp('grupos-visual');
   if (!container) return;
 
   var grupos = obtenerGrupos();
+
+  if (grupos.length === 0) {
+    container.innerHTML = '<div class="empty-state">No hay grupos creados</div>';
+    return;
+  }
+
   var map = obtenerMapaGrupos();
   var conteo = {};
 
   for (var sid in map) {
-    if (Object.prototype.hasOwnProperty.call(map, sid)) {
-      var gid = map[sid];
-      conteo[gid] = (conteo[gid] || 0) + 1;
-    }
-  }
-
-  grupos.sort(function(a, b) {
-    return (a.orden || 99) - (b.orden || 99);
-  });
-
-  if (!grupos.length) {
-    container.innerHTML = '<div class="empty-state">No hay grupos disponibles</div>';
-    return;
+    var gid = map[sid];
+    conteo[gid] = (conteo[gid] || 0) + 1;
   }
 
   var html = '';
 
   for (var i = 0; i < grupos.length; i++) {
     var g = grupos[i];
-    var color = getGrupoColor(g.color);
+    var color = COLORES_GRUPO[g.color] || COLORES_GRUPO.blue;
 
     html += ''
-      + '<div style="border:1px solid ' + color.border + ';background:' + color.bg + ';border-radius:16px;padding:16px;margin-bottom:12px;">'
-      +   '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">'
-      +     '<div>'
-      +       '<div style="font-weight:700;">' + color.icon + ' ' + escapeHtml(g.nombre) + '</div>'
-      +       '<div style="font-size:12px;opacity:.8;">' + escapeHtml(g.codigo) + '</div>'
-      +     '</div>'
-      +     '<div style="font-size:12px;padding:4px 8px;border-radius:999px;background:#fff;border:1px solid rgba(0,0,0,.08);">'
-      +       + (conteo[g.id] || 0) + ' servicios'
-      +     '</div>'
-      +   '</div>'
-      +   '<div style="margin-top:10px;font-size:14px;">' + escapeHtml(g.descripcion || 'Sin descripción') + '</div>'
+      + '<div class="grupo-card" style="background:' + color.bg + ';border:1px solid ' + color.border + ';border-radius:16px;padding:16px;margin-bottom:12px;">'
+      + '<div style="font-weight:700;">' + color.icon + ' ' + grupoEscapeHtml(g.nombre) + '</div>'
+      + '<div style="opacity:.8;margin-top:6px;">' + grupoEscapeHtml(g.descripcion || 'Sin descripción') + '</div>'
+      + '<div style="margin-top:8px;font-size:.95em;"><strong>' + (conteo[g.id] || 0) + '</strong> servicios asignados</div>'
       + '</div>';
   }
 
   container.innerHTML = html;
 }
 
-function actualizarSelectGrupos() {
-  var selectIds = [
-    'grp-select',
-    'grupo-select',
-    'servicio-grupo',
-    'asignar-grupo',
-    'grupoId',
-    'grupo-servicio-select'
-  ];
-
-  var grupos = obtenerGrupos();
-  grupos.sort(function(a, b) {
-    return (a.orden || 99) - (b.orden || 99);
-  });
-
-  for (var i = 0; i < selectIds.length; i++) {
-    var select = document.getElementById(selectIds[i]);
-    if (!select) continue;
-
-    var currentValue = select.value;
-    var html = '<option value="">Selecciona un grupo</option>';
-
-    for (var j = 0; j < grupos.length; j++) {
-      html += '<option value="' + escapeHtml(grupos[j].id) + '">' + escapeHtml(grupos[j].nombre) + '</option>';
-    }
-
-    select.innerHTML = html;
-    select.value = currentValue;
-  }
-}
-
-function asignarServicioAGrupo(servicioId, grupoId) {
-  if (!servicioId) return false;
-
-  var map = obtenerMapaGrupos();
-
-  if (!grupoId) {
-    delete map[servicioId];
-  } else {
-    map[servicioId] = grupoId;
-  }
-
-  guardarMapaGrupos(map);
-  renderGrupos();
-  renderServiciosPorGrupo();
-  renderServiciosSinGrupo();
-  renderGruposVisuales();
-
-  return true;
-}
-
-function quitarServicioDeGrupo(servicioId) {
-  return asignarServicioAGrupo(servicioId, '');
-}
-
-function asignarServicioDesdeFormulario(event) {
-  if (event && typeof event.preventDefault === 'function') {
-    event.preventDefault();
-  }
-
-  var servicioSelect =
-    document.getElementById('grp-servicio') ||
-    document.getElementById('servicio-select') ||
-    document.getElementById('servicio-sin-grupo');
-
-  var grupoSelect =
-    document.getElementById('grp-select') ||
-    document.getElementById('grupo-select') ||
-    document.getElementById('asignar-grupo');
-
-  if (!servicioSelect || !grupoSelect) return false;
-
-  if (!servicioSelect.value || !grupoSelect.value) {
-    return false;
-  }
-
-  asignarServicioAGrupo(servicioSelect.value, grupoSelect.value);
-
-  servicioSelect.value = '';
-  grupoSelect.value = '';
-
-  return false;
-}
+// ============================================================
+// SERVICIOS POR GRUPO
+// ============================================================
 
 function renderServiciosPorGrupo() {
-  var container =
-    document.getElementById('servicios-por-grupo') ||
-    document.getElementById('serviciosPorGrupo') ||
-    document.getElementById('listaServiciosPorGrupo');
-
+  var container = contenedorPrimero(['servicios-por-grupo', 'serviciosPorGrupo']);
   if (!container) return;
 
+  if (typeof obtenerServicios !== 'function') {
+    container.innerHTML = '';
+    return;
+  }
+
   var grupos = obtenerGrupos();
-  var servicios = getServiciosBase();
+  var servicios = obtenerServicios();
   var map = obtenerMapaGrupos();
 
-  grupos.sort(function(a, b) {
-    return (a.orden || 99) - (b.orden || 99);
-  });
-
-  if (!grupos.length) {
-    container.innerHTML = '<div class="empty-state">No hay grupos registrados</div>';
+  if (grupos.length === 0) {
+    container.innerHTML = '<div class="empty-state">No hay grupos creados</div>';
     return;
   }
 
@@ -504,39 +362,27 @@ function renderServiciosPorGrupo() {
 
   for (var i = 0; i < grupos.length; i++) {
     var g = grupos[i];
-    var color = getGrupoColor(g.color);
-    var items = [];
+    var lista = [];
 
     for (var j = 0; j < servicios.length; j++) {
-      if (map[servicios[j].id] === g.id) {
-        items.push(servicios[j]);
-      }
+      var s = servicios[j];
+      if (map[s.id] === g.id) lista.push(s);
     }
 
-    html += ''
-      + '<div style="border:1px solid ' + color.border + ';border-radius:16px;padding:16px;margin-bottom:16px;background:#fff;">'
-      +   '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;">'
-      +     '<div style="font-weight:700;">' + color.icon + ' ' + escapeHtml(g.nombre) + '</div>'
-      +     '<div style="font-size:12px;color:#666;">' + items.length + ' servicios</div>'
-      +   '</div>';
+    html += '<div style="margin-bottom:18px;">';
+    html += '<h4 style="margin-bottom:10px;">' + grupoEscapeHtml(g.nombre) + ' <span style="opacity:.7;">(' + lista.length + ')</span></h4>';
 
-    if (!items.length) {
-      html += '<div style="color:#777;">Sin servicios asignados</div>';
+    if (lista.length === 0) {
+      html += '<div class="empty-state">Sin servicios asignados</div>';
     } else {
       html += '<div>';
-
-      for (var k = 0; k < items.length; k++) {
-        var s = items[k];
+      for (var k = 0; k < lista.length; k++) {
         html += ''
-          + '<div style="display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:' + (k === 0 ? '0' : '1px solid #eee') + ';">'
-          +   '<div>'
-          +     '<div><strong>' + escapeHtml(s.codigo) + '</strong> — ' + escapeHtml(s.descripcion) + '</div>'
-          +     '<div style="font-size:12px;color:#777;">' + escapeHtml(s.unidad || 'und') + '</div>'
-          +   '</div>'
-          +   '<button type="button" onclick="quitarServicioDeGrupo(\'' + escapeHtml(s.id) + '\')">Quitar</button>'
+          + '<div style="border:1px solid rgba(255,255,255,0.08);padding:10px 12px;border-radius:12px;margin-bottom:8px;">'
+          + '<div style="font-weight:600;">[' + grupoEscapeHtml(lista[k].codigo) + '] ' + grupoEscapeHtml(lista[k].descripcion) + '</div>'
+          + '<div style="opacity:.8;margin-top:4px;">' + grupoEscapeHtml(lista[k].unidad) + ' · ' + formatMoney(parseFloat(lista[k].precio) || 0) + '</div>'
           + '</div>';
       }
-
       html += '</div>';
     }
 
@@ -547,61 +393,46 @@ function renderServiciosPorGrupo() {
 }
 
 function renderServiciosSinGrupo() {
-  var container =
-    document.getElementById('servicios-sin-grupo') ||
-    document.getElementById('serviciosSinGrupo') ||
-    document.getElementById('listaServiciosSinGrupo');
+  var container = contenedorPrimero(['servicios-sin-grupo', 'serviciosSinGrupo']);
+  if (!container) return;
 
-  var select =
-    document.getElementById('grp-servicio') ||
-    document.getElementById('servicio-select') ||
-    document.getElementById('servicio-sin-grupo');
+  if (typeof obtenerServicios !== 'function') {
+    container.innerHTML = '';
+    return;
+  }
 
-  var servicios = getServiciosBase();
+  var servicios = obtenerServicios();
   var map = obtenerMapaGrupos();
   var sinGrupo = [];
 
   for (var i = 0; i < servicios.length; i++) {
-    if (!map[servicios[i].id]) {
-      sinGrupo.push(servicios[i]);
-    }
+    if (!map[servicios[i].id]) sinGrupo.push(servicios[i]);
   }
 
-  if (select) {
-    var currentValue = select.value;
-    var options = '<option value="">Selecciona un servicio</option>';
-
-    for (var j = 0; j < sinGrupo.length; j++) {
-      options += '<option value="' + escapeHtml(sinGrupo[j].id) + '">' + escapeHtml(sinGrupo[j].codigo + ' — ' + sinGrupo[j].descripcion) + '</option>';
-    }
-
-    select.innerHTML = options;
-    select.value = currentValue;
-  }
-
-  if (!container) return;
-
-  if (!sinGrupo.length) {
+  if (sinGrupo.length === 0) {
     container.innerHTML = '<div class="empty-state">✅ Todos los servicios tienen un grupo asignado</div>';
     return;
   }
 
+  var grupos = obtenerGrupos();
   var html = '';
 
-  for (var k = 0; k < sinGrupo.length; k++) {
-    var s = sinGrupo[k];
-    html += ''
-      + '<div style="padding:12px 0;border-bottom:1px solid #eee;">'
-      +   '<div><strong>' + escapeHtml(s.codigo) + '</strong> — ' + escapeHtml(s.descripcion) + '</div>'
-      +   '<div style="font-size:12px;color:#777;">' + escapeHtml(s.unidad || 'und') + '</div>'
-      + '</div>';
+  for (var j = 0; j < sinGrupo.length; j++) {
+    var s = sinGrupo[j];
+
+    html += '<div style="border:1px dashed rgba(255,255,255,0.15);padding:12px;border-radius:12px;margin-bottom:10px;">';
+    html += '<div style="font-weight:600;">[' + grupoEscapeHtml(s.codigo) + '] ' + grupoEscapeHtml(s.descripcion) + '</div>';
+    html += '<div style="opacity:.8;margin:6px 0 10px;">' + grupoEscapeHtml(s.unidad) + ' · ' + formatMoney(parseFloat(s.precio) || 0) + '</div>';
+    html += '<select onchange="asignarServicioAGrupo(\'' + s.id + '\', this.value)">';
+    html += '<option value="">Asignar a grupo...</option>';
+
+    for (var g = 0; g < grupos.length; g++) {
+      html += '<option value="' + grupos[g].id + '">' + grupoEscapeHtml(grupos[g].nombre) + '</option>';
+    }
+
+    html += '</select>';
+    html += '</div>';
   }
 
   container.innerHTML = html;
-}
-
-function filtrarGrupos() {
-  var input = document.getElementById('buscar-grupo') || document.getElementById('filtro-grupos');
-  var valor = input ? input.value : '';
-  renderGrupos(valor);
 }
