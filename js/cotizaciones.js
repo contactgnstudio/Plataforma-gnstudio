@@ -4,256 +4,78 @@
 
 var itemsCotizacionActual = [];
 
-function ctGetServicios() {
-  if (typeof obtenerServicios === 'function') {
-    var servicios = obtenerServicios();
-    return Array.isArray(servicios) ? servicios : [];
-  }
-
-  if (typeof getData === 'function' && typeof STORAGE_KEYS !== 'undefined') {
-    var data = getData(STORAGE_KEYS.SERVICIOS, []);
-    return Array.isArray(data) ? data : [];
-  }
-
-  return [];
-}
-
-function ctGetClientes() {
-  if (typeof obtenerClientes === 'function') {
-    var clientes = obtenerClientes();
-    return Array.isArray(clientes) ? clientes : [];
-  }
-
-  if (typeof getData === 'function' && typeof STORAGE_KEYS !== 'undefined') {
-    var data = getData(STORAGE_KEYS.CLIENTES, []);
-    return Array.isArray(data) ? data : [];
-  }
-
-  return [];
-}
-
-function ctGetCotizaciones() {
-  if (typeof getData === 'function' && typeof STORAGE_KEYS !== 'undefined') {
-    var data = getData(STORAGE_KEYS.COTIZACIONES, []);
-    return Array.isArray(data) ? data : [];
-  }
-
-  return [];
-}
-
-function ctSetCotizaciones(data) {
-  if (typeof setData === 'function' && typeof STORAGE_KEYS !== 'undefined') {
-    return setData(STORAGE_KEYS.COTIZACIONES, data);
-  }
-  return false;
-}
-
-function ctFindServicio(id) {
-  var servicios = ctGetServicios();
-  for (var i = 0; i < servicios.length; i++) {
-    if (servicios[i].id === id) return servicios[i];
-  }
-  return null;
-}
-
-function ctFindCliente(id) {
-  var clientes = ctGetClientes();
-  for (var i = 0; i < clientes.length; i++) {
-    if (clientes[i].id === id) return clientes[i];
-  }
-  return null;
-}
-
-function ctEscape(str) {
-  return String(str || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function ctMoney(value) {
-  if (typeof formatMoney === 'function') return formatMoney(value);
-  var num = parseFloat(value) || 0;
-  return '$' + num.toFixed(2);
-}
-
-function ctDate(value) {
-  if (typeof formatDate === 'function') return formatDate(value);
-  return value || '—';
-}
-
-function ctId() {
-  if (typeof generarId === 'function') return generarId();
-  return 'id_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-}
-
-function ctNumero(fecha) {
-  if (typeof generarNumeroCotizacion === 'function') return generarNumeroCotizacion(fecha);
-  var d = fecha ? new Date(fecha) : new Date();
-  var dd = String(d.getDate()).padStart(2, '0');
-  var mm = String(d.getMonth() + 1).padStart(2, '0');
-  var yy = String(d.getFullYear()).slice(-2);
-  return 'COT-' + dd + mm + yy + '-' + Math.floor(Math.random() * 900 + 100);
-}
+// ============================================================
+// INICIALIZAR
+// ============================================================
 
 function inicializarCotizaciones() {
-  var data = ctGetCotizaciones();
-  if (!Array.isArray(data)) {
-    ctSetCotizaciones([]);
-  }
+  if (typeof getData !== 'function' || typeof setData !== 'function') return;
+
+  var key = STORAGE_KEYS && STORAGE_KEYS.COTIZACIONES ? STORAGE_KEYS.COTIZACIONES : 'gn_cotizaciones';
+  var data = getData(key);
+  if (!Array.isArray(data)) setData(key, []);
 
   var fechaInput = document.getElementById('cot-fecha');
   if (fechaInput && !fechaInput.value) {
-    var hoy = new Date();
-    fechaInput.value = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
+    fechaInput.value = obtenerFechaHoy();
   }
 
-  actualizarSelectClientes();
   actualizarSelectServicios();
+  actualizarSelectClientes();
   renderItemsCotizacion();
   renderCotizacionesGuardadas();
 }
 
-function actualizarSelectClientes() {
-  var selectIds = ['cot-cliente', 'proy-cliente'];
-  var clientes = ctGetClientes();
+// ============================================================
+// HELPERS
+// ============================================================
 
-  for (var i = 0; i < selectIds.length; i++) {
-    var select = document.getElementById(selectIds[i]);
-    if (!select) continue;
-
-    var currentValue = select.value;
-    var html = '<option value="">Selecciona un cliente</option>';
-
-    for (var j = 0; j < clientes.length; j++) {
-      html += '<option value="' + ctEscape(clientes[j].id) + '">' + ctEscape(clientes[j].nombre) + '</option>';
-    }
-
-    select.innerHTML = html;
-    select.value = currentValue;
-  }
+function keyCotizaciones() {
+  return STORAGE_KEYS && STORAGE_KEYS.COTIZACIONES ? STORAGE_KEYS.COTIZACIONES : 'gn_cotizaciones';
 }
 
-function actualizarSelectServicios() {
-  var select = document.getElementById('cot-item-servicio');
-  if (!select) return;
-
-  var currentValue = select.value;
-  var servicios = ctGetServicios();
-  var html = '<option value="">Selecciona un servicio</option>';
-
-  for (var i = 0; i < servicios.length; i++) {
-    var s = servicios[i];
-    html += '<option value="' + ctEscape(s.id) + '">' + ctEscape(s.codigo + ' — ' + s.descripcion) + '</option>';
-  }
-
-  select.innerHTML = html;
-  select.value = currentValue;
+function obtenerCotizaciones() {
+  return getData(keyCotizaciones()) || [];
 }
 
-function cargarPrecioServicio() {
-  var select = document.getElementById('cot-item-servicio');
-  if (!select || !select.value) return;
-
-  var servicio = ctFindServicio(select.value);
-  if (!servicio) return;
+function guardarCotizacionesData(cotizaciones) {
+  setData(keyCotizaciones(), cotizaciones);
 }
 
-function agregarItemDesdeCatalogo() {
-  var servicioId = document.getElementById('cot-item-servicio') ? document.getElementById('cot-item-servicio').value : '';
-  var cantidad = document.getElementById('cot-item-cantidad-catalogo') ? parseFloat(document.getElementById('cot-item-cantidad-catalogo').value) || 1 : 1;
-
-  if (!servicioId) {
-    alert('Selecciona un servicio del catálogo');
-    return;
-  }
-
-  var servicio = ctFindServicio(servicioId);
-  if (!servicio) {
-    alert('No se encontró el servicio seleccionado');
-    return;
-  }
-
-  itemsCotizacionActual.push({
-    id: ctId(),
-    tipo: 'catalogo',
-    servicioId: servicio.id,
-    codigo: servicio.codigo,
-    descripcion: servicio.descripcion,
-    cantidad: cantidad,
-    unidad: servicio.unidad || 'und',
-    precioUnitario: parseFloat(servicio.precio) || 0,
-    aplicaItbms: Number(servicio.itbms) === 1
-  });
-
-  if (document.getElementById('cot-item-servicio')) {
-    document.getElementById('cot-item-servicio').value = '';
-  }
-  if (document.getElementById('cot-item-cantidad-catalogo')) {
-    document.getElementById('cot-item-cantidad-catalogo').value = '1';
-  }
-
-  renderItemsCotizacion();
+function obtenerFechaHoy() {
+  var hoy = new Date();
+  return hoy.getFullYear()
+    + '-' + String(hoy.getMonth() + 1).padStart(2, '0')
+    + '-' + String(hoy.getDate()).padStart(2, '0');
 }
 
-function agregarItemManual() {
-  var descripcion = document.getElementById('cot-item-desc-manual') ? document.getElementById('cot-item-desc-manual').value.trim() : '';
-  var cantidad = document.getElementById('cot-item-cantidad-manual') ? parseFloat(document.getElementById('cot-item-cantidad-manual').value) || 1 : 1;
-  var unidad = document.getElementById('cot-item-unidad-manual') ? document.getElementById('cot-item-unidad-manual').value : 'und';
-  var precio = document.getElementById('cot-item-precio-manual') ? parseFloat(document.getElementById('cot-item-precio-manual').value) || 0 : 0;
-  var itbms = document.getElementById('cot-item-itbms-manual') ? parseInt(document.getElementById('cot-item-itbms-manual').value, 10) : 1;
-
-  if (!descripcion) {
-    alert('Ingresa una descripción para el servicio');
-    return;
-  }
-
-  if (precio <= 0) {
-    alert('Ingresa un precio unitario válido');
-    return;
-  }
-
-  itemsCotizacionActual.push({
-    id: ctId(),
-    tipo: 'manual',
-    servicioId: null,
-    codigo: 'MANUAL',
-    descripcion: descripcion,
-    cantidad: cantidad,
-    unidad: unidad || 'und',
-    precioUnitario: precio,
-    aplicaItbms: itbms === 1
-  });
-
-  if (document.getElementById('cot-item-desc-manual')) document.getElementById('cot-item-desc-manual').value = '';
-  if (document.getElementById('cot-item-cantidad-manual')) document.getElementById('cot-item-cantidad-manual').value = '1';
-  if (document.getElementById('cot-item-unidad-manual')) document.getElementById('cot-item-unidad-manual').value = 'und';
-  if (document.getElementById('cot-item-precio-manual')) document.getElementById('cot-item-precio-manual').value = '';
-
-  renderItemsCotizacion();
+function obtenerTextoOpcion(selectId) {
+  var select = document.getElementById(selectId);
+  if (!select || select.selectedIndex < 0) return '';
+  return (select.options[select.selectedIndex] && select.options[select.selectedIndex].text) || '';
 }
 
-function eliminarItemCotizacion(id) {
-  var nextItems = [];
-  for (var i = 0; i < itemsCotizacionActual.length; i++) {
-    if (itemsCotizacionActual[i].id !== id) {
-      nextItems.push(itemsCotizacionActual[i]);
-    }
+function obtenerClienteSeleccionado() {
+  var clienteId = document.getElementById('cot-cliente') ? document.getElementById('cot-cliente').value : '';
+  if (!clienteId) return null;
+
+  var clientes = getData(STORAGE_KEYS.CLIENTES) || [];
+  for (var i = 0; i < clientes.length; i++) {
+    if (clientes[i].id === clienteId) return clientes[i];
   }
-  itemsCotizacionActual = nextItems;
-  renderItemsCotizacion();
+  return null;
 }
 
 function calcularTotalesCotizacion() {
   var subtotal = 0;
   var itbmsMonto = 0;
-  var descuentoPct = document.getElementById('cot-descuento') ? parseFloat(document.getElementById('cot-descuento').value) || 0 : 0;
 
   for (var i = 0; i < itemsCotizacionActual.length; i++) {
     var item = itemsCotizacionActual[i];
-    var totalItem = (parseFloat(item.cantidad) || 0) * (parseFloat(item.precioUnitario) || 0);
+    var cantidad = parseFloat(item.cantidad) || 0;
+    var precio = parseFloat(item.precioUnitario) || 0;
+    var totalItem = cantidad * precio;
+
     subtotal += totalItem;
 
     if (item.aplicaItbms) {
@@ -261,7 +83,8 @@ function calcularTotalesCotizacion() {
     }
   }
 
-  var descuentoMonto = subtotal * (descuentoPct / 100);
+  var descuentoPct = parseFloat(document.getElementById('cot-descuento') ? document.getElementById('cot-descuento').value : 0) || 0;
+  var descuentoMonto = (subtotal + itbmsMonto) * (descuentoPct / 100);
   var total = subtotal + itbmsMonto - descuentoMonto;
 
   return {
@@ -273,13 +96,170 @@ function calcularTotalesCotizacion() {
   };
 }
 
+function actualizarResumenCotizacion() {
+  var resumen = calcularTotalesCotizacion();
+
+  var subtotalEl = document.getElementById('cot-subtotal');
+  var itbmsEl = document.getElementById('cot-itbms-monto');
+  var descuentoEl = document.getElementById('cot-descuento-monto');
+  var totalEl = document.getElementById('cot-total');
+  var rowItbms = document.getElementById('row-itbms');
+  var rowDescuento = document.getElementById('row-descuento');
+
+  if (subtotalEl) subtotalEl.textContent = formatMoney(resumen.subtotal);
+  if (itbmsEl) itbmsEl.textContent = formatMoney(resumen.itbmsMonto);
+  if (descuentoEl) descuentoEl.textContent = formatMoney(resumen.descuentoMonto);
+  if (totalEl) totalEl.textContent = formatMoney(resumen.total);
+
+  if (rowItbms) {
+    rowItbms.style.display = resumen.itbmsMonto > 0 ? '' : 'none';
+  }
+
+  if (rowDescuento) {
+    rowDescuento.style.display = resumen.descuentoMonto > 0 ? '' : 'none';
+  }
+}
+
+// ============================================================
+// SELECTS
+// ============================================================
+
+function actualizarSelectServicios() {
+  var select = document.getElementById('cot-item-servicio');
+  if (!select || typeof obtenerServicios !== 'function') return;
+
+  var servicios = obtenerServicios() || [];
+  var html = '<option value="">Selecciona del catálogo</option>';
+
+  for (var i = 0; i < servicios.length; i++) {
+    var s = servicios[i];
+    html += '<option value="' + s.id + '">[' + s.codigo + '] ' + s.descripcion + '</option>';
+  }
+
+  select.innerHTML = html;
+}
+
+function actualizarSelectClientes() {
+  var select = document.getElementById('cot-cliente');
+  if (!select) return;
+
+  var clientes = getData(STORAGE_KEYS.CLIENTES) || [];
+  var html = '<option value="">Selecciona un cliente</option>';
+
+  for (var i = 0; i < clientes.length; i++) {
+    var c = clientes[i];
+    html += '<option value="' + c.id + '">' + c.nombre + '</option>';
+  }
+
+  select.innerHTML = html;
+}
+
+// ============================================================
+// SERVICIO DESDE CATÁLOGO
+// ============================================================
+
+function cargarPrecioServicio() {
+  return true;
+}
+
+function agregarItemDesdeCatalogo() {
+  var servicioId = document.getElementById('cot-item-servicio').value;
+  var cantidad = parseFloat(document.getElementById('cot-item-cantidad-catalogo').value) || 1;
+
+  if (!servicioId) {
+    alert('Selecciona un servicio del catálogo');
+    return false;
+  }
+
+  var servicio = findItem(STORAGE_KEYS.SERVICIOS, servicioId);
+  if (!servicio) {
+    alert('No se encontró el servicio seleccionado');
+    return false;
+  }
+
+  var item = {
+    id: generarId(),
+    tipo: 'catalogo',
+    servicioId: servicio.id,
+    codigo: servicio.codigo,
+    descripcion: servicio.descripcion,
+    cantidad: cantidad,
+    unidad: servicio.unidad,
+    precioUnitario: parseFloat(servicio.precio) || 0,
+    aplicaItbms: parseInt(servicio.itbms) === 1
+  };
+
+  itemsCotizacionActual.push(item);
+
+  document.getElementById('cot-item-servicio').value = '';
+  document.getElementById('cot-item-cantidad-catalogo').value = '1';
+
+  renderItemsCotizacion();
+  return false;
+}
+
+// ============================================================
+// ITEM MANUAL
+// ============================================================
+
+function agregarItemManual() {
+  var descripcion = document.getElementById('cot-item-desc-manual').value.trim();
+  var cantidad = parseFloat(document.getElementById('cot-item-cantidad-manual').value) || 1;
+  var unidad = document.getElementById('cot-item-unidad-manual').value;
+  var precio = parseFloat(document.getElementById('cot-item-precio-manual').value);
+  var itbms = parseInt(document.getElementById('cot-item-itbms-manual').value);
+
+  if (!descripcion) {
+    alert('Ingresa una descripción para el servicio');
+    return false;
+  }
+
+  if (!precio || precio <= 0) {
+    alert('Ingresa un precio unitario válido');
+    return false;
+  }
+
+  var item = {
+    id: generarId(),
+    tipo: 'manual',
+    servicioId: null,
+    codigo: 'MANUAL',
+    descripcion: descripcion,
+    cantidad: cantidad,
+    unidad: unidad,
+    precioUnitario: precio,
+    aplicaItbms: itbms === 1
+  };
+
+  itemsCotizacionActual.push(item);
+
+  document.getElementById('cot-item-desc-manual').value = '';
+  document.getElementById('cot-item-cantidad-manual').value = '1';
+  document.getElementById('cot-item-precio-manual').value = '';
+
+  renderItemsCotizacion();
+  return false;
+}
+
+// ============================================================
+// RENDER ITEMS
+// ============================================================
+
+function eliminarItemCotizacion(itemId) {
+  itemsCotizacionActual = itemsCotizacionActual.filter(function(item) {
+    return item.id !== itemId;
+  });
+
+  renderItemsCotizacion();
+}
+
 function renderItemsCotizacion() {
   var tbody = document.getElementById('tbodyItemsCotizacion');
-  var totals = calcularTotalesCotizacion();
+  var agrupados = document.getElementById('items-agrupados-container');
 
   if (tbody) {
-    if (!itemsCotizacionActual.length) {
-      tbody.innerHTML = '<tr><td colspan="8">No hay items agregados</td></tr>';
+    if (itemsCotizacionActual.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No hay items agregados</td></tr>';
     } else {
       var html = '';
 
@@ -290,14 +270,14 @@ function renderItemsCotizacion() {
 
         html += ''
           + '<tr>'
-          +   '<td>' + (i + 1) + '</td>'
-          +   '<td>' + ctEscape((item.tipo === 'catalogo' ? '[' + item.codigo + '] ' : '') + item.descripcion) + '</td>'
-          +   '<td>' + ctEscape(item.cantidad) + '</td>'
-          +   '<td>' + ctEscape(item.unidad) + '</td>'
-          +   '<td>' + ctMoney(item.precioUnitario) + '</td>'
-          +   '<td>' + ctMoney(totalItem) + '</td>'
-          +   '<td>' + (item.aplicaItbms ? ctMoney(itbmsItem) : '—') + '</td>'
-          +   '<td><button type="button" onclick="eliminarItemCotizacion(\'' + ctEscape(item.id) + '\')">Quitar</button></td>'
+          + '<td>' + (i + 1) + '</td>'
+          + '<td>' + (item.tipo === 'catalogo' ? '[' + item.codigo + '] ' : '') + item.descripcion + '</td>'
+          + '<td>' + item.cantidad + '</td>'
+          + '<td>' + item.unidad + '</td>'
+          + '<td>' + formatMoney(item.precioUnitario) + '</td>'
+          + '<td>' + formatMoney(totalItem) + '</td>'
+          + '<td>' + (item.aplicaItbms ? formatMoney(itbmsItem) : '—') + '</td>'
+          + '<td><button type="button" class="btn-table danger" onclick="eliminarItemCotizacion(\'' + item.id + '\')">Eliminar</button></td>'
           + '</tr>';
       }
 
@@ -305,165 +285,184 @@ function renderItemsCotizacion() {
     }
   }
 
-  var subtotalEl = document.getElementById('cot-subtotal');
-  var itbmsEl = document.getElementById('cot-itbms');
-  var descuentoEl = document.getElementById('cot-descuento-monto');
-  var totalEl = document.getElementById('cot-total');
+  if (agrupados) {
+    if (itemsCotizacionActual.length === 0) {
+      agrupados.innerHTML = '<div class="tabla-vacia"><div class="tabla-vacia-icon">🧾</div>No hay items agregados</div>';
+    } else {
+      var tarjetas = '';
 
-  if (subtotalEl) subtotalEl.textContent = ctMoney(totals.subtotal);
-  if (itbmsEl) itbmsEl.textContent = ctMoney(totals.itbmsMonto);
-  if (descuentoEl) descuentoEl.textContent = ctMoney(totals.descuentoMonto);
-  if (totalEl) totalEl.textContent = ctMoney(totals.total);
-}
+      for (var j = 0; j < itemsCotizacionActual.length; j++) {
+        var item2 = itemsCotizacionActual[j];
+        var totalItem2 = (parseFloat(item2.cantidad) || 0) * (parseFloat(item2.precioUnitario) || 0);
 
-function guardarCotizacion(event) {
-  if (event && typeof event.preventDefault === 'function') {
-    event.preventDefault();
+        tarjetas += ''
+          + '<div class="card-item-cotizacion" style="border:1px solid rgba(255,255,255,0.08);padding:12px;border-radius:12px;margin-bottom:10px;">'
+          + '<div style="font-weight:600;">' + (item2.tipo === 'catalogo' ? '[' + item2.codigo + '] ' : '') + item2.descripcion + '</div>'
+          + '<div style="opacity:.8;margin-top:4px;">'
+          + item2.cantidad + ' × ' + item2.unidad + ' · ' + formatMoney(item2.precioUnitario)
+          + (item2.aplicaItbms ? ' · ITBMS' : ' · Sin ITBMS')
+          + '</div>'
+          + '<div style="margin-top:6px;font-weight:700;color:#6bbd45;">' + formatMoney(totalItem2) + '</div>'
+          + '</div>';
+      }
+
+      agrupados.innerHTML = tarjetas;
+    }
   }
 
+  actualizarResumenCotizacion();
+}
+
+// ============================================================
+// GUARDAR COTIZACIÓN
+// ============================================================
+
+function guardarCotizacion() {
   var feedback = document.getElementById('feedback-cotizacion');
-  var clienteId = document.getElementById('cot-cliente') ? document.getElementById('cot-cliente').value : '';
-  var proyecto = document.getElementById('cot-proyecto') ? document.getElementById('cot-proyecto').value.trim() : '';
-  var fecha = document.getElementById('cot-fecha') ? document.getElementById('cot-fecha').value : '';
-  var atencion = document.getElementById('cot-atencion') ? document.getElementById('cot-atencion').value.trim() : '';
-  var alcance = document.getElementById('cot-alcance') ? document.getElementById('cot-alcance').value.trim() : '';
+  var clienteId = document.getElementById('cot-cliente').value;
+  var proyecto = document.getElementById('cot-proyecto').value.trim();
+  var fecha = document.getElementById('cot-fecha').value;
+  var atencion = document.getElementById('cot-atencion').value.trim();
+  var alcance = document.getElementById('cot-alcance').value.trim();
+  var aplicaItbmsGeneral = parseInt(document.getElementById('cot-itbms').value) === 1;
 
   if (!clienteId) {
-    if (feedback) {
-      feedback.className = 'form-feedback error';
-      feedback.textContent = '❌ Debes seleccionar un cliente';
-    }
+    alert('Selecciona un cliente');
     return false;
   }
 
   if (!proyecto) {
-    if (feedback) {
-      feedback.className = 'form-feedback error';
-      feedback.textContent = '❌ Debes ingresar el nombre del proyecto';
-    }
+    alert('Ingresa el nombre del proyecto');
     return false;
   }
 
-  if (!itemsCotizacionActual.length) {
-    if (feedback) {
-      feedback.className = 'form-feedback error';
-      feedback.textContent = '❌ Agrega al menos un item a la cotización';
-    }
+  if (itemsCotizacionActual.length === 0) {
+    alert('Agrega al menos un item a la cotización');
     return false;
   }
 
-  var cliente = ctFindCliente(clienteId);
-  var totals = calcularTotalesCotizacion();
-  var cotizaciones = ctGetCotizaciones();
+  var cliente = obtenerClienteSeleccionado();
+  var resumen = calcularTotalesCotizacion();
 
-  var nuevaCotizacion = {
-    id: ctId(),
-    numero: ctNumero(fecha),
-    fecha: fecha,
+  var cotizacion = {
+    id: generarId(),
+    numero: typeof generarNumeroCotizacion === 'function' ? generarNumeroCotizacion(fecha) : ('COT-' + Date.now()),
     clienteId: clienteId,
     clienteNombre: cliente ? cliente.nombre : '',
     proyecto: proyecto,
+    fecha: fecha,
     atencion: atencion,
     alcance: alcance,
-    items: itemsCotizacionActual.slice(),
-    subtotal: totals.subtotal,
-    itbmsMonto: totals.itbmsMonto,
-    descuentoPct: totals.descuentoPct,
-    descuentoMonto: totals.descuentoMonto,
-    total: totals.total,
-    estado: 'cotizado',
+    aplicaItbms: aplicaItbmsGeneral,
+    descuentoPct: resumen.descuentoPct,
+    subtotal: resumen.subtotal,
+    itbmsMonto: resumen.itbmsMonto,
+    descuentoMonto: resumen.descuentoMonto,
+    total: resumen.total,
+    estado: 'pendiente',
+    items: JSON.parse(JSON.stringify(itemsCotizacionActual)),
     creadoEn: new Date().toISOString()
   };
 
-  cotizaciones.push(nuevaCotizacion);
-  ctSetCotizaciones(cotizaciones);
+  var cotizaciones = obtenerCotizaciones();
+  cotizaciones.push(cotizacion);
+  cotizaciones.sort(function(a, b) {
+    return new Date(b.creadoEn) - new Date(a.creadoEn);
+  });
 
-  itemsCotizacionActual = [];
-  renderItemsCotizacion();
-  renderCotizacionesGuardadas();
-
-  var form = document.getElementById('formCotizacion');
-  if (form) form.reset();
-
-  var fechaInput = document.getElementById('cot-fecha');
-  if (fechaInput && !fechaInput.value) {
-    var hoy = new Date();
-    fechaInput.value = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
-  }
-
-  actualizarSelectClientes();
-  actualizarSelectServicios();
+  guardarCotizacionesData(cotizaciones);
 
   if (feedback) {
     feedback.className = 'form-feedback success';
-    feedback.textContent = '✅ Cotización guardada correctamente';
+    feedback.textContent = '✅ Cotización guardada: ' + cotizacion.numero;
   }
 
+  renderCotizacionesGuardadas();
+  if (typeof actualizarKPIs === 'function') actualizarKPIs();
+  if (typeof limpiarCotizacion === 'function') limpiarCotizacion();
+
   return false;
+}
+
+// ============================================================
+// HISTORIAL
+// ============================================================
+
+function cambiarEstadoCotizacion(id, nuevoEstado) {
+  var cotizaciones = obtenerCotizaciones();
+
+  for (var i = 0; i < cotizaciones.length; i++) {
+    if (cotizaciones[i].id === id) {
+      cotizaciones[i].estado = nuevoEstado;
+      break;
+    }
+  }
+
+  guardarCotizacionesData(cotizaciones);
+  renderCotizacionesGuardadas();
+  if (typeof actualizarKPIs === 'function') actualizarKPIs();
 }
 
 function eliminarCotizacion(id) {
   if (!confirm('¿Eliminar esta cotización?')) return;
 
-  var data = ctGetCotizaciones();
-  var next = [];
+  var cotizaciones = obtenerCotizaciones().filter(function(c) {
+    return c.id !== id;
+  });
 
-  for (var i = 0; i < data.length; i++) {
-    if (data[i].id !== id) next.push(data[i]);
-  }
-
-  ctSetCotizaciones(next);
+  guardarCotizacionesData(cotizaciones);
   renderCotizacionesGuardadas();
+  if (typeof actualizarKPIs === 'function') actualizarKPIs();
 }
 
-function cambiarEstadoCotizacion(id, estado) {
-  var data = ctGetCotizaciones();
-
-  for (var i = 0; i < data.length; i++) {
-    if (data[i].id === id) {
-      data[i].estado = estado;
-      break;
-    }
-  }
-
-  ctSetCotizaciones(data);
-  renderCotizacionesGuardadas();
-}
-
-function renderCotizacionesGuardadas() {
+function renderCotizacionesGuardadas(filtro) {
   var tbody = document.getElementById('tbodyCotizaciones');
   if (!tbody) return;
 
-  var data = ctGetCotizaciones();
-  data.sort(function(a, b) {
-    return new Date(b.creadoEn || b.fecha) - new Date(a.creadoEn || a.fecha);
-  });
+  var cotizaciones = obtenerCotizaciones();
 
-  if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="7">No hay cotizaciones registradas</td></tr>';
+  if (filtro) {
+    var term = filtro.toLowerCase();
+    cotizaciones = cotizaciones.filter(function(c) {
+      return (c.numero || '').toLowerCase().indexOf(term) !== -1
+        || (c.clienteNombre || '').toLowerCase().indexOf(term) !== -1
+        || (c.proyecto || '').toLowerCase().indexOf(term) !== -1;
+    });
+  }
+
+  if (cotizaciones.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No hay cotizaciones registradas</td></tr>';
     return;
   }
 
   var html = '';
 
-  for (var i = 0; i < data.length; i++) {
-    var c = data[i];
+  for (var i = 0; i < cotizaciones.length; i++) {
+    var c = cotizaciones[i];
 
     html += ''
       + '<tr>'
-      +   '<td>' + ctEscape(c.numero) + '</td>'
-      +   '<td>' + ctEscape(c.clienteNombre || '—') + '</td>'
-      +   '<td>' + ctEscape(c.proyecto || '—') + '</td>'
-      +   '<td>' + ctMoney(c.total) + '</td>'
-      +   '<td>' + ctEscape(c.estado || 'cotizado') + '</td>'
-      +   '<td>' + ctDate(c.fecha) + '</td>'
-      +   '<td>'
-      +     '<button type="button" onclick="cambiarEstadoCotizacion(\'' + ctEscape(c.id) + '\', \'aprobado\')">Aprobar</button> '
-      +     '<button type="button" onclick="cambiarEstadoCotizacion(\'' + ctEscape(c.id) + '\', \'rechazado\')">Rechazar</button> '
-      +     '<button type="button" onclick="eliminarCotizacion(\'' + ctEscape(c.id) + '\')">Eliminar</button>'
-      +   '</td>'
+      + '<td>' + c.numero + '</td>'
+      + '<td>' + (c.clienteNombre || '—') + '</td>'
+      + '<td>' + (c.proyecto || '—') + '</td>'
+      + '<td>' + formatMoney(c.total || 0) + '</td>'
+      + '<td>'
+      + '<select onchange="cambiarEstadoCotizacion(\'' + c.id + '\', this.value)">'
+      + '<option value="pendiente"' + (c.estado === 'pendiente' ? ' selected' : '') + '>Pendiente</option>'
+      + '<option value="aprobada"' + (c.estado === 'aprobada' ? ' selected' : '') + '>Aprobada</option>'
+      + '<option value="rechazada"' + (c.estado === 'rechazada' ? ' selected' : '') + '>Rechazada</option>'
+      + '<option value="vencida"' + (c.estado === 'vencida' ? ' selected' : '') + '>Vencida</option>'
+      + '</select>'
+      + '</td>'
+      + '<td>' + (typeof formatDate === 'function' ? formatDate(c.fecha) : c.fecha) + '</td>'
+      + '<td><button type="button" class="btn-table danger" onclick="eliminarCotizacion(\'' + c.id + '\')">Eliminar</button></td>'
       + '</tr>';
   }
 
   tbody.innerHTML = html;
+}
+
+function filtrarCotizaciones() {
+  var term = document.getElementById('buscar-cotizacion');
+  renderCotizacionesGuardadas(term ? term.value : '');
 }
