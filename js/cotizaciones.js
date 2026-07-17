@@ -303,19 +303,17 @@
     var totales = recalcularTotalesCotizacion();
     var codigo = generarCodigoCotizacion();
     var payload = {
-      codigo: codigo,
-      cliente_id: clienteId,
-      proyecto: proyecto,
-      atencion: atencion,
-      fecha: fecha,
-      alcance: alcance,
-      estado: 'borrador',
-      subtotal: totales.subtotal,
-      descuento: totales.descuento,
-      itbms: aplicaItbms ? totales.itbms : 0,
-      total: aplicaItbms ? totales.total : Math.max(0, totales.subtotal - totales.descuento)
-    };
-
+  codigo: codigo,
+  cliente_id: clienteId,
+  proyecto: proyecto,
+  atencion: atencion,
+  fecha: fecha,
+  estado: 'borrador',
+  subtotal: totales.subtotal,
+  descuento: totales.descuento,
+  itbms: aplicaItbms ? totales.itbms : 0,
+  total: aplicaItbms ? totales.total : Math.max(0, totales.subtotal - totales.descuento)
+};
     var created = await window.addItem(window.STORAGE_KEYS.COTIZACIONES, payload);
     if (!created || !created.id) {
       showFeedback(feedback, '❌ No se pudo guardar la cotización', 'error');
