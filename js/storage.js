@@ -1,443 +1,424 @@
 // ============================================================
-// js/storage.js — GN Studio OS + Supabase Database
-// Compatibilidad híbrida:
-// - Supabase: servicios, clientes, cotizaciones, proyectos, gastos, pagos, tareas
-// - localStorage legacy temporal: gn_grupos_servicios, gn_grupo_servicio_map
+// js/storage.js — Capa de datos GN Studio OS
+// Supabase como fuente principal + compatibilidad temporal legacy
 // ============================================================
 
-// Mapeo de claves internas a nombres de tablas / claves legacy
-var STORAGE_KEYS = {
-  SERVICIOS: 'servicios',
-  CLIENTES: 'clientes',
-  COTIZACIONES: 'cotizaciones',
-  PROYECTOS: 'proyectos',
-  GASTOS: 'gastos',
-  PAGOS: 'pagos',
-  TAREAS: 'tareas',
-  GRUPOS_SERVICIOS: 'gn_grupos_servicios',
-  GRUPO_SERVICIO_MAP: 'gn_grupo_servicio_map'
-};
+(function(window) {
+  'use strict';
 
-// Claves legacy que todavía viven en localStorage
-var LEGACY_LOCAL_KEYS = {
-  gn_grupos_servicios: {
-    type: 'array',
-    fallback: []
-  },
-  gn_grupo_servicio_map: {
-    type: 'object',
-    fallback: {}
-  }
-};
-
-// Alias para compatibilidad con código viejo
-var TABLE_ALIASES = {
-  gn_tareas: 'tareas'
-};
-
-// ============================================================
-// Helpers
-// ============================================================
-
-function gnSupabase() {
-  return window.supabaseClient || null;
-}
-
-function gnHasOwn(obj, key) {
-  return Object.prototype.hasOwnProperty.call(obj, key);
-}
-
-function gnIsLegacyLocalKey(key) {
-  return gnHasOwn(LEGACY_LOCAL_KEYS, key);
-}
-
-function gnResolveTableName(tableName) {
-  return TABLE_ALIASES[tableName] || tableName;
-}
-
-function gnCloneValue(value) {
-  return JSON.parse(JSON.stringify(value));
-}
-
-function gnLegacyFallback(key) {
-  if (!gnIsLegacyLocalKey(key)) return [];
-  return gnCloneValue(LEGACY_LOCAL_KEYS[key].fallback);
-}
-
-function gnReadLegacyLocal(key) {
-  if (!gnIsLegacyLocalKey(key)) return null;
-
-  try {
-    var raw = localStorage.getItem(key);
-    if (!raw) return gnLegacyFallback(key);
-
-    var parsed = JSON.parse(raw);
-    var expectedType = LEGACY_LOCAL_KEYS[key].type;
-
-    if (expectedType === 'array') {
-      return Array.isArray(parsed) ? parsed : [];
+  var GNUtils = window.GNUtils || {};
+  var log = GNUtils.log || function(level, message, meta) {
+    if (meta !== undefined) {
+      console[level] ? console[level](message, meta) : console.log(message, meta);
+      return;
     }
+    console[level] ? console[level](message) : console.log(message);
+  };
 
-    if (expectedType === 'object') {
-      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-        return {};
+  var STORAGE_KEYS = {
+    SERVICIOS: 'servicios',
+    CLIENTES: 'clientes',
+    COTIZACIONES: 'cotizaciones',
+    COTIZACION_ITEMS: 'cotizacion_items',
+    PROYECTOS: 'proyectos',
+    GASTOS: 'gastos',
+    PAGOS: 'pagos',
+    TAREAS: 'tareas',
+    GRUPOS_SERVICIOS: 'gn_grupos_servicios',
+    GRUPO_SERVICIO_MAP: 'gn_grupo_servicio_map'
+  };
+
+  var LEGACY_KEYS = {
+    gn_grupos_servicios: {
+      type: 'array',
+      fallback: []
+    },
+    gn_grupo_servicio_map: {
+      type: 'object',
+      fallback: {}
+    }
+  };
+
+  var TABLE_ALIASES = {
+    gn_tareas: 'tareas'
+  };
+
+  function getSupabase() {
+    return window.supabaseClient || null;
+  }
+
+  function hasOwn(obj, key) {
+    return Object.prototype.hasOwnProperty.call(obj, key);
+  }
+
+  function isLegacyKey(key) {
+    return hasOwn(LEGACY_KEYS, key);
+  }
+
+  function resolveKey(tableName) {
+    return TABLE_ALIASES[tableName] || tableName;
+  }
+
+  function clone(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function getLegacyFallback(key) {
+    return clone(LEGACY_KEYS[key].fallback);
+  }
+
+  function readLegacy(key) {
+    if (!isLegacyKey(key)) return null;
+
+    try {
+      var raw = localStorage.getItem(key);
+      if (!raw) return getLegacyFallback(key);
+
+      var parsed = JSON.parse(raw);
+      var expectedType = LEGACY_KEYS[key].type;
+
+      if (expectedType === 'array') {
+        return Array.isArray(parsed) ? parsed : [];
       }
+
+      if (expectedType === 'object') {
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+          return {};
+        }
+        return parsed;
+      }
+
       return parsed;
+    } catch (error) {
+      log('error', 'Error leyendo localStorage legacy: ' + key, error);
+      return getLegacyFallback(key);
+    }
+  }
+
+  function writeLegacy(key, value) {
+    if (!isLegacyKey(key)) return false;
+
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (error) {
+      log('error', 'Error guardando localStorage legacy: ' + key, error);
+      return false;
+    }
+  }
+
+  async function getSessionUserId() {
+    var sb = getSupabase();
+    if (!sb) return null;
+
+    try {
+      var session = await sb.auth.getSession();
+      return session && session.data && session.data.session
+        ? session.data.session.user.id
+        : null;
+    } catch (error) {
+      log('error', 'No se pudo obtener la sesión de Supabase', error);
+      return null;
+    }
+  }
+
+  async function getData(tableName, options) {
+    if (isLegacyKey(tableName)) {
+      return readLegacy(tableName);
     }
 
-    return parsed;
-  } catch (e) {
-    console.error('Error leyendo localStorage ' + key + ':', e);
-    return gnLegacyFallback(key);
+    var sb = getSupabase();
+    var resolvedTable = resolveKey(tableName);
+    var settings = options || {};
+
+    if (!sb) {
+      log('error', 'Supabase no disponible para getData: ' + resolvedTable);
+      return [];
+    }
+
+    try {
+      var query = sb.from(resolvedTable).select(settings.select || '*');
+
+      if (settings.filters && typeof settings.filters === 'object') {
+        for (var key in settings.filters) {
+          query = query.eq(key, settings.filters[key]);
+        }
+      }
+
+      if (settings.orderBy) {
+        query = query.order(settings.orderBy, {
+          ascending: !!settings.ascending
+        });
+      } else {
+        query = query.order('created_at', { ascending: false });
+      }
+
+      var result = await query;
+
+      if (result.error) {
+        log('error', 'Error getData ' + resolvedTable + ': ' + result.error.message);
+        return [];
+      }
+
+      return Array.isArray(result.data) ? result.data : [];
+    } catch (error) {
+      log('error', 'Error getData ' + resolvedTable, error);
+      return [];
+    }
   }
-}
 
-function gnWriteLegacyLocal(key, value) {
-  if (!gnIsLegacyLocalKey(key)) return false;
+  async function getDataFiltered(tableName, filters, options) {
+    return await getData(tableName, {
+      filters: filters || {},
+      orderBy: options && options.orderBy ? options.orderBy : 'created_at',
+      ascending: options && options.ascending ? true : false,
+      select: options && options.select ? options.select : '*'
+    });
+  }
 
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-    return true;
-  } catch (e) {
-    console.error('Error guardando localStorage ' + key + ':', e);
+  async function findItem(tableName, id) {
+    if (!id) return null;
+
+    if (isLegacyKey(tableName)) {
+      var source = readLegacy(tableName);
+
+      if (Array.isArray(source)) {
+        for (var i = 0; i < source.length; i++) {
+          if (source[i] && source[i].id === id) return source[i];
+        }
+        return null;
+      }
+
+      if (source && typeof source === 'object') {
+        return hasOwn(source, id) ? source[id] : null;
+      }
+
+      return null;
+    }
+
+    var sb = getSupabase();
+    var resolvedTable = resolveKey(tableName);
+
+    if (!sb) {
+      log('error', 'Supabase no disponible para findItem: ' + resolvedTable);
+      return null;
+    }
+
+    try {
+      var result = await sb.from(resolvedTable).select('*').eq('id', id).single();
+
+      if (result.error) {
+        log('warn', 'findItem sin resultado en ' + resolvedTable + ': ' + result.error.message);
+        return null;
+      }
+
+      return result.data || null;
+    } catch (error) {
+      log('error', 'Error findItem ' + resolvedTable, error);
+      return null;
+    }
+  }
+
+  async function addItem(tableName, item) {
+    if (isLegacyKey(tableName)) {
+      if (LEGACY_KEYS[tableName].type !== 'array') {
+        log('error', 'addItem no aplica a clave legacy tipo object: ' + tableName);
+        return null;
+      }
+
+      var current = readLegacy(tableName);
+      var record = Object.assign({}, item || {});
+      if (!record.id) {
+        record.id = typeof window.generarId === 'function' ? window.generarId('legacy') : String(Date.now());
+      }
+      current.push(record);
+      writeLegacy(tableName, current);
+      return record;
+    }
+
+    var sb = getSupabase();
+    var resolvedTable = resolveKey(tableName);
+
+    if (!sb) {
+      log('error', 'Supabase no disponible para addItem: ' + resolvedTable);
+      return null;
+    }
+
+    try {
+      var userId = await getSessionUserId();
+      if (!userId) {
+        log('error', 'No hay sesión activa para insertar en ' + resolvedTable);
+        return null;
+      }
+
+      var record = Object.assign({}, item || {});
+      delete record.id;
+
+      if (!record.user_id) {
+        record.user_id = userId;
+      }
+
+      var result = await sb.from(resolvedTable).insert(record).select().single();
+
+      if (result.error) {
+        log('error', 'Error addItem ' + resolvedTable + ': ' + result.error.message);
+        return null;
+      }
+
+      return result.data || null;
+    } catch (error) {
+      log('error', 'Error addItem ' + resolvedTable, error);
+      return null;
+    }
+  }
+
+  async function updateItem(tableName, id, changes) {
+    if (!id) return false;
+
+    if (isLegacyKey(tableName)) {
+      var expectedType = LEGACY_KEYS[tableName].type;
+
+      if (expectedType === 'array') {
+        var list = readLegacy(tableName);
+        var updated = false;
+
+        for (var i = 0; i < list.length; i++) {
+          if (list[i] && list[i].id === id) {
+            list[i] = Object.assign({}, list[i], changes || {});
+            updated = true;
+            break;
+          }
+        }
+
+        if (updated) writeLegacy(tableName, list);
+        return updated;
+      }
+
+      if (expectedType === 'object') {
+        var map = readLegacy(tableName);
+        map[id] = Object.assign({}, map[id] || {}, changes || {});
+        writeLegacy(tableName, map);
+        return true;
+      }
+
+      return false;
+    }
+
+    var sb = getSupabase();
+    var resolvedTable = resolveKey(tableName);
+
+    if (!sb) {
+      log('error', 'Supabase no disponible para updateItem: ' + resolvedTable);
+      return false;
+    }
+
+    try {
+      var payload = Object.assign({}, changes || {});
+      payload.updated_at = new Date().toISOString();
+
+      var result = await sb.from(resolvedTable).update(payload).eq('id', id);
+
+      if (result.error) {
+        log('error', 'Error updateItem ' + resolvedTable + ': ' + result.error.message);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      log('error', 'Error updateItem ' + resolvedTable, error);
+      return false;
+    }
+  }
+
+  async function deleteItem(tableName, id) {
+    if (!id) return false;
+
+    if (isLegacyKey(tableName)) {
+      var expectedType = LEGACY_KEYS[tableName].type;
+
+      if (expectedType === 'array') {
+        var list = readLegacy(tableName);
+        var next = list.filter(function(item) {
+          return !item || item.id !== id;
+        });
+        writeLegacy(tableName, next);
+        return true;
+      }
+
+      if (expectedType === 'object') {
+        var map = readLegacy(tableName);
+        if (hasOwn(map, id)) {
+          delete map[id];
+          writeLegacy(tableName, map);
+        }
+        return true;
+      }
+
+      return false;
+    }
+
+    var sb = getSupabase();
+    var resolvedTable = resolveKey(tableName);
+
+    if (!sb) {
+      log('error', 'Supabase no disponible para deleteItem: ' + resolvedTable);
+      return false;
+    }
+
+    try {
+      var result = await sb.from(resolvedTable).delete().eq('id', id);
+
+      if (result.error) {
+        log('error', 'Error deleteItem ' + resolvedTable + ': ' + result.error.message);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      log('error', 'Error deleteItem ' + resolvedTable, error);
+      return false;
+    }
+  }
+
+  function setData(tableName, data) {
+    if (isLegacyKey(tableName)) {
+      if (LEGACY_KEYS[tableName].type === 'array') {
+        return writeLegacy(tableName, Array.isArray(data) ? data : []);
+      }
+
+      if (LEGACY_KEYS[tableName].type === 'object') {
+        var safeObject = data && typeof data === 'object' && !Array.isArray(data) ? data : {};
+        return writeLegacy(tableName, safeObject);
+      }
+    }
+
+    log('warn', 'setData deshabilitado para tablas Supabase: ' + tableName + '. Usa addItem/updateItem/deleteItem.');
     return false;
   }
-}
 
-function gnGenerateLegacyId(prefix) {
-  return (prefix || 'id') + '-' + Date.now() + '-' + Math.floor(Math.random() * 100000);
-}
+  window.STORAGE_KEYS = STORAGE_KEYS;
+  window.getData = getData;
+  window.getDataFiltered = getDataFiltered;
+  window.findItem = findItem;
+  window.addItem = addItem;
+  window.updateItem = updateItem;
+  window.deleteItem = deleteItem;
+  window.setData = setData;
 
-function gnNormalizeLegacyArrayItem(item) {
-  var record = Object.assign({}, item || {});
-  if (!record.id) {
-    record.id = gnGenerateLegacyId('legacy');
-  }
-  return record;
-}
-
-// ============================================================
-// getData — Obtener todos los registros
-// NOTA:
-// - Si la clave es legacy, responde en modo síncrono para no romper grupos.js
-// - Si la clave es Supabase, responde una Promise como hasta ahora
-// ============================================================
-
-function getData(tableName) {
-  if (gnIsLegacyLocalKey(tableName)) {
-    return gnReadLegacyLocal(tableName);
+  if (!window.GNStudio) {
+    window.GNStudio = {};
   }
 
-  var resolvedTable = gnResolveTableName(tableName);
-  var sb = gnSupabase();
+  window.GNStudio.storage = {
+    STORAGE_KEYS: STORAGE_KEYS,
+    getData: getData,
+    getDataFiltered: getDataFiltered,
+    findItem: findItem,
+    addItem: addItem,
+    updateItem: updateItem,
+    deleteItem: deleteItem,
+    setData: setData
+  };
 
-  if (!sb) {
-    console.error('Supabase no disponible');
-    return [];
-  }
-
-  return sb
-    .from(resolvedTable)
-    .select('*')
-    .order('created_at', { ascending: false })
-    .then(function(result) {
-      if (result.error) {
-        console.error('Error getData ' + resolvedTable + ':', result.error.message);
-        return [];
-      }
-      return result.data || [];
-    })
-    .catch(function(e) {
-      console.error('Error getData ' + resolvedTable + ':', e);
-      return [];
-    });
-}
-
-// ============================================================
-// setData — Reemplazar registros completos
-// - localStorage legacy: sí reemplaza
-// - Supabase: solo warning de compatibilidad
-// ============================================================
-
-function setData(tableName, dataArray) {
-  if (gnIsLegacyLocalKey(tableName)) {
-    var expectedType = LEGACY_LOCAL_KEYS[tableName].type;
-
-    if (expectedType === 'array') {
-      var safeArray = Array.isArray(dataArray) ? dataArray : [];
-      return gnWriteLegacyLocal(tableName, safeArray);
-    }
-
-    if (expectedType === 'object') {
-      var safeObject = dataArray && typeof dataArray === 'object' && !Array.isArray(dataArray)
-        ? dataArray
-        : {};
-      return gnWriteLegacyLocal(tableName, safeObject);
-    }
-
-    return gnWriteLegacyLocal(tableName, dataArray);
-  }
-
-  console.warn('setData es una operación de reemplazo masivo. Usar addItem/updateItem/deleteItem en su lugar.');
-  return true;
-}
-
-// ============================================================
-// addItem — Insertar un nuevo registro
-// ============================================================
-
-function addItem(tableName, item) {
-  if (gnIsLegacyLocalKey(tableName)) {
-    if (LEGACY_LOCAL_KEYS[tableName].type !== 'array') {
-      console.error('addItem no aplica sobre clave legacy tipo object: ' + tableName);
-      return Promise.resolve(null);
-    }
-
-    var current = gnReadLegacyLocal(tableName);
-    var record = gnNormalizeLegacyArrayItem(item);
-    current.push(record);
-    gnWriteLegacyLocal(tableName, current);
-    return Promise.resolve(record);
-  }
-
-  var resolvedTable = gnResolveTableName(tableName);
-  var sb = gnSupabase();
-  if (!sb) return Promise.resolve(null);
-
-  return sb.auth.getSession().then(function(session) {
-    var userId = session && session.data && session.data.session
-      ? session.data.session.user.id
-      : null;
-
-    if (!userId) {
-      console.error('Usuario no autenticado');
-      return null;
-    }
-
-    var record = Object.assign({}, item);
-    delete record.id;
-    record.user_id = userId;
-
-    delete record.codigo;
-
-    return sb
-      .from(resolvedTable)
-      .insert(record)
-      .select()
-      .single()
-      .then(function(result) {
-        if (result.error) {
-          console.error('Error addItem ' + resolvedTable + ':', result.error.message);
-          return null;
-        }
-        return result.data;
-      });
-  }).catch(function(e) {
-    console.error('Error addItem ' + resolvedTable + ':', e);
-    return null;
-  });
-}
-
-// ============================================================
-// findItem — Buscar un registro por ID
-// ============================================================
-
-function findItem(tableName, id) {
-  if (gnIsLegacyLocalKey(tableName)) {
-    var current = gnReadLegacyLocal(tableName);
-
-    if (Array.isArray(current)) {
-      for (var i = 0; i < current.length; i++) {
-        if (current[i] && current[i].id === id) return current[i];
-      }
-      return null;
-    }
-
-    if (current && typeof current === 'object') {
-      return gnHasOwn(current, id) ? current[id] : null;
-    }
-
-    return null;
-  }
-
-  var resolvedTable = gnResolveTableName(tableName);
-  var sb = gnSupabase();
-  if (!sb) return Promise.resolve(null);
-
-  return sb
-    .from(resolvedTable)
-    .select('*')
-    .eq('id', id)
-    .single()
-    .then(function(result) {
-      if (result.error) return null;
-      return result.data;
-    })
-    .catch(function() {
-      return null;
-    });
-}
-
-// ============================================================
-// updateItem — Actualizar un registro por ID
-// ============================================================
-
-function updateItem(tableName, id, changes) {
-  if (gnIsLegacyLocalKey(tableName)) {
-    var expectedType = LEGACY_LOCAL_KEYS[tableName].type;
-
-    if (expectedType === 'array') {
-      var list = gnReadLegacyLocal(tableName);
-      var updated = false;
-
-      for (var i = 0; i < list.length; i++) {
-        if (list[i] && list[i].id === id) {
-          list[i] = Object.assign({}, list[i], changes || {});
-          updated = true;
-          break;
-        }
-      }
-
-      if (updated) {
-        gnWriteLegacyLocal(tableName, list);
-      }
-
-      return Promise.resolve(updated);
-    }
-
-    if (expectedType === 'object') {
-      var map = gnReadLegacyLocal(tableName);
-      map[id] = Object.assign({}, map[id] || {}, changes || {});
-      gnWriteLegacyLocal(tableName, map);
-      return Promise.resolve(true);
-    }
-
-    return Promise.resolve(false);
-  }
-
-  var resolvedTable = gnResolveTableName(tableName);
-  var sb = gnSupabase();
-  if (!sb) return Promise.resolve(false);
-
-  var updates = Object.assign({}, changes || {});
-  updates.updated_at = new Date().toISOString();
-
-  return sb
-    .from(resolvedTable)
-    .update(updates)
-    .eq('id', id)
-    .then(function(result) {
-      if (result.error) {
-        console.error('Error updateItem ' + resolvedTable + ':', result.error.message);
-        return false;
-      }
-      return true;
-    })
-    .catch(function(e) {
-      console.error('Error updateItem ' + resolvedTable + ':', e);
-      return false;
-    });
-}
-
-// ============================================================
-// deleteItem — Eliminar un registro por ID
-// ============================================================
-
-function deleteItem(tableName, id) {
-  if (gnIsLegacyLocalKey(tableName)) {
-    var expectedType = LEGACY_LOCAL_KEYS[tableName].type;
-
-    if (expectedType === 'array') {
-      var list = gnReadLegacyLocal(tableName);
-      var next = list.filter(function(item) {
-        return !item || item.id !== id;
-      });
-      gnWriteLegacyLocal(tableName, next);
-      return Promise.resolve(true);
-    }
-
-    if (expectedType === 'object') {
-      var map = gnReadLegacyLocal(tableName);
-      if (gnHasOwn(map, id)) {
-        delete map[id];
-        gnWriteLegacyLocal(tableName, map);
-      }
-      return Promise.resolve(true);
-    }
-
-    return Promise.resolve(false);
-  }
-
-  var resolvedTable = gnResolveTableName(tableName);
-  var sb = gnSupabase();
-  if (!sb) return Promise.resolve(false);
-
-  return sb
-    .from(resolvedTable)
-    .delete()
-    .eq('id', id)
-    .then(function(result) {
-      if (result.error) {
-        console.error('Error deleteItem ' + resolvedTable + ':', result.error.message);
-        return false;
-      }
-      return true;
-    })
-    .catch(function(e) {
-      console.error('Error deleteItem ' + resolvedTable + ':', e);
-      return false;
-    });
-}
-
-// ============================================================
-// getDataFiltered — Obtener registros con filtros
-// ============================================================
-
-function getDataFiltered(tableName, filters) {
-  if (gnIsLegacyLocalKey(tableName)) {
-    var data = gnReadLegacyLocal(tableName);
-
-    if (!Array.isArray(data)) {
-      return data || {};
-    }
-
-    if (!filters || typeof filters !== 'object') {
-      return data;
-    }
-
-    return data.filter(function(item) {
-      for (var key in filters) {
-        if (item[key] !== filters[key]) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }
-
-  var resolvedTable = gnResolveTableName(tableName);
-  var sb = gnSupabase();
-  if (!sb) return Promise.resolve([]);
-
-  try {
-    var query = sb.from(resolvedTable).select('*');
-
-    if (filters) {
-      for (var key in filters) {
-        query = query.eq(key, filters[key]);
-      }
-    }
-
-    return query
-      .order('created_at', { ascending: false })
-      .then(function(result) {
-        if (result.error) return [];
-        return result.data || [];
-      })
-      .catch(function() {
-        return [];
-      });
-  } catch (e) {
-    return Promise.resolve([]);
-  }
-}
+  log('info', 'storage.js cargado correctamente');
+})(window);
