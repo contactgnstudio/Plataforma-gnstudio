@@ -55,19 +55,19 @@
   async function inicializarGrupos() {
     var grupos = await obtenerGruposRaw();
     if (!grupos.length) {
-      window.setData(GRUPOS_KEY, gruposBase());
+      await window.setData(GRUPOS_KEY, gruposBase());
     }
 
     var map = await obtenerMapaGruposRaw();
     if (!map || typeof map !== 'object' || Array.isArray(map)) {
-      window.setData(GRUPO_SERVICIOS_KEY, {});
+      await window.setData(GRUPO_SERVICIOS_KEY, {});
     }
 
     renderGrupos();
     renderGruposVisuales();
     actualizarSelectGrupos();
-    renderServiciosPorGrupo();
-    renderServiciosSinGrupo();
+    await renderServiciosPorGrupo();
+    await renderServiciosSinGrupo();
   }
 
   async function obtenerGruposRaw() {
@@ -201,7 +201,7 @@
     });
   }
 
-  function guardarGrupo(event) {
+  async function guardarGrupo(event) {
     if (event) event.preventDefault();
 
     var feedback = byId('feedback-grupo');
@@ -239,23 +239,23 @@
       return (parseInt(a.orden, 10) || 99) - (parseInt(b.orden, 10) || 99);
     });
 
-    window.setData(GRUPOS_KEY, grupos);
+    await window.setData(GRUPOS_KEY, grupos);
 
     showFeedback(feedback, '✅ Grupo guardado correctamente', 'success');
 
-    setTimeout(function() {
+    setTimeout(async function() {
       cerrarModalGrupo();
       renderGrupos();
       renderGruposVisuales();
       actualizarSelectGrupos();
-      renderServiciosPorGrupo();
-      renderServiciosSinGrupo();
+      await renderServiciosPorGrupo();
+      await renderServiciosSinGrupo();
     }, 300);
 
     return false;
   }
 
-  function eliminarGrupo(id) {
+  async function eliminarGrupo(id) {
     if (!window.confirm('¿Eliminar este grupo?')) return;
 
     var grupos = obtenerGrupos().filter(function(grupo) {
@@ -269,14 +269,14 @@
       }
     });
 
-    window.setData(GRUPOS_KEY, grupos);
-    window.setData(GRUPO_SERVICIOS_KEY, map);
+    await window.setData(GRUPOS_KEY, grupos);
+    await window.setData(GRUPO_SERVICIOS_KEY, map);
 
     renderGrupos();
     renderGruposVisuales();
     actualizarSelectGrupos();
-    renderServiciosPorGrupo();
-    renderServiciosSinGrupo();
+    await renderServiciosPorGrupo();
+    await renderServiciosSinGrupo();
   }
 
   function actualizarSelectGrupos() {
@@ -356,7 +356,7 @@
     }).join('');
   }
 
-  function renderServiciosPorGrupo() {
+  async function renderServiciosPorGrupo() {
     var container = byId('serviciosPorGrupo');
     if (!container) return;
 
@@ -364,12 +364,13 @@
     var map = obtenerMapaGrupos();
     var servicios = [];
 
-    try {
-      var raw = localStorage.getItem('servicios');
-      servicios = raw ? JSON.parse(raw) : [];
-      servicios = Array.isArray(servicios) ? servicios : [];
-    } catch (error) {
-      servicios = [];
+    if (typeof window.obtenerServicios === 'function') {
+      try {
+        servicios = await window.obtenerServicios();
+        servicios = Array.isArray(servicios) ? servicios : [];
+      } catch (error) {
+        servicios = [];
+      }
     }
 
     if (!grupos.length) {
@@ -378,13 +379,17 @@
     }
 
     container.innerHTML = grupos.map(function(grupo) {
+      var color = COLORES_GRUPO[grupo.color] || COLORES_GRUPO.gray;
       var items = servicios.filter(function(servicio) {
         return map[servicio.id] === grupo.id;
       });
 
       return ''
-        + '<div style="margin-bottom:20px;">'
-        + '<h4 style="color:#fff;margin-bottom:10px;">' + escapeHtml(grupo.nombre) + ' (' + items.length + ')</h4>'
+        + '<div style="margin-bottom:20px;padding:16px;border:1px solid ' + color.border + ';border-radius:12px;background:' + color.bg + ';">'
+        + '<h4 style="color:#fff;margin-bottom:10px;display:flex;align-items:center;gap:8px;">'
+        + '<span>' + color.icon + '</span>'
+        + '<span>' + escapeHtml(grupo.nombre) + ' (' + items.length + ')</span>'
+        + '</h4>'
         + (items.length
           ? '<div style="display:grid;gap:8px;">' + items.map(function(servicio) {
               return '<div style="padding:10px;border:1px solid #333;border-radius:8px;background:#0f0f23;color:#fff;">'
@@ -396,19 +401,20 @@
     }).join('');
   }
 
-  function renderServiciosSinGrupo() {
+  async function renderServiciosSinGrupo() {
     var container = byId('serviciosSinGrupo');
     if (!container) return;
 
     var map = obtenerMapaGrupos();
     var servicios = [];
 
-    try {
-      var raw = localStorage.getItem('servicios');
-      servicios = raw ? JSON.parse(raw) : [];
-      servicios = Array.isArray(servicios) ? servicios : [];
-    } catch (error) {
-      servicios = [];
+    if (typeof window.obtenerServicios === 'function') {
+      try {
+        servicios = await window.obtenerServicios();
+        servicios = Array.isArray(servicios) ? servicios : [];
+      } catch (error) {
+        servicios = [];
+      }
     }
 
     var sinGrupo = servicios.filter(function(servicio) {
