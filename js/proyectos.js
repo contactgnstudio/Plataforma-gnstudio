@@ -1,6 +1,10 @@
 // ============================================================
-// js/proyectos.js — ProjectOS completo para GN Studio OS
-// Ajuste clave: no depende de created_at para listar proyectos
+// js/proyectos.js — ProjectOS ajustado al esquema real Supabase
+// Tabla proyectos real:
+// id, user_id, cotizacion_id, cliente_id, nombre, descripcion,
+// fecha_inicio, fecha_fin, fecha_fin_real, estado,
+// presupuesto, total_cobrado, total_gastado, notas,
+// created_at, updated_at
 // ============================================================
 
 (function(window, document) {
@@ -108,6 +112,21 @@
     return await window.updateItem(tableName, id, payload);
   }
 
+  function deriveAvance(row) {
+    var estado = row.estado || 'pendiente';
+    var presupuesto = num(row.presupuesto);
+    var cobrado = num(row.total_cobrado);
+
+    if (estado === 'completado') return 100;
+    if (estado === 'cancelado') return 0;
+    if (presupuesto > 0 && cobrado > 0) {
+      return Math.max(0, Math.min(99, Math.round((cobrado / presupuesto) * 100)));
+    }
+    if (estado === 'en_progreso') return 25;
+    if (estado === 'pausado') return 50;
+    return 0;
+  }
+
   function normalizeCliente(row) {
     return {
       id: row && row.id ? row.id : '',
@@ -120,16 +139,22 @@
   function normalizeProyecto(row) {
     return {
       id: row.id,
+      userId: row.user_id || '',
+      cotizacionId: row.cotizacion_id || '',
+      clienteId: row.cliente_id || row.clienteId || '',
       nombre: row.nombre || 'Proyecto',
-      clienteId: row.clienteId || row.cliente_id || '',
+      descripcion: row.descripcion || '',
+      fechaInicio: row.fecha_inicio || '',
+      fechaFin: row.fecha_fin || '',
+      fechaFinReal: row.fecha_fin_real || '',
+      estado: row.estado || 'en_progreso',
       presupuesto: num(row.presupuesto),
-      fechaInicio: row.fechaInicio || row.fecha_inicio || '',
-      estado: row.estado || 'pendiente',
-      avance: intVal(row.avance),
-      alcance: row.alcance || '',
+      totalCobrado: num(row.total_cobrado),
+      totalGastado: num(row.total_gastado),
       notas: row.notas || '',
-      createdAt: row.createdAt || row.created_at || '',
-      updatedAt: row.updatedAt || row.updated_at || '',
+      createdAt: row.created_at || '',
+      updatedAt: row.updated_at || '',
+      avance: deriveAvance(row),
       raw: row
     };
   }
@@ -137,7 +162,7 @@
   function normalizeGasto(row) {
     return {
       id: row.id,
-      proyectoId: row.proyectoId || row.proyecto_id || '',
+      proyectoId: row.proyecto_id || row.proyectoId || '',
       fecha: row.fecha || row.created_at || '',
       categoria: row.categoria || row.tipo || 'General',
       descripcion: row.descripcion || row.concepto || 'Gasto registrado',
@@ -150,7 +175,7 @@
   function normalizePago(row) {
     return {
       id: row.id,
-      proyectoId: row.proyectoId || row.proyecto_id || '',
+      proyectoId: row.proyecto_id || row.proyectoId || '',
       fecha: row.fecha || row.created_at || '',
       concepto: row.concepto || row.descripcion || 'Pago recibido',
       monto: num(row.monto),
@@ -163,7 +188,7 @@
   function normalizeTarea(row) {
     return {
       id: row.id,
-      proyectoId: row.proyectoId || row.proyecto_id || '',
+      proyectoId: row.proyecto_id || row.proyectoId || '',
       titulo: row.titulo || row.nombre || 'Tarea',
       asignado: row.asignado || row.responsable || '',
       fechaLimite: row.fecha_limite || row.fechaLimite || '',
@@ -174,7 +199,7 @@
   }
 
   async function obtenerClientes() {
-    var rows = await getAll(getStorageKey('CLIENTES', 'clientes'), { orderBy: 'id', ascending: false });
+    var rows = await getAll(getStorageKey('CLIENTES', 'clientes'), { orderBy: 'created_at', ascending: false });
     CLIENTES_CACHE = rows.map(normalizeCliente);
     return CLIENTES_CACHE;
   }
@@ -189,28 +214,34 @@
   async function getClienteNombre(clienteId) {
     if (!clienteId) return 'Sin cliente';
     await ensureClientesCache();
+
     for (var i = 0; i < CLIENTES_CACHE.length; i++) {
-      if (String(CLIENTES_CACHE[i].id) === String(clienteId)) return CLIENTES_CACHE[i].nombre;
+      if (String(CLIENTES_CACHE[i].id) === String(clienteId)) {
+        return CLIENTES_CACHE[i].nombre;
+      }
     }
+
     return 'Sin cliente';
   }
 
   async function obtenerProyectos() {
-    var rows = await getAll(getStorageKey('PROYECTOS', 'proyectos'), { orderBy: 'id', ascending: false });
+    var rows = await getAll(getStorageKey('PROYECTOS', 'proyectos'), { orderBy: 'created_at', ascending: false });
     var proyectos = rows.map(normalizeProyecto);
+
     for (var i = 0; i < proyectos.length; i++) {
       proyectos[i].clienteNombre = await getClienteNombre(proyectos[i].clienteId);
     }
+
     return proyectos;
   }
 
   async function obtenerProyectoPorId(id) {
-    var proyecto = null;
+    if (!id) return null;
 
     if (typeof window.findItem === 'function') {
       var row = await window.findItem(getStorageKey('PROYECTOS', 'proyectos'), id);
       if (row) {
-        proyecto = normalizeProyecto(row);
+        var proyecto = normalizeProyecto(row);
         proyecto.clienteNombre = await getClienteNombre(proyecto.clienteId);
         return proyecto;
       }
@@ -220,33 +251,34 @@
     for (var i = 0; i < proyectos.length; i++) {
       if (String(proyectos[i].id) === String(id)) return proyectos[i];
     }
+
     return null;
   }
 
+  async function obtenerFilasProyectoCompat(tableKey, proyectoId) {
+    var tableName = getStorageKey(tableKey, tableKey.toLowerCase());
+
+    var rows = await getFiltered(tableName, { proyecto_id: proyectoId }, { orderBy: 'created_at', ascending: false });
+    if (rows.length) return rows;
+
+    rows = await getFiltered(tableName, { proyectoId: proyectoId }, { orderBy: 'created_at', ascending: false });
+    if (rows.length) return rows;
+
+    return [];
+  }
+
   async function obtenerGastosProyecto(proyectoId) {
-    var rows = await getFiltered(
-      getStorageKey('GASTOS', 'gastos'),
-      { proyecto_id: proyectoId },
-      { orderBy: 'id', ascending: false }
-    );
+    var rows = await obtenerFilasProyectoCompat('GASTOS', proyectoId);
     return rows.map(normalizeGasto);
   }
 
   async function obtenerPagosProyecto(proyectoId) {
-    var rows = await getFiltered(
-      getStorageKey('PAGOS', 'pagos'),
-      { proyecto_id: proyectoId },
-      { orderBy: 'id', ascending: false }
-    );
+    var rows = await obtenerFilasProyectoCompat('PAGOS', proyectoId);
     return rows.map(normalizePago);
   }
 
   async function obtenerTareasProyecto(proyectoId) {
-    var rows = await getFiltered(
-      getStorageKey('TAREAS', 'tareas'),
-      { proyecto_id: proyectoId },
-      { orderBy: 'id', ascending: false }
-    );
+    var rows = await obtenerFilasProyectoCompat('TAREAS', proyectoId);
     return rows.map(normalizeTarea);
   }
 
@@ -276,7 +308,7 @@
     var clienteId = byId('proy-cliente') ? byId('proy-cliente').value : '';
     var presupuesto = byId('proy-presupuesto') ? byId('proy-presupuesto').value : 0;
     var fechaInicio = byId('proy-fecha') ? byId('proy-fecha').value : todayISO();
-    var alcance = byId('proy-alcance') ? byId('proy-alcance').value.trim() : '';
+    var descripcion = byId('proy-alcance') ? byId('proy-alcance').value.trim() : '';
     var feedback = byId('feedback-proyecto');
 
     if (!nombre || !clienteId) {
@@ -289,13 +321,14 @@
     }
 
     var payload = {
-      nombre: nombre,
       cliente_id: clienteId,
-      presupuesto: num(presupuesto),
+      nombre: nombre,
+      descripcion: descripcion,
       fecha_inicio: fechaInicio || todayISO(),
       estado: 'en_progreso',
-      avance: 0,
-      alcance: alcance,
+      presupuesto: num(presupuesto),
+      total_cobrado: 0,
+      total_gastado: 0,
       notas: ''
     };
 
@@ -320,7 +353,11 @@
     if (byId('proy-fecha')) byId('proy-fecha').value = todayISO();
 
     await renderProyectos('todos');
-    if (typeof window.actualizarKPIs === 'function') await window.actualizarKPIs();
+
+    if (typeof window.actualizarKPIs === 'function') {
+      await window.actualizarKPIs();
+    }
+
     if (typeof window.actualizarSelectProyectosFinanzas === 'function') {
       window.actualizarSelectProyectosFinanzas();
     }
@@ -343,12 +380,13 @@
       + '  </div>'
       + '  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:14px;">'
       + '    <div><small>Presupuesto</small><br><strong>' + money(p.presupuesto) + '</strong></div>'
-      + '    <div><small>Inicio</small><br><strong>' + esc(formatDateSafe(p.fechaInicio)) + '</strong></div>'
-      + '    <div><small>Avance</small><br><strong>' + progreso + '%</strong></div>'
+      + '    <div><small>Cobrado</small><br><strong>' + money(p.totalCobrado) + '</strong></div>'
+      + '    <div><small>Gastado</small><br><strong>' + money(p.totalGastado) + '</strong></div>'
       + '  </div>'
       + '  <div style="margin-top:12px;height:10px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;">'
       + '    <div style="width:' + progreso + '%;height:100%;background:linear-gradient(90deg,#6bbd45,#4f8cff);"></div>'
       + '  </div>'
+      + '  <div style="margin-top:8px;font-size:.92rem;opacity:.85;">Avance estimado: ' + progreso + '%</div>'
       + '  <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">'
       + '    <button type="button" class="btn-primary" onclick="verProyecto(\'' + esc(p.id) + '\')">Ver Detalle</button>'
       + '  </div>'
@@ -388,7 +426,7 @@
       if (!term) return true;
       return (p.nombre || '').toLowerCase().indexOf(term) !== -1
         || (p.clienteNombre || '').toLowerCase().indexOf(term) !== -1
-        || (p.alcance || '').toLowerCase().indexOf(term) !== -1;
+        || (p.descripcion || '').toLowerCase().indexOf(term) !== -1;
     });
 
     if (!proyectos.length) {
@@ -459,14 +497,32 @@
         fecha: proyecto.fechaInicio,
         icono: '🚀',
         titulo: 'Inicio del proyecto',
-        descripcion: 'Se registró el inicio de ' + proyecto.nombre
+        descripcion: proyecto.nombre
+      });
+    }
+
+    if (proyecto.fechaFin) {
+      eventos.push({
+        fecha: proyecto.fechaFin,
+        icono: '📅',
+        titulo: 'Fecha fin estimada',
+        descripcion: 'Fecha objetivo del proyecto'
+      });
+    }
+
+    if (proyecto.fechaFinReal) {
+      eventos.push({
+        fecha: proyecto.fechaFinReal,
+        icono: '✅',
+        titulo: 'Fecha fin real',
+        descripcion: 'Cierre real del proyecto'
       });
     }
 
     tareas.forEach(function(t) {
       eventos.push({
         fecha: t.fechaLimite || t.createdAt || '',
-        icono: '✅',
+        icono: '🧩',
         titulo: t.titulo,
         descripcion: 'Tarea ' + (t.estado || 'pendiente') + (t.asignado ? ' · ' + t.asignado : '')
       });
@@ -564,17 +620,15 @@
 
   function renderListaTareas(tareas) {
     var container = byId('lista-tareas-proyecto') || byId('listaTareasProyecto') || byId('tareasProyectoLista');
+
     if (!container) {
       var form = byId('formTareaProyecto');
       if (form && form.parentNode) {
-        var existing = byId('lista-tareas-proyecto');
-        if (!existing) {
-          var wrap = document.createElement('div');
-          wrap.id = 'lista-tareas-proyecto';
-          wrap.style.marginTop = '18px';
-          form.parentNode.appendChild(wrap);
-          container = wrap;
-        }
+        var wrap = document.createElement('div');
+        wrap.id = 'lista-tareas-proyecto';
+        wrap.style.marginTop = '18px';
+        form.parentNode.appendChild(wrap);
+        container = wrap;
       }
     }
 
@@ -636,9 +690,7 @@
         maintainAspectRatio: false,
         plugins: {
           legend: {
-            labels: {
-              color: '#ffffff'
-            }
+            labels: { color: '#ffffff' }
           }
         }
       }
@@ -650,8 +702,11 @@
     var pagos = await obtenerPagosProyecto(proyecto.id);
     var tareas = await obtenerTareasProyecto(proyecto.id);
 
-    var totalGastos = gastos.reduce(function(acc, item) { return acc + item.monto; }, 0);
-    var totalPagos = pagos.reduce(function(acc, item) { return acc + item.monto; }, 0);
+    var totalGastosFiltrado = gastos.reduce(function(acc, item) { return acc + item.monto; }, 0);
+    var totalPagosFiltrado = pagos.reduce(function(acc, item) { return acc + item.monto; }, 0);
+
+    var totalGastos = totalGastosFiltrado > 0 ? totalGastosFiltrado : num(proyecto.totalGastado);
+    var totalPagos = totalPagosFiltrado > 0 ? totalPagosFiltrado : num(proyecto.totalCobrado);
     var presupuesto = num(proyecto.presupuesto);
     var porCobrar = Math.max(0, presupuesto - totalPagos);
     var utilidad = totalPagos - totalGastos;
@@ -789,19 +844,18 @@
       return false;
     }
 
-    await verProyecto(PROYECTO_ACTUAL.id);
     if (form) form.reset();
-
+    await verProyecto(PROYECTO_ACTUAL.id);
     return false;
   }
 
   function abrirModalGastoProyecto() {
-    alert('Registro rápido pendiente de modal. Por ahora inserta gastos desde Finanzas o te preparo el modal en el siguiente paso.');
+    alert('El modal rápido de gasto sigue pendiente; por ahora usa Finanzas o conectamos el modal en el siguiente paso.');
     return false;
   }
 
   function abrirModalPagoProyecto() {
-    alert('Registro rápido pendiente de modal. Por ahora inserta pagos desde Finanzas o te preparo el modal en el siguiente paso.');
+    alert('El modal rápido de pago sigue pendiente; por ahora usa Finanzas o conectamos el modal en el siguiente paso.');
     return false;
   }
 
