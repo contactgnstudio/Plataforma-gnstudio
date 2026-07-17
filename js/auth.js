@@ -7,6 +7,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_PUCx7VxzdeB75l1FqrvKSA_WbBha9mE';
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 window.supabaseClient = supabaseClient;
+
 function gnGetOverlay() {
   return document.getElementById('gn-login-overlay');
 }
@@ -226,7 +227,7 @@ async function gnRecuperarPassword() {
 
   try {
     const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + '/reset-password.html'
+      redirectTo: window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '') + '/reset-password.html'
     });
 
     if (error) {
