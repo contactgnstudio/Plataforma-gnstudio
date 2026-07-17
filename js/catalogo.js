@@ -1,5 +1,5 @@
 // ============================================================
-// js/catalogo.js — Catálogo de Servicios
+// js/catalogo.js — Catálogo de Servicios + Supabase
 // ============================================================
 
 function $serv(id) {
@@ -11,41 +11,121 @@ function servicioEscapeHtml(str) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
+    .replace(/\"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
 
+function servicioFormatMoney(valor) {
+  if (typeof formatMoney === 'function') return formatMoney(valor);
+  var num = parseFloat(valor || 0);
+  return 'USD ' + num.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+function catalogoSupabase() {
+  return window.supabaseClient || null;
+}
+
+async function catalogoGetUserId() {
+  var sb = catalogoSupabase();
+  if (!sb) return null;
+
+  try {
+    var session = await sb.auth.getSession();
+    return session && session.data && session.data.session
+      ? session.data.session.user.id
+      : null;
+  } catch (error) {
+    return null;
+  }
+}
+
 var serviciosEjemplo = [
-  { id: generarId(), codigo: 'WEB-001', categoria: 'diseno', descripcion: 'Landing page de alto impacto', unidad: 'und', precio: 450.00, itbms: 1 },
-  { id: generarId(), codigo: 'WEB-002', categoria: 'diseno', descripcion: 'Sitio web corporativo hasta 5 páginas', unidad: 'proyecto', precio: 1800.00, itbms: 1 },
-  { id: generarId(), codigo: 'DEV-001', categoria: 'desarrollo', descripcion: 'Desarrollo frontend HTML/CSS/JS', unidad: 'hr', precio: 45.00, itbms: 1 },
-  { id: generarId(), codigo: 'DEV-002', categoria: 'desarrollo', descripcion: 'Desarrollo backend', unidad: 'hr', precio: 55.00, itbms: 1 },
-  { id: generarId(), codigo: 'BRD-001', categoria: 'branding', descripcion: 'Diseño de logotipo', unidad: 'proyecto', precio: 650.00, itbms: 1 },
-  { id: generarId(), codigo: 'BRD-002', categoria: 'branding', descripcion: 'Manual de marca', unidad: 'proyecto', precio: 1200.00, itbms: 1 },
-  { id: generarId(), codigo: 'MKT-001', categoria: 'marketing', descripcion: 'Estrategia de marketing digital mensual', unidad: 'mes', precio: 800.00, itbms: 1 },
-  { id: generarId(), codigo: 'SEO-001', categoria: 'seo', descripcion: 'Auditoría SEO completa', unidad: 'proyecto', precio: 500.00, itbms: 1 },
-  { id: generarId(), codigo: 'SM-001', categoria: 'social_media', descripcion: 'Gestión mensual de redes sociales', unidad: 'mes', precio: 600.00, itbms: 1 },
-  { id: generarId(), codigo: 'HOS-001', categoria: 'hosting', descripcion: 'Hosting compartido anual', unidad: 'und', precio: 120.00, itbms: 1 }
+  { codigo: 'WEB-001', categoria: 'diseno_web', descripcion: 'Landing page de alto impacto', unidad: 'und', precio: 450.00, itbms: 1 },
+  { codigo: 'WEB-002', categoria: 'diseno_web', descripcion: 'Sitio web corporativo hasta 5 páginas', unidad: 'proyecto', precio: 1800.00, itbms: 1 },
+  { codigo: 'DEV-001', categoria: 'desarrollo_web', descripcion: 'Desarrollo frontend HTML/CSS/JS', unidad: 'hr', precio: 45.00, itbms: 1 },
+  { codigo: 'DEV-002', categoria: 'desarrollo_web', descripcion: 'Desarrollo backend', unidad: 'hr', precio: 55.00, itbms: 1 },
+  { codigo: 'BRD-001', categoria: 'branding', descripcion: 'Diseño de logotipo', unidad: 'proyecto', precio: 650.00, itbms: 1 },
+  { codigo: 'BRD-002', categoria: 'branding', descripcion: 'Manual de marca', unidad: 'proyecto', precio: 1200.00, itbms: 1 },
+  { codigo: 'MKT-001', categoria: 'marketing', descripcion: 'Estrategia de marketing digital mensual', unidad: 'mes', precio: 800.00, itbms: 1 },
+  { codigo: 'SEO-001', categoria: 'seo', descripcion: 'Auditoría SEO completa', unidad: 'proyecto', precio: 500.00, itbms: 1 },
+  { codigo: 'SM-001', categoria: 'social_media', descripcion: 'Gestión mensual de redes sociales', unidad: 'mes', precio: 600.00, itbms: 1 },
+  { codigo: 'HOS-001', categoria: 'hosting', descripcion: 'Hosting compartido anual', unidad: 'und', precio: 120.00, itbms: 1 }
 ];
 
 // ============================================================
 // DATOS
 // ============================================================
 
-function inicializarCatalogo() {
-  var data = getData(STORAGE_KEYS.SERVICIOS);
-  if (!Array.isArray(data) || data.length === 0) {
-    setData(STORAGE_KEYS.SERVICIOS, serviciosEjemplo);
+async function inicializarCatalogo() {
+  await sembrarServiciosSiVacio();
+  await renderServicios();
+  await actualizarVistaJSON();
+}
+
+async function obtenerServicios() {
+  var sb = catalogoSupabase();
+  if (!sb) {
+    console.error('Supabase no disponible en catálogo');
+    return [];
+  }
+
+  try {
+    var result = await sb
+      .from('servicios')
+      .select('*')
+      .order('codigo', { ascending: true });
+
+    if (result.error) {
+      console.error('Error obtenerServicios:', result.error.message);
+      return [];
+    }
+
+    return Array.isArray(result.data) ? result.data : [];
+  } catch (error) {
+    console.error('Error obtenerServicios:', error);
+    return [];
   }
 }
 
-function obtenerServicios() {
-  var data = getData(STORAGE_KEYS.SERVICIOS);
-  return Array.isArray(data) ? data : [];
-}
+async function sembrarServiciosSiVacio() {
+  var servicios = await obtenerServicios();
+  if (servicios.length > 0) return true;
 
-function guardarServicios(servicios) {
-  setData(STORAGE_KEYS.SERVICIOS, servicios);
+  var sb = catalogoSupabase();
+  if (!sb) return false;
+
+  var userId = await catalogoGetUserId();
+  if (!userId) {
+    console.error('No se pudo obtener el usuario autenticado para sembrar servicios');
+    return false;
+  }
+
+  var rows = serviciosEjemplo.map(function(item) {
+    return {
+      codigo: item.codigo,
+      categoria: item.categoria,
+      descripcion: item.descripcion,
+      unidad: item.unidad,
+      precio: item.precio,
+      itbms: item.itbms,
+      user_id: userId
+    };
+  });
+
+  try {
+    var result = await sb.from('servicios').insert(rows);
+    if (result.error) {
+      console.error('Error sembrando servicios de ejemplo:', result.error.message);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('Error sembrando servicios de ejemplo:', error);
+    return false;
+  }
 }
 
 // ============================================================
@@ -60,14 +140,17 @@ function obtenerGrupoIdFormularioServicio() {
 function obtenerNombreGrupoPorId(grupoId) {
   if (!grupoId || typeof obtenerGrupos !== 'function') return '';
   var grupos = obtenerGrupos();
+
   for (var i = 0; i < grupos.length; i++) {
     if (grupos[i].id === grupoId) return grupos[i].nombre;
   }
+
   return '';
 }
 
 function sincronizarGrupoServicio(servicioId, grupoId) {
   if (typeof obtenerMapaGrupos !== 'function' || typeof guardarMapaGrupos !== 'function') return;
+
   var map = obtenerMapaGrupos() || {};
 
   if (grupoId) {
@@ -79,104 +162,180 @@ function sincronizarGrupoServicio(servicioId, grupoId) {
   guardarMapaGrupos(map);
 }
 
+function normalizarCategoriaDesdeGrupo(grupoNombre) {
+  return (grupoNombre || 'general')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '_');
+}
+
 // ============================================================
 // CRUD
 // ============================================================
 
-function guardarServicio(event) {
-  event.preventDefault();
+async function guardarServicio(event) {
+  if (event) event.preventDefault();
 
   var feedback = $serv('feedback-servicio');
   var codigo = ($serv('serv-codigo') ? $serv('serv-codigo').value : '').trim().toUpperCase();
   var descripcion = ($serv('serv-descripcion') ? $serv('serv-descripcion').value : '').trim();
   var unidad = $serv('serv-unidad') ? $serv('serv-unidad').value : 'und';
   var precio = parseFloat($serv('serv-precio') ? $serv('serv-precio').value : 0);
-  var itbms = parseInt($serv('serv-itbms') ? $serv('serv-itbms').value : 1);
+  var itbms = parseInt($serv('serv-itbms') ? $serv('serv-itbms').value : 1, 10);
   var grupoId = obtenerGrupoIdFormularioServicio();
+  var grupoNombre = obtenerNombreGrupoPorId(grupoId);
 
   if (!codigo || !descripcion || !precio || precio <= 0) {
     if (feedback) {
       feedback.className = 'form-feedback error';
       feedback.textContent = '❌ Completa código, descripción y precio válido';
+      feedback.style.display = 'block';
     }
     return false;
   }
 
-  var servicios = obtenerServicios();
+  var servicios = await obtenerServicios();
 
   for (var i = 0; i < servicios.length; i++) {
-    if (servicios[i].codigo === codigo) {
+    if ((servicios[i].codigo || '').toUpperCase() === codigo) {
       if (feedback) {
         feedback.className = 'form-feedback error';
         feedback.textContent = '❌ El código "' + codigo + '" ya existe';
+        feedback.style.display = 'block';
       }
       return false;
     }
   }
 
-  var grupoNombre = obtenerNombreGrupoPorId(grupoId);
+  var sb = catalogoSupabase();
+  if (!sb) {
+    if (feedback) {
+      feedback.className = 'form-feedback error';
+      feedback.textContent = '❌ Supabase no está disponible';
+      feedback.style.display = 'block';
+    }
+    return false;
+  }
+
+  var userId = await catalogoGetUserId();
+  if (!userId) {
+    if (feedback) {
+      feedback.className = 'form-feedback error';
+      feedback.textContent = '❌ No hay una sesión válida';
+      feedback.style.display = 'block';
+    }
+    return false;
+  }
 
   var nuevoServicio = {
-    id: generarId(),
     codigo: codigo,
-    categoria: grupoNombre ? grupoNombre.toLowerCase().replace(/\s+/g, '_') : 'general',
-    grupoId: grupoId || '',
+    categoria: normalizarCategoriaDesdeGrupo(grupoNombre),
     descripcion: descripcion,
     unidad: unidad,
     precio: precio,
     itbms: itbms === 1 ? 1 : 0,
-    creadoEn: new Date().toISOString()
+    user_id: userId
   };
 
-  servicios.push(nuevoServicio);
-  servicios.sort(function(a, b) {
-    return a.codigo.localeCompare(b.codigo);
-  });
+  try {
+    var result = await sb
+      .from('servicios')
+      .insert(nuevoServicio)
+      .select()
+      .single();
 
-  guardarServicios(servicios);
-  sincronizarGrupoServicio(nuevoServicio.id, grupoId);
+    if (result.error) {
+      if (feedback) {
+        feedback.className = 'form-feedback error';
+        feedback.textContent = '❌ ' + result.error.message;
+        feedback.style.display = 'block';
+      }
+      return false;
+    }
 
-  if (feedback) {
-    feedback.className = 'form-feedback success';
-    feedback.textContent = '✅ Servicio "' + codigo + '" guardado correctamente';
+    if (result.data && result.data.id) {
+      sincronizarGrupoServicio(result.data.id, grupoId);
+    }
+
+    if (feedback) {
+      feedback.className = 'form-feedback success';
+      feedback.textContent = '✅ Servicio "' + codigo + '" guardado correctamente';
+      feedback.style.display = 'block';
+    }
+
+    if ($serv('formServicio')) $serv('formServicio').reset();
+
+    await renderServicios();
+    await actualizarVistaJSON();
+
+    if (typeof actualizarSelectServicios === 'function') {
+      await actualizarSelectServicios();
+    }
+
+    if (typeof renderServiciosPorGrupo === 'function') {
+      renderServiciosPorGrupo();
+    }
+
+    if (typeof renderServiciosSinGrupo === 'function') {
+      renderServiciosSinGrupo();
+    }
+
+    return false;
+  } catch (error) {
+    console.error('Error guardarServicio:', error);
+
+    if (feedback) {
+      feedback.className = 'form-feedback error';
+      feedback.textContent = '❌ No se pudo guardar el servicio';
+      feedback.style.display = 'block';
+    }
+
+    return false;
   }
-
-  if ($serv('formServicio')) $serv('formServicio').reset();
-
-  renderServicios();
-  actualizarVistaJSON();
-
-  if (typeof actualizarSelectServicios === 'function') actualizarSelectServicios();
-  if (typeof renderServiciosPorGrupo === 'function') renderServiciosPorGrupo();
-  if (typeof renderServiciosSinGrupo === 'function') renderServiciosSinGrupo();
-
-  return false;
 }
 
-function eliminarServicio(id) {
+async function eliminarServicio(id) {
   if (!confirm('¿Eliminar este servicio?')) return;
 
-  var servicios = obtenerServicios().filter(function(s) {
-    return s.id !== id;
-  });
+  var sb = catalogoSupabase();
+  if (!sb) return;
 
-  guardarServicios(servicios);
-  sincronizarGrupoServicio(id, '');
+  try {
+    var result = await sb.from('servicios').delete().eq('id', id);
 
-  renderServicios();
-  actualizarVistaJSON();
+    if (result.error) {
+      alert('No se pudo eliminar el servicio: ' + result.error.message);
+      return;
+    }
 
-  if (typeof actualizarSelectServicios === 'function') actualizarSelectServicios();
-  if (typeof renderServiciosPorGrupo === 'function') renderServiciosPorGrupo();
-  if (typeof renderServiciosSinGrupo === 'function') renderServiciosSinGrupo();
+    sincronizarGrupoServicio(id, '');
+
+    await renderServicios();
+    await actualizarVistaJSON();
+
+    if (typeof actualizarSelectServicios === 'function') {
+      await actualizarSelectServicios();
+    }
+
+    if (typeof renderServiciosPorGrupo === 'function') {
+      renderServiciosPorGrupo();
+    }
+
+    if (typeof renderServiciosSinGrupo === 'function') {
+      renderServiciosSinGrupo();
+    }
+  } catch (error) {
+    console.error('Error eliminarServicio:', error);
+    alert('No se pudo eliminar el servicio.');
+  }
 }
 
 // ============================================================
 // RENDER
 // ============================================================
 
-function renderServicios(filtroTexto, filtroGrupo) {
-  var servicios = obtenerServicios();
+async function renderServicios(filtroTexto, filtroGrupo) {
+  var servicios = await obtenerServicios();
   var tbody = $serv('tbodyServicios');
   if (!tbody) return;
 
@@ -190,11 +349,9 @@ function renderServicios(filtroTexto, filtroGrupo) {
 
   if (filtroGrupo && filtroGrupo !== 'todos') {
     servicios = servicios.filter(function(s) {
-      var grupoId = s.grupoId || '';
-      if (!grupoId && typeof obtenerMapaGrupos === 'function') {
-        var map = obtenerMapaGrupos() || {};
-        grupoId = map[s.id] || '';
-      }
+      if (typeof obtenerMapaGrupos !== 'function') return false;
+      var map = obtenerMapaGrupos() || {};
+      var grupoId = map[s.id] || '';
       return grupoId === filtroGrupo;
     });
   }
@@ -208,11 +365,13 @@ function renderServicios(filtroTexto, filtroGrupo) {
 
   for (var i = 0; i < servicios.length; i++) {
     var s = servicios[i];
-    var grupoId = s.grupoId || '';
-    if (!grupoId && typeof obtenerMapaGrupos === 'function') {
+    var grupoId = '';
+
+    if (typeof obtenerMapaGrupos === 'function') {
       var map = obtenerMapaGrupos() || {};
       grupoId = map[s.id] || '';
     }
+
     var grupoNombre = obtenerNombreGrupoPorId(grupoId) || 'Sin grupo';
 
     html += ''
@@ -223,8 +382,8 @@ function renderServicios(filtroTexto, filtroGrupo) {
       + '<div style="opacity:.75;font-size:.9em;">' + servicioEscapeHtml(grupoNombre) + '</div>'
       + '</td>'
       + '<td>' + servicioEscapeHtml(s.unidad) + '</td>'
-      + '<td>' + formatMoney(parseFloat(s.precio) || 0) + '</td>'
-      + '<td>' + ((parseInt(s.itbms) === 1) ? 'Sí' : 'No') + '</td>'
+      + '<td>' + servicioFormatMoney(parseFloat(s.precio) || 0) + '</td>'
+      + '<td>' + ((parseInt(s.itbms, 10) === 1) ? 'Sí' : 'No') + '</td>'
       + '<td><button type="button" class="btn-table danger" onclick="eliminarServicio(\'' + s.id + '\')">Eliminar</button></td>'
       + '</tr>';
   }
@@ -232,20 +391,20 @@ function renderServicios(filtroTexto, filtroGrupo) {
   tbody.innerHTML = html;
 }
 
-function filtrarServicios() {
+async function filtrarServicios() {
   var input = $serv('buscar-servicio');
   var filtroGrupo = $serv('filtro-grupo-servicio') || $serv('filtro-servicio-grupo');
 
-  renderServicios(
+  await renderServicios(
     input ? input.value : '',
     filtroGrupo ? filtroGrupo.value : ''
   );
 }
 
-function actualizarVistaJSON() {
+async function actualizarVistaJSON() {
   var target = $serv('jsonServicios') || $serv('vista-json') || $serv('servicios-json');
   if (!target) return;
 
-  var servicios = obtenerServicios();
+  var servicios = await obtenerServicios();
   target.textContent = JSON.stringify(servicios, null, 2);
 }
