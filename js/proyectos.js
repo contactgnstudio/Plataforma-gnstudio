@@ -1,8 +1,6 @@
 // ============================================================
 // js/proyectos.js — ProjectOS completo para GN Studio OS
-// Compatible con la UI actual en index.html
-// Enfoque: lista + detalle + tabs + tareas + gastos + pagos + notas
-// Fuente de datos: Supabase mediante helpers globales existentes
+// Ajuste clave: no depende de created_at para listar proyectos
 // ============================================================
 
 (function(window, document) {
@@ -113,7 +111,9 @@
   function normalizeCliente(row) {
     return {
       id: row && row.id ? row.id : '',
-      nombre: row && (row.nombre || row.nombre_comercial || row.empresa || row.razon_social) ? (row.nombre || row.nombre_comercial || row.empresa || row.razon_social) : 'Cliente'
+      nombre: row && (row.nombre || row.nombre_comercial || row.empresa || row.razon_social)
+        ? (row.nombre || row.nombre_comercial || row.empresa || row.razon_social)
+        : 'Cliente'
     };
   }
 
@@ -123,12 +123,12 @@
       nombre: row.nombre || 'Proyecto',
       clienteId: row.clienteId || row.cliente_id || '',
       presupuesto: num(row.presupuesto),
-      fechaInicio: row.fechaInicio || row.fecha_inicio || row.created_at || '',
+      fechaInicio: row.fechaInicio || row.fecha_inicio || '',
       estado: row.estado || 'pendiente',
       avance: intVal(row.avance),
       alcance: row.alcance || '',
       notas: row.notas || '',
-      createdAt: row.createdAt || row.created_at || row.fecha_inicio || '',
+      createdAt: row.createdAt || row.created_at || '',
       updatedAt: row.updatedAt || row.updated_at || '',
       raw: row
     };
@@ -174,7 +174,7 @@
   }
 
   async function obtenerClientes() {
-    var rows = await getAll(getStorageKey('CLIENTES', 'clientes'));
+    var rows = await getAll(getStorageKey('CLIENTES', 'clientes'), { orderBy: 'id', ascending: false });
     CLIENTES_CACHE = rows.map(normalizeCliente);
     return CLIENTES_CACHE;
   }
@@ -196,7 +196,7 @@
   }
 
   async function obtenerProyectos() {
-    var rows = await getAll(getStorageKey('PROYECTOS', 'proyectos'));
+    var rows = await getAll(getStorageKey('PROYECTOS', 'proyectos'), { orderBy: 'id', ascending: false });
     var proyectos = rows.map(normalizeProyecto);
     for (var i = 0; i < proyectos.length; i++) {
       proyectos[i].clienteNombre = await getClienteNombre(proyectos[i].clienteId);
@@ -205,6 +205,17 @@
   }
 
   async function obtenerProyectoPorId(id) {
+    var proyecto = null;
+
+    if (typeof window.findItem === 'function') {
+      var row = await window.findItem(getStorageKey('PROYECTOS', 'proyectos'), id);
+      if (row) {
+        proyecto = normalizeProyecto(row);
+        proyecto.clienteNombre = await getClienteNombre(proyecto.clienteId);
+        return proyecto;
+      }
+    }
+
     var proyectos = await obtenerProyectos();
     for (var i = 0; i < proyectos.length; i++) {
       if (String(proyectos[i].id) === String(id)) return proyectos[i];
@@ -213,17 +224,29 @@
   }
 
   async function obtenerGastosProyecto(proyectoId) {
-    var rows = await getFiltered(getStorageKey('GASTOS', 'gastos'), { proyecto_id: proyectoId }, { orderBy: 'fecha', ascending: false });
+    var rows = await getFiltered(
+      getStorageKey('GASTOS', 'gastos'),
+      { proyecto_id: proyectoId },
+      { orderBy: 'id', ascending: false }
+    );
     return rows.map(normalizeGasto);
   }
 
   async function obtenerPagosProyecto(proyectoId) {
-    var rows = await getFiltered(getStorageKey('PAGOS', 'pagos'), { proyecto_id: proyectoId }, { orderBy: 'fecha', ascending: false });
+    var rows = await getFiltered(
+      getStorageKey('PAGOS', 'pagos'),
+      { proyecto_id: proyectoId },
+      { orderBy: 'id', ascending: false }
+    );
     return rows.map(normalizePago);
   }
 
   async function obtenerTareasProyecto(proyectoId) {
-    var rows = await getFiltered(getStorageKey('TAREAS', 'tareas'), { proyecto_id: proyectoId }, { orderBy: 'created_at', ascending: false });
+    var rows = await getFiltered(
+      getStorageKey('TAREAS', 'tareas'),
+      { proyecto_id: proyectoId },
+      { orderBy: 'id', ascending: false }
+    );
     return rows.map(normalizeTarea);
   }
 
@@ -298,7 +321,9 @@
 
     await renderProyectos('todos');
     if (typeof window.actualizarKPIs === 'function') await window.actualizarKPIs();
-    if (typeof window.actualizarSelectProyectosFinanzas === 'function') await window.actualizarSelectProyectosFinanzas();
+    if (typeof window.actualizarSelectProyectosFinanzas === 'function') {
+      window.actualizarSelectProyectosFinanzas();
+    }
 
     return false;
   }
@@ -341,10 +366,6 @@
         return p.estado === filtro;
       });
     }
-
-    proyectos.sort(function(a, b) {
-      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-    });
 
     if (!proyectos.length) {
       grid.innerHTML = '<div class="empty-state">No hay proyectos registrados</div>';
@@ -768,8 +789,8 @@
       return false;
     }
 
+    await verProyecto(PROYECTO_ACTUAL.id);
     if (form) form.reset();
-    await renderDetalleProyecto(PROYECTO_ACTUAL);
 
     return false;
   }
