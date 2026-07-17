@@ -25,7 +25,7 @@ function grupoEscapeHtml(str) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
+    .replace(/\"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
 
@@ -43,15 +43,16 @@ function contenedorPrimero(ids) {
 
 function inicializarGrupos() {
   var grupos = getData(GRUPOS_KEY);
+
   if (!Array.isArray(grupos) || grupos.length === 0) {
     grupos = [
-      { id: 'grp-desarrollo',  codigo: 'DESARROLLO',  nombre: 'Desarrollo Web',      descripcion: 'Programación, APIs, CMS y deploy', color: 'green',  orden: 1, creadoEn: new Date().toISOString() },
-      { id: 'grp-diseno',      codigo: 'DISENO',      nombre: 'Diseño Web',          descripcion: 'UI/UX, landing pages y responsive', color: 'blue',   orden: 2, creadoEn: new Date().toISOString() },
-      { id: 'grp-branding',    codigo: 'BRANDING',    nombre: 'Branding',            descripcion: 'Logotipos, manuales y papelería', color: 'purple', orden: 3, creadoEn: new Date().toISOString() },
-      { id: 'grp-marketing',   codigo: 'MARKETING',   nombre: 'Marketing Digital',   descripcion: 'Ads, SEO y automatización', color: 'orange', orden: 4, creadoEn: new Date().toISOString() },
-      { id: 'grp-social',      codigo: 'SOCIAL',      nombre: 'Social Media',        descripcion: 'Gestión de redes y contenido', color: 'pink',   orden: 5, creadoEn: new Date().toISOString() },
-      { id: 'grp-consultoria', codigo: 'CONSULTORIA', nombre: 'Consultoría',         descripcion: 'Estrategia, auditorías y asesoría', color: 'teal',  orden: 6, creadoEn: new Date().toISOString() },
-      { id: 'grp-soporte',     codigo: 'SOPORTE',     nombre: 'Soporte & Hosting',   descripcion: 'Mantenimiento, hosting y dominios', color: 'gray',  orden: 7, creadoEn: new Date().toISOString() }
+      { id: 'grp-desarrollo',  codigo: 'DESARROLLO',  nombre: 'Desarrollo Web',    descripcion: 'Programación, APIs, CMS y deploy', color: 'green',  orden: 1, creadoEn: new Date().toISOString() },
+      { id: 'grp-diseno',      codigo: 'DISENO',      nombre: 'Diseño Web',        descripcion: 'UI/UX, landing pages y responsive', color: 'blue',   orden: 2, creadoEn: new Date().toISOString() },
+      { id: 'grp-branding',    codigo: 'BRANDING',    nombre: 'Branding',          descripcion: 'Logotipos, manuales y papelería', color: 'purple', orden: 3, creadoEn: new Date().toISOString() },
+      { id: 'grp-marketing',   codigo: 'MARKETING',   nombre: 'Marketing Digital', descripcion: 'Ads, SEO y automatización', color: 'orange', orden: 4, creadoEn: new Date().toISOString() },
+      { id: 'grp-social',      codigo: 'SOCIAL',      nombre: 'Social Media',      descripcion: 'Gestión de redes y contenido', color: 'pink', orden: 5, creadoEn: new Date().toISOString() },
+      { id: 'grp-consultoria', codigo: 'CONSULTORIA', nombre: 'Consultoría',       descripcion: 'Estrategia, auditorías y asesoría', color: 'teal', orden: 6, creadoEn: new Date().toISOString() },
+      { id: 'grp-soporte',     codigo: 'SOPORTE',     nombre: 'Soporte & Hosting', descripcion: 'Mantenimiento, hosting y dominios', color: 'gray', orden: 7, creadoEn: new Date().toISOString() }
     ];
     setData(GRUPOS_KEY, grupos);
   }
@@ -76,7 +77,7 @@ function obtenerGrupos() {
   var grupos = getData(GRUPOS_KEY);
   grupos = Array.isArray(grupos) ? grupos : [];
   grupos.sort(function(a, b) {
-    return (parseInt(a.orden) || 99) - (parseInt(b.orden) || 99);
+    return (parseInt(a.orden, 10) || 99) - (parseInt(b.orden, 10) || 99);
   });
   return grupos;
 }
@@ -104,23 +105,102 @@ function obtenerGrupoDeServicio(servicioId) {
 }
 
 // ============================================================
+// MODAL DE GRUPO
+// ============================================================
+
+function abrirModalGrupo() {
+  var existing = document.getElementById('gn-modal-grupo');
+  if (existing) existing.remove();
+
+  var modal = document.createElement('div');
+  modal.id = 'gn-modal-grupo';
+  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+
+  modal.innerHTML = `
+    <div style="background:#1a1a2e;border-radius:12px;padding:32px;width:100%;max-width:680px;max-height:90vh;overflow-y:auto;border:1px solid #2a2a4a;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+        <h3 style="margin:0;color:#fff;font-size:18px;">Nuevo Grupo</h3>
+        <button type="button" onclick="cerrarModalGrupo()" style="background:none;border:none;color:#aaa;font-size:24px;cursor:pointer;">&#x2715;</button>
+      </div>
+
+      <form id="formGrupo" onsubmit="return guardarGrupo(event)">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div>
+            <label style="color:#aaa;font-size:12px;display:block;margin-bottom:6px;">CÓDIGO *</label>
+            <input id="grp-codigo" type="text" placeholder="Ej: DESARROLLO" maxlength="30" style="width:100%;padding:10px;background:#0f0f23;border:1px solid #333;border-radius:8px;color:#fff;box-sizing:border-box;" />
+          </div>
+
+          <div>
+            <label style="color:#aaa;font-size:12px;display:block;margin-bottom:6px;">ORDEN</label>
+            <input id="grp-orden" type="number" min="1" step="1" value="99" style="width:100%;padding:10px;background:#0f0f23;border:1px solid #333;border-radius:8px;color:#fff;box-sizing:border-box;" />
+          </div>
+
+          <div style="grid-column:1/-1;">
+            <label style="color:#aaa;font-size:12px;display:block;margin-bottom:6px;">NOMBRE *</label>
+            <input id="grp-nombre" type="text" placeholder="Nombre del grupo" style="width:100%;padding:10px;background:#0f0f23;border:1px solid #333;border-radius:8px;color:#fff;box-sizing:border-box;" />
+          </div>
+
+          <div style="grid-column:1/-1;">
+            <label style="color:#aaa;font-size:12px;display:block;margin-bottom:6px;">DESCRIPCIÓN</label>
+            <textarea id="grp-descripcion" rows="3" placeholder="Descripción breve del grupo" style="width:100%;padding:10px;background:#0f0f23;border:1px solid #333;border-radius:8px;color:#fff;box-sizing:border-box;resize:vertical;"></textarea>
+          </div>
+
+          <div style="grid-column:1/-1;">
+            <label style="color:#aaa;font-size:12px;display:block;margin-bottom:6px;">COLOR</label>
+            <select id="grp-color" style="width:100%;padding:10px;background:#0f0f23;border:1px solid #333;border-radius:8px;color:#fff;box-sizing:border-box;">
+              <option value="green">🟢 Verde</option>
+              <option value="blue" selected>🔵 Azul</option>
+              <option value="purple">🟣 Púrpura</option>
+              <option value="orange">🟠 Naranja</option>
+              <option value="red">🔴 Rojo</option>
+              <option value="teal">🩵 Turquesa</option>
+              <option value="pink">🩷 Rosa</option>
+              <option value="gray">⚪ Gris</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="feedback-grupo" class="form-feedback" style="margin-top:16px;"></div>
+
+        <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:24px;">
+          <button type="button" onclick="cerrarModalGrupo()" style="padding:10px 20px;background:#333;border:none;border-radius:8px;color:#fff;cursor:pointer;">Cancelar</button>
+          <button type="submit" style="padding:10px 20px;background:#2563eb;border:none;border-radius:8px;color:#fff;cursor:pointer;">Guardar Grupo</button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) cerrarModalGrupo();
+  });
+}
+
+function cerrarModalGrupo() {
+  var modal = document.getElementById('gn-modal-grupo');
+  if (modal) modal.remove();
+}
+
+// ============================================================
 // CRUD
 // ============================================================
 
 function guardarGrupo(event) {
-  event.preventDefault();
+  if (event) event.preventDefault();
 
   var feedback = $grp('feedback-grupo');
   var codigo = ($grp('grp-codigo') ? $grp('grp-codigo').value : '').trim().toUpperCase();
   var nombre = ($grp('grp-nombre') ? $grp('grp-nombre').value : '').trim();
   var descripcion = ($grp('grp-descripcion') ? $grp('grp-descripcion').value : '').trim();
   var color = $grp('grp-color') ? $grp('grp-color').value : 'blue';
-  var orden = parseInt($grp('grp-orden') ? $grp('grp-orden').value : 99) || 99;
+  var orden = parseInt($grp('grp-orden') ? $grp('grp-orden').value : 99, 10) || 99;
 
   if (!codigo || !nombre) {
     if (feedback) {
       feedback.className = 'form-feedback error';
       feedback.textContent = '❌ Completa código y nombre del grupo';
+      feedback.style.display = 'block';
     }
     return false;
   }
@@ -132,6 +212,7 @@ function guardarGrupo(event) {
       if (feedback) {
         feedback.className = 'form-feedback error';
         feedback.textContent = '❌ El código "' + codigo + '" ya existe';
+        feedback.style.display = 'block';
       }
       return false;
     }
@@ -148,7 +229,7 @@ function guardarGrupo(event) {
   });
 
   grupos.sort(function(a, b) {
-    return (parseInt(a.orden) || 99) - (parseInt(b.orden) || 99);
+    return (parseInt(a.orden, 10) || 99) - (parseInt(b.orden, 10) || 99);
   });
 
   setData(GRUPOS_KEY, grupos);
@@ -156,6 +237,7 @@ function guardarGrupo(event) {
   if (feedback) {
     feedback.className = 'form-feedback success';
     feedback.textContent = '✅ Grupo "' + nombre + '" creado';
+    feedback.style.display = 'block';
   }
 
   if ($grp('formGrupo')) $grp('formGrupo').reset();
@@ -165,6 +247,10 @@ function guardarGrupo(event) {
   actualizarSelectGrupos();
   renderServiciosPorGrupo();
   renderServiciosSinGrupo();
+
+  setTimeout(function() {
+    cerrarModalGrupo();
+  }, 500);
 
   return false;
 }
@@ -305,12 +391,6 @@ function renderGruposVisuales() {
   if (!container) return;
 
   var grupos = obtenerGrupos();
-
-  if (grupos.length === 0) {
-    container.innerHTML = '<div class="empty-state">No hay grupos creados</div>';
-    return;
-  }
-
   var map = obtenerMapaGrupos();
   var conteo = {};
 
@@ -319,17 +399,28 @@ function renderGruposVisuales() {
     conteo[gid] = (conteo[gid] || 0) + 1;
   }
 
+  if (grupos.length === 0) {
+    container.innerHTML = '<div class="empty-state">No hay grupos registrados</div>';
+    return;
+  }
+
   var html = '';
 
   for (var i = 0; i < grupos.length; i++) {
     var g = grupos[i];
     var color = COLORES_GRUPO[g.color] || COLORES_GRUPO.blue;
+    var totalServicios = conteo[g.id] || 0;
 
     html += ''
-      + '<div class="grupo-card" style="background:' + color.bg + ';border:1px solid ' + color.border + ';border-radius:16px;padding:16px;margin-bottom:12px;">'
-      + '<div style="font-weight:700;">' + color.icon + ' ' + grupoEscapeHtml(g.nombre) + '</div>'
-      + '<div style="opacity:.8;margin-top:6px;">' + grupoEscapeHtml(g.descripcion || 'Sin descripción') + '</div>'
-      + '<div style="margin-top:8px;font-size:.95em;"><strong>' + (conteo[g.id] || 0) + '</strong> servicios asignados</div>'
+      + '<div class="grupo-card" style="border:1px solid ' + color.border + ';background:' + color.bg + ';">'
+      + '  <div class="grupo-card-header" style="display:flex;justify-content:space-between;align-items:center;gap:12px;">'
+      + '    <div>'
+      + '      <div style="font-size:12px;opacity:0.8;">' + grupoEscapeHtml(g.codigo) + '</div>'
+      + '      <h3 style="margin:4px 0 0;">' + color.icon + ' ' + grupoEscapeHtml(g.nombre) + '</h3>'
+      + '    </div>'
+      + '    <div style="font-size:12px;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,0.15);">' + totalServicios + ' servicios</div>'
+      + '  </div>'
+      + '  <p style="margin-top:12px;">' + grupoEscapeHtml(g.descripcion || 'Sin descripción') + '</p>'
       + '</div>';
   }
 
@@ -337,195 +428,114 @@ function renderGruposVisuales() {
 }
 
 // ============================================================
-// SERVICIOS POR GRUPO
+// RENDER SERVICIOS POR GRUPO
 // ============================================================
 
 function renderServiciosPorGrupo() {
   var container = contenedorPrimero(['servicios-por-grupo', 'serviciosPorGrupo']);
   if (!container) return;
 
-  if (typeof obtenerServicios !== 'function') {
-    container.innerHTML = '';
-    return;
-  }
-
   var grupos = obtenerGrupos();
-  var servicios = obtenerServicios();
   var map = obtenerMapaGrupos();
+  var servicios = typeof obtenerServicios === 'function' ? obtenerServicios() : [];
 
-  if (grupos.length === 0) {
-    container.innerHTML = '<div class="empty-state">No hay grupos creados</div>';
+  if (!Array.isArray(servicios) || servicios.length === 0) {
+    container.innerHTML = '<div class="empty-state">No hay servicios cargados todavía.</div>';
     return;
   }
 
   var html = '';
 
   for (var i = 0; i < grupos.length; i++) {
-    var g = grupos[i];
-    var lista = [];
+    var grupo = grupos[i];
+    var color = COLORES_GRUPO[grupo.color] || COLORES_GRUPO.blue;
+    var items = servicios.filter(function(servicio) {
+      return map[servicio.id] === grupo.id;
+    });
 
-    for (var j = 0; j < servicios.length; j++) {
-      var s = servicios[j];
-      if (map[s.id] === g.id) lista.push(s);
-    }
+    if (items.length === 0) continue;
 
-    html += '<div style="margin-bottom:18px;">';
-    html += '<h4 style="margin-bottom:10px;">' + grupoEscapeHtml(g.nombre) + ' <span style="opacity:.7;">(' + lista.length + ')</span></h4>';
+    html += '<div style="margin-bottom:24px;">';
+    html += '<h3 style="margin-bottom:12px;color:' + color.border + ';">' + color.icon + ' ' + grupoEscapeHtml(grupo.nombre) + '</h3>';
+    html += '<div style="display:grid;gap:12px;">';
 
-    if (lista.length === 0) {
-      html += '<div class="empty-state">Sin servicios asignados</div>';
-    } else {
-      html += '<div>';
-      for (var k = 0; k < lista.length; k++) {
-        html += ''
-          + '<div style="border:1px solid rgba(255,255,255,0.08);padding:10px 12px;border-radius:12px;margin-bottom:8px;">'
-          + '<div style="font-weight:600;">[' + grupoEscapeHtml(lista[k].codigo) + '] ' + grupoEscapeHtml(lista[k].descripcion) + '</div>'
-          + '<div style="opacity:.8;margin-top:4px;">' + grupoEscapeHtml(lista[k].unidad) + ' · ' + formatMoney(parseFloat(lista[k].precio) || 0) + '</div>'
-          + '</div>';
-      }
-      html += '</div>';
+    for (var j = 0; j < items.length; j++) {
+      var servicio = items[j];
+      html += ''
+        + '<div style="padding:12px;border:1px solid #2a2a4a;border-radius:10px;background:#111827;">'
+        + '  <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;">'
+        + '    <div>'
+        + '      <strong>' + grupoEscapeHtml(servicio.nombre || 'Servicio sin nombre') + '</strong><br>'
+        + '      <span style="color:#94a3b8;font-size:12px;">' + grupoEscapeHtml(servicio.codigo || 'Sin código') + '</span>'
+        + '    </div>'
+        + '    <button type="button" class="btn-table danger" onclick="quitarServicioDeGrupo(\'' + servicio.id + '\')">Quitar</button>'
+        + '  </div>'
+        + '</div>';
     }
 
     html += '</div>';
+    html += '</div>';
+  }
+
+  if (!html) {
+    html = '<div class="empty-state">No hay servicios asignados a grupos.</div>';
   }
 
   container.innerHTML = html;
 }
+
+// ============================================================
+// RENDER SERVICIOS SIN GRUPO
+// ============================================================
 
 function renderServiciosSinGrupo() {
   var container = contenedorPrimero(['servicios-sin-grupo', 'serviciosSinGrupo']);
   if (!container) return;
 
-  if (typeof obtenerServicios !== 'function') {
-    container.innerHTML = '';
+  var map = obtenerMapaGrupos();
+  var grupos = obtenerGrupos();
+  var servicios = typeof obtenerServicios === 'function' ? obtenerServicios() : [];
+
+  if (!Array.isArray(servicios) || servicios.length === 0) {
+    container.innerHTML = '<div class="empty-state">No hay servicios disponibles.</div>';
     return;
   }
 
-  var servicios = obtenerServicios();
-  var map = obtenerMapaGrupos();
-  var sinGrupo = [];
-
-  for (var i = 0; i < servicios.length; i++) {
-    if (!map[servicios[i].id]) sinGrupo.push(servicios[i]);
-  }
+  var sinGrupo = servicios.filter(function(servicio) {
+    return !map[servicio.id];
+  });
 
   if (sinGrupo.length === 0) {
-    container.innerHTML = '<div class="empty-state">✅ Todos los servicios tienen un grupo asignado</div>';
+    container.innerHTML = '<div class="empty-state">Todos los servicios ya tienen grupo.</div>';
     return;
   }
 
-  var grupos = obtenerGrupos();
-  var html = '';
+  var options = '<option value="">Selecciona un grupo</option>';
+  for (var i = 0; i < grupos.length; i++) {
+    options += '<option value="' + grupos[i].id + '">' + grupoEscapeHtml(grupos[i].nombre) + '</option>';
+  }
+
+  var html = '<div style="display:grid;gap:12px;">';
 
   for (var j = 0; j < sinGrupo.length; j++) {
-    var s = sinGrupo[j];
-
-    html += '<div style="border:1px dashed rgba(255,255,255,0.15);padding:12px;border-radius:12px;margin-bottom:10px;">';
-    html += '<div style="font-weight:600;">[' + grupoEscapeHtml(s.codigo) + '] ' + grupoEscapeHtml(s.descripcion) + '</div>';
-    html += '<div style="opacity:.8;margin:6px 0 10px;">' + grupoEscapeHtml(s.unidad) + ' · ' + formatMoney(parseFloat(s.precio) || 0) + '</div>';
-    html += '<select onchange="asignarServicioAGrupo(\'' + s.id + '\', this.value)">';
-    html += '<option value="">Asignar a grupo...</option>';
-
-    for (var g = 0; g < grupos.length; g++) {
-      html += '<option value="' + grupos[g].id + '">' + grupoEscapeHtml(grupos[g].nombre) + '</option>';
-    }
-
-    html += '</select>';
-    html += '</div>';
+    var servicio = sinGrupo[j];
+    html += ''
+      + '<div style="padding:12px;border:1px solid #2a2a4a;border-radius:10px;background:#111827;">'
+      + '  <div style="display:grid;grid-template-columns:1fr 220px;gap:12px;align-items:center;">'
+      + '    <div>'
+      + '      <strong>' + grupoEscapeHtml(servicio.nombre || 'Servicio sin nombre') + '</strong><br>'
+      + '      <span style="color:#94a3b8;font-size:12px;">' + grupoEscapeHtml(servicio.codigo || 'Sin código') + '</span>'
+      + '    </div>'
+      + '    <div style="display:flex;gap:8px;">'
+      + '      <select id="grupo-servicio-' + servicio.id + '" style="flex:1;padding:10px;background:#0f0f23;border:1px solid #333;border-radius:8px;color:#fff;">'
+      +            options
+      + '      </select>'
+      + '      <button type="button" class="btn-primary" onclick="asignarServicioAGrupo(\'' + servicio.id + '\', document.getElementById(\'grupo-servicio-' + servicio.id + '\').value)">Asignar</button>'
+      + '    </div>'
+      + '  </div>'
+      + '</div>';
   }
 
+  html += '</div>';
   container.innerHTML = html;
-}
-// ============================================================
-// SUGERENCIA AUTOMÁTICA DE GRUPO
-// ============================================================
-
-function sugerirGrupoIA() {
-  var descripcionEl = document.getElementById('serv-descripcion');
-  var grupoSelect = document.getElementById('serv-grupo') || document.getElementById('serv-categoria');
-  var feedback = document.getElementById('feedback-servicio');
-
-  if (!descripcionEl || !grupoSelect) return false;
-
-  var texto = (descripcionEl.value || '').trim().toLowerCase();
-
-  if (!texto) {
-    if (feedback) {
-      feedback.className = 'form-feedback error';
-      feedback.textContent = '❌ Escribe primero la descripción del servicio para sugerir un grupo';
-    }
-    return false;
-  }
-
-  var grupos = typeof obtenerGrupos === 'function' ? obtenerGrupos() : [];
-  if (!Array.isArray(grupos) || grupos.length === 0) {
-    if (feedback) {
-      feedback.className = 'form-feedback error';
-      feedback.textContent = '❌ No hay grupos creados para sugerir';
-    }
-    return false;
-  }
-
-  var reglas = [
-    { match: ['web', 'landing', 'ui', 'ux', 'responsive', 'figma', 'diseño', 'diseno'], codigo: 'DISENO', nombre: 'Diseño Web' },
-    { match: ['frontend', 'backend', 'api', 'cms', 'wordpress', 'strapi', 'deploy', 'desarrollo', 'app'], codigo: 'DESARROLLO', nombre: 'Desarrollo Web' },
-    { match: ['logo', 'branding', 'marca', 'identidad', 'papelería', 'papeleria'], codigo: 'BRANDING', nombre: 'Branding' },
-    { match: ['marketing', 'ads', 'campaña', 'campana', 'email', 'embudo'], codigo: 'MARKETING', nombre: 'Marketing Digital' },
-    { match: ['social', 'redes', 'instagram', 'facebook', 'contenido', 'reels', 'stories'], codigo: 'SOCIAL', nombre: 'Social Media' },
-    { match: ['consultoría', 'consultoria', 'auditoría', 'auditoria', 'estrategia', 'asesoría', 'asesoria'], codigo: 'CONSULTORIA', nombre: 'Consultoría' },
-    { match: ['hosting', 'dominio', 'ssl', 'mantenimiento', 'soporte', 'servidor'], codigo: 'SOPORTE', nombre: 'Soporte & Hosting' }
-  ];
-
-  var mejorRegla = null;
-  var mejorPuntaje = 0;
-
-  for (var i = 0; i < reglas.length; i++) {
-    var puntaje = 0;
-
-    for (var j = 0; j < reglas[i].match.length; j++) {
-      if (texto.indexOf(reglas[i].match[j]) !== -1) {
-        puntaje++;
-      }
-    }
-
-    if (puntaje > mejorPuntaje) {
-      mejorPuntaje = puntaje;
-      mejorRegla = reglas[i];
-    }
-  }
-
-  if (!mejorRegla) {
-    if (feedback) {
-      feedback.className = 'form-feedback error';
-      feedback.textContent = '❌ No pude sugerir un grupo con esa descripción';
-    }
-    return false;
-  }
-
-  var grupoEncontrado = null;
-
-  for (var k = 0; k < grupos.length; k++) {
-    var g = grupos[k];
-    if (g.codigo === mejorRegla.codigo || g.nombre === mejorRegla.nombre) {
-      grupoEncontrado = g;
-      break;
-    }
-  }
-
-  if (!grupoEncontrado) {
-    if (feedback) {
-      feedback.className = 'form-feedback error';
-      feedback.textContent = '❌ Se detectó "' + mejorRegla.nombre + '" pero ese grupo no existe en tu lista';
-    }
-    return false;
-  }
-
-  grupoSelect.value = grupoEncontrado.id;
-
-  if (feedback) {
-    feedback.className = 'form-feedback success';
-    feedback.textContent = '💡 Grupo sugerido: ' + grupoEncontrado.nombre;
-  }
-
-  return false;
 }
