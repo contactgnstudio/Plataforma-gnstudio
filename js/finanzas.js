@@ -1,5 +1,6 @@
 // ============================================================
-// js/finanzas.js — Estado de Cuenta + ITBMS
+// js/finanzas.js — Estado de Cuenta + ITBMS + Registro básico
+// de Gastos y Pagos enlazados a proyectos
 // ============================================================
 
 function finEl(id) {
@@ -31,6 +32,8 @@ function finDate(value) {
 function finEscapeHtml(str) {
   return String(str || '')
     .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
@@ -122,49 +125,52 @@ function generarEstadoCuenta() {
     pagos = pagos.filter(function(p) { return String(p.fecha || '') <= hasta; });
   }
 
+  // Filtro por proyecto: compatible con proyecto_id (Supabase) y proyectoId (legacy)
   if (proyectoId) {
-  gastos = gastos.filter(function(g) {
-    var pid = g.proyecto_id || g.proyectoId || '';
-    return String(pid) === String(proyectoId);
-  });
+    gastos = gastos.filter(function(g) {
+      var pid = g.proyecto_id || g.proyectoId || '';
+      return String(pid) === String(proyectoId);
+    });
 
-  pagos = pagos.filter(function(p) {
-    var pid = p.proyecto_id || p.proyectoId || '';
-    return String(pid) === String(proyectoId);
-  });
-}
+    pagos = pagos.filter(function(p) {
+      var pid = p.proyecto_id || p.proyectoId || '';
+      return String(pid) === String(proyectoId);
+    });
+  }
 
   var movimientos = [];
 
+  // GASTOS → movimientos tipo gasto
   if (tipo !== 'ingresos') {
-  for (var i = 0; i < gastos.length; i++) {
-    var gid = gastos[i].proyecto_id || gastos[i].proyectoId || '';
-    movimientos.push({
-      fecha: gastos[i].fecha || '',
-      tipo: 'gasto',
-      proyecto: finProjectLabel(gid, proyectosMap),
-      descripcion: gastos[i].descripcion || gastos[i].referencia || 'Gasto',
-      ingreso: 0,
-      gasto: parseFloat(gastos[i].monto) || 0,
-      metodo: gastos[i].metodo_pago || gastos[i].metodo || ''
-    });
+    for (var i = 0; i < gastos.length; i++) {
+      var gid = gastos[i].proyecto_id || gastos[i].proyectoId || '';
+      movimientos.push({
+        fecha: gastos[i].fecha || '',
+        tipo: 'gasto',
+        proyecto: finProjectLabel(gid, proyectosMap),
+        descripcion: gastos[i].descripcion || gastos[i].referencia || 'Gasto',
+        ingreso: 0,
+        gasto: parseFloat(gastos[i].monto) || 0,
+        metodo: gastos[i].metodo_pago || gastos[i].metodo || ''
+      });
+    }
   }
-}
 
- if (tipo !== 'gastos') {
-  for (var j = 0; j < pagos.length; j++) {
-    var pid = pagos[j].proyecto_id || pagos[j].proyectoId || '';
-    movimientos.push({
-      fecha: pagos[j].fecha || '',
-      tipo: 'pago',
-      proyecto: finProjectLabel(pid, proyectosMap) || pagos[j].cliente || 'General',
-      descripcion: pagos[j].concepto || pagos[j].referencia || 'Pago',
-      ingreso: parseFloat(pagos[j].monto) || 0,
-      gasto: 0,
-      metodo: pagos[j].metodo_pago || pagos[j].metodo || ''
-    });
+  // PAGOS → movimientos tipo pago/ingreso
+  if (tipo !== 'gastos') {
+    for (var j = 0; j < pagos.length; j++) {
+      var pid = pagos[j].proyecto_id || pagos[j].proyectoId || '';
+      movimientos.push({
+        fecha: pagos[j].fecha || '',
+        tipo: 'pago',
+        proyecto: finProjectLabel(pid, proyectosMap) || pagos[j].cliente || 'General',
+        descripcion: pagos[j].concepto || pagos[j].referencia || 'Pago',
+        ingreso: parseFloat(pagos[j].monto) || 0,
+        gasto: 0,
+        metodo: pagos[j].metodo_pago || pagos[j].metodo || ''
+      });
+    }
   }
-}
 
   movimientos.sort(function(a, b) {
     return new Date(a.fecha) - new Date(b.fecha);
@@ -307,4 +313,60 @@ function generarDeclaracionITBMS() {
 
 function generarReporteITBMS() {
   return renderITBMS();
+}
+
+// ============================================================
+// Registro básico de Gastos y Pagos desde formularios
+// (para conectar Finanzas con ProjectOS y Supabase)
+// ============================================================
+
+async function guardarGastoDesdeFormulario(formValues) {
+  // formValues debe traer: fecha, referencia, descripcion, tipo, monto,
+  // metodoPago, proyectoId, cotizacionId, clienteId, notas
+  var payload = {
+    proyecto_id: formValues.proyectoId || null,
+    cotizacion_id: formValues.cotizacionId || null,
+    cliente_id: formValues.clienteId || null,
+    fecha: formValues.fecha || null,            // 'YYYY-MM-DD'
+    referencia: formValues.referencia || null,  // factura / referencia
+    descripcion: formValues.descripcion || '',
+    tipo: formValues.tipo || null,              // categoría de gasto
+    monto: parseFloat(formValues.monto) || 0,
+    metodo_pago: formValues.metodoPago || null,
+    notas: formValues.notas || null
+  };
+
+  if (typeof window.addItem !== 'function' || !window.STORAGE_KEYS) {
+    console.error('addItem/STORAGE_KEYS no disponibles para guardar gasto');
+    return null;
+  }
+
+  var saved = await window.addItem(window.STORAGE_KEYS.GASTOS, payload);
+  return saved;
+}
+
+async function guardarPagoDesdeFormulario(formValues) {
+  // formValues debe traer: fecha, referencia, concepto, tipo, monto,
+  // metodoPago, proyectoId, cotizacionId, clienteId, estado, notas
+  var payload = {
+    proyecto_id: formValues.proyectoId || null,
+    cotizacion_id: formValues.cotizacionId || null,
+    cliente_id: formValues.clienteId || null,
+    fecha: formValues.fecha || null,            // 'YYYY-MM-DD'
+    referencia: formValues.referencia || null,  // referencia bancaria
+    concepto: formValues.concepto || '',
+    tipo: formValues.tipo || null,              // 'abono', 'pago_total', etc.
+    monto: parseFloat(formValues.monto) || 0,
+    metodo_pago: formValues.metodoPago || null,
+    estado: formValues.estado || 'registrado',
+    notas: formValues.notas || null
+  };
+
+  if (typeof window.addItem !== 'function' || !window.STORAGE_KEYS) {
+    console.error('addItem/STORAGE_KEYS no disponibles para guardar pago');
+    return null;
+  }
+
+  var saved = await window.addItem(window.STORAGE_KEYS.PAGOS, payload);
+  return saved;
 }
