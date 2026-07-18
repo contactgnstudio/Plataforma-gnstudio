@@ -1,6 +1,6 @@
 // ============================================================
 // js/app.js — Núcleo de inicialización y navegación
-// Versión limpia sobre utils.js + storage.js + UI GN Studio OS 0.2
+// GN Studio OS 0.2 — Dashboard KPIs + Tendencias + UI
 // ============================================================
 
 (function(window, document) {
@@ -105,12 +105,10 @@
 
     container.appendChild(toast);
 
-    // Animación de entrada
     requestAnimationFrame(function() {
       toast.classList.add('gn-toast-visible');
     });
 
-    // Cierre manual
     var closeBtn = toast.querySelector('.gn-toast-close');
     if (closeBtn) {
       closeBtn.addEventListener('click', function() {
@@ -118,7 +116,6 @@
       });
     }
 
-    // Autocierre
     if (duration > 0) {
       setTimeout(function() {
         hideToast(toast);
@@ -177,7 +174,6 @@
       }
     });
 
-    // Si hay overlay móvil, sincronizar enlaces allí
     qsa('.mobile-nav-link').forEach(function(link) {
       var target = link.getAttribute('data-section');
       if (target === sectionId) {
@@ -227,7 +223,6 @@
     setActiveNav(sectionId);
     updateHeader(sectionId);
 
-    // Cerrar nav móvil si está abierto
     closeMobileNav();
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -250,7 +245,6 @@
       active.classList.add('active');
     }
 
-    // Actualizar botones de sub-nav (los que ya tienes en HTML)
     var subNavSelector = parentId === 'negocio'
       ? '#negocio .sub-nav .sub-nav-item'
       : parentId === 'finanzas'
@@ -261,7 +255,6 @@
       btn.classList.remove('active');
     });
 
-    // Marcar el botón correcto por texto/contenido
     qsa(subNavSelector).forEach(function(btn) {
       var onclickAttr = btn.getAttribute('onclick') || '';
       if (
@@ -332,13 +325,33 @@
         '<td colspan="5">' +
           '<div class="tabla-vacia">' +
             '<div class="tabla-vacia-icon">📑</div>' +
-            '<div>La actividad reciente se actualizará al completar la migración de módulos.</div>' +
+            '<div>La actividad reciente se actualizará al conectar todos los módulos.</div>' +
+            '<div style="margin-top:6px;font-size:13px;">' +
+              'Por ahora verás aquí facturas, pagos y proyectos cuando se registren.' +
+            '</div>' +
           '</div>' +
         '</td>' +
       '</tr>';
   }
 
   function renderPipelineMini() {
+    var mini = byId('pipeline-mini');
+    if (!mini) return;
+
+    var bar = mini.querySelector('.pipeline-bar');
+    var legend = mini.querySelector('.pipeline-legend');
+
+    if (bar) {
+      bar.innerHTML =
+        '<div class="pipeline-segment" style="width:100%;background:#4f8cff;">' +
+          'Sin datos de pipeline aún' +
+        '</div>';
+    }
+    if (legend) {
+      legend.innerHTML =
+        '<span>Registra cotizaciones y proyectos para ver el pipeline en tiempo real.</span>';
+    }
+
     var targets = {
       cotizaciones: byId('kpi-cotizaciones'),
       proyectos: byId('kpi-proyectos'),
@@ -356,6 +369,45 @@
         targets[key].textContent = '0';
       }
     });
+
+    resetTrends();
+  }
+
+  function resetTrends() {
+    var trendIngresos = byId('trend-ingresos');
+    var trendGastos = byId('trend-gastos');
+    var trendBalance = byId('trend-balance');
+
+    [trendIngresos, trendGastos, trendBalance].forEach(function(el) {
+      if (!el) return;
+      el.textContent = '→ 0%';
+      el.classList.remove('up', 'down');
+    });
+  }
+
+  function calcularDelta(actual, previo) {
+    var a = parseFloat(actual || 0) || 0;
+    var p = parseFloat(previo || 0) || 0;
+    if (p === 0 && a === 0) return 0;
+    if (p === 0 && a !== 0) return 100;
+    return ((a - p) / p) * 100;
+  }
+
+  function aplicarTrend(el, delta) {
+    if (!el) return;
+    var d = Math.round(delta);
+    if (d > 0) {
+      el.textContent = '↑ ' + d + '% vs mes anterior';
+      el.classList.remove('down');
+      el.classList.add('up');
+    } else if (d < 0) {
+      el.textContent = '↓ ' + Math.abs(d) + '% vs mes anterior';
+      el.classList.remove('up');
+      el.classList.add('down');
+    } else {
+      el.textContent = '→ 0%';
+      el.classList.remove('up', 'down');
+    }
   }
 
   async function actualizarKPIs() {
@@ -366,22 +418,74 @@
       var gastos = typeof window.getData === 'function' ? await window.getData(window.STORAGE_KEYS.GASTOS) : [];
       var pagos = typeof window.getData === 'function' ? await window.getData(window.STORAGE_KEYS.PAGOS) : [];
 
-      var totalIngresos = (pagos || []).reduce(function(acc, item) {
-        return acc + (parseFloat(item && (item.monto || item.total || 0)) || 0);
+      var ahora = new Date();
+      var mesActual = ahora.getMonth();
+      var anioActual = ahora.getFullYear();
+      var mesPrevio = mesActual === 0 ? 11 : mesActual - 1;
+      var anioPrevio = mesActual === 0 ? anioActual - 1 : anioActual;
+
+      function esDelMes(fechaStr, m, y) {
+        if (!fechaStr) return false;
+        var f = new Date(fechaStr);
+        return f.getMonth() === m && f.getFullYear() === y;
+      }
+
+      var totalIngresosActual = (pagos || []).reduce(function(acc, item) {
+        var monto = parseFloat(item && (item.monto || item.total || 0)) || 0;
+        var fecha = item && (item.fecha || item.fechaPago || item.createdAt);
+        return esDelMes(fecha, mesActual, anioActual) ? acc + monto : acc;
       }, 0);
 
-      var totalGastos = (gastos || []).reduce(function(acc, item) {
-        return acc + (parseFloat(item && item.monto) || 0);
+      var totalIngresosPrevio = (pagos || []).reduce(function(acc, item) {
+        var monto = parseFloat(item && (item.monto || item.total || 0)) || 0;
+        var fecha = item && (item.fecha || item.fechaPago || item.createdAt);
+        return esDelMes(fecha, mesPrevio, anioPrevio) ? acc + monto : acc;
       }, 0);
 
-      var balance = totalIngresos - totalGastos;
+      var totalGastosActual = (gastos || []).reduce(function(acc, item) {
+        var monto = parseFloat(item && item.monto) || 0;
+        var fecha = item && (item.fecha || item.fechaGasto || item.createdAt);
+        return esDelMes(fecha, mesActual, anioActual) ? acc + monto : acc;
+      }, 0);
+
+      var totalGastosPrevio = (gastos || []).reduce(function(acc, item) {
+        var monto = parseFloat(item && item.monto) || 0;
+        var fecha = item && (item.fecha || item.fechaGasto || item.createdAt);
+        return esDelMes(fecha, mesPrevio, anioPrevio) ? acc + monto : acc;
+      }, 0);
+
+      var balanceActual = totalIngresosActual - totalGastosActual;
+      var balancePrevio = totalIngresosPrevio - totalGastosPrevio;
 
       if (byId('kpi-clientes')) byId('kpi-clientes').textContent = String((clientes || []).length);
       if (byId('kpi-proyectos')) byId('kpi-proyectos').textContent = String((proyectos || []).length);
       if (byId('kpi-cotizaciones')) byId('kpi-cotizaciones').textContent = String((cotizaciones || []).length);
-      if (byId('kpi-ingresos')) byId('kpi-ingresos').textContent = formatMoney(totalIngresos);
-      if (byId('kpi-gastos')) byId('kpi-gastos').textContent = formatMoney(totalGastos);
-      if (byId('kpi-balance')) byId('kpi-balance').textContent = formatMoney(balance);
+      if (byId('kpi-ingresos')) byId('kpi-ingresos').textContent = formatMoney(totalIngresosActual);
+      if (byId('kpi-gastos')) byId('kpi-gastos').textContent = formatMoney(totalGastosActual);
+      if (byId('kpi-balance')) byId('kpi-balance').textContent = formatMoney(balanceActual);
+
+      var trendIngresos = byId('trend-ingresos');
+      var trendGastos = byId('trend-gastos');
+      var trendBalance = byId('trend-balance');
+
+      aplicarTrend(trendIngresos, calcularDelta(totalIngresosActual, totalIngresosPrevio));
+      aplicarTrend(trendGastos, calcularDelta(totalGastosActual, totalGastosPrevio));
+      aplicarTrend(trendBalance, calcularDelta(balanceActual, balancePrevio));
+
+      if ((clientes || []).length === 0 &&
+          (proyectos || []).length === 0 &&
+          (cotizaciones || []).length === 0 &&
+          (pagos || []).length === 0 &&
+          (gastos || []).length === 0) {
+        renderPipelineMini();
+        if (window.showToast) {
+          window.showToast({
+            type: 'info',
+            title: 'Dashboard vacío',
+            message: 'Cuando registres clientes, proyectos y finanzas, el dashboard mostrará tus métricas en tiempo real.'
+          });
+        }
+      }
     } catch (error) {
       log('error', 'No se pudieron actualizar los KPIs', error);
       renderPipelineMini();
@@ -410,7 +514,7 @@
   }
 
   // ============================================================
-  // Exportaciones placeholder (pendiente de migración)
+  // Exportaciones placeholder
   // ============================================================
   function exportarTodo() {
     log('info', 'exportarTodo() pendiente de migración');
@@ -496,10 +600,8 @@
 
     await actualizarKPIs();
     renderActividadReciente();
-    renderPipelineMini();
     await actualizarVistaJSON();
 
-    // Estado inicial de navegación
     switchSection('dashboard');
     switchSubSection('negocio', 'crm');
     switchSubSection('finanzas', 'estado-cuenta');
@@ -534,9 +636,6 @@
   window.inicializarFinanzas = inicializarFinanzas;
   window.showToast = showToast;
 
-  // ============================================================
-  // Bootstrap con Auth
-  // ============================================================
   document.addEventListener('DOMContentLoaded', function() {
     if (typeof window.gnAuthInit === 'function') {
       window.gnAuthInit(inicializarAppGNStudio);
