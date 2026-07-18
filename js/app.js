@@ -65,20 +65,13 @@
     }
   }
 
-  // ============================================================
+    // ============================================================
   // TOASTS (success, error, info, warning) — GN Studio OS
   // ============================================================
   var toastIdCounter = 0;
 
-  /**
-   * options:
-   *  - type: 'success' | 'error' | 'warning' | 'info'
-   *  - title: string
-   *  - message: string
-   *  - duration: ms (0 = no auto-cerrar)
-   */
   function showToast(options) {
-    var container = byId('toast-container');
+    var container = document.getElementById('toast-container');
     if (!container) return;
 
     // Aseguramos que el contenedor sea visible
@@ -115,33 +108,34 @@
 
     container.appendChild(toast);
 
-    // Animación de entrada (clase opcional si luego la añades en CSS)
+    // Animación de entrada (si quieres usarla en CSS)
     requestAnimationFrame(function() {
       toast.classList.add('toast-visible');
     });
 
     var closeBtn = toast.querySelector('.toast-close');
     if (closeBtn) {
-      closeBtn.addEventListener('click', function() {
+      closeBtn.addEventListener('click', function () {
         hideToast(toast);
       });
     }
 
     if (duration > 0) {
-      setTimeout(function() {
+      setTimeout(function () {
         hideToast(toast);
       }, duration);
     }
   }
 
   function hideToast(toast) {
-    var container = byId('toast-container');
+    var container = document.getElementById('toast-container');
     if (!toast || !toast.parentNode) return;
 
+    // Opcional: clases para animación de salida
     toast.classList.remove('toast-visible');
     toast.classList.add('toast-leaving');
 
-    setTimeout(function() {
+    setTimeout(function () {
       if (toast.parentNode) {
         toast.parentNode.removeChild(toast);
       }
@@ -161,7 +155,6 @@
     }
   }
 
-  // Helper específico para el toast de inicio de GN Studio OS
   function mostrarToastOSListo() {
     showToast({
       type: 'success',
@@ -171,12 +164,12 @@
     });
   }
 
-  // Cierre manual desde el HTML del toast “base” (por si lo usas)
+  // Cierre manual desde otros sitios (por ejemplo, si añades un botón “Cerrar todo”)
   function cerrarToast() {
-    var container = byId('toast-container');
+    var container = document.getElementById('toast-container');
     if (!container) return;
-    // Eliminamos todos los toasts activos
-    Array.prototype.slice.call(container.children).forEach(function(toast) {
+
+    Array.prototype.slice.call(container.children).forEach(function (toast) {
       hideToast(toast);
     });
   }
