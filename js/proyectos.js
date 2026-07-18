@@ -1,10 +1,6 @@
 // ============================================================
 // js/proyectos.js — ProjectOS ajustado al esquema real Supabase
-// Tabla proyectos real:
-// id, user_id, cotizacion_id, cliente_id, nombre, descripcion,
-// fecha_inicio, fecha_fin, fecha_fin_real, estado,
-// presupuesto, total_cobrado, total_gastado, notas,
-// created_at, updated_at
+// Integrado con Finanzas para registrar gastos y pagos
 // ============================================================
 
 (function(window, document) {
@@ -69,7 +65,10 @@
       en_progreso: 'En Progreso',
       pausado: 'Pausado',
       completado: 'Completado',
-      cancelado: 'Cancelado'
+      cancelado: 'Cancelado',
+      registrado: 'Registrado',
+      confirmado: 'Confirmado',
+      reversado: 'Reversado'
     };
     return map[estado] || estado || 'Pendiente';
   }
@@ -80,7 +79,10 @@
       en_progreso: '#4f8cff',
       pausado: '#a78bfa',
       completado: '#6bbd45',
-      cancelado: '#ef4444'
+      cancelado: '#ef4444',
+      registrado: '#4f8cff',
+      confirmado: '#6bbd45',
+      reversado: '#ef4444'
     };
     return map[estado] || '#6bbd45';
   }
@@ -141,7 +143,7 @@
       id: row.id,
       userId: row.user_id || '',
       cotizacionId: row.cotizacion_id || '',
-      clienteId: row.cliente_id || row.clienteId || '',
+      clienteId: row.cliente_id || '',
       nombre: row.nombre || 'Proyecto',
       descripcion: row.descripcion || '',
       fechaInicio: row.fecha_inicio || '',
@@ -159,31 +161,34 @@
     };
   }
 
-function normalizeGasto(row) {
-  return {
-    id: row.id,
-    proyectoId: row.proyecto_id || row.proyectoId || '',
-    fecha: row.fecha || row.created_at || '',
-    categoria: row.tipo || 'General',
-    descripcion: row.descripcion || row.referencia || 'Gasto registrado',
-    monto: num(row.monto),
-    metodo: row.metodo_pago || row.metodo || '—',
-    referencia: row.referencia || '',
-    clienteId: row.cliente_id || '',
-    cotizacionId: row.cotizacion_id || '',
-    createdAt: row.created_at || ''
-  };
-}
+  function normalizeGasto(row) {
+    return {
+      id: row.id,
+      proyectoId: row.proyecto_id || '',
+      fecha: row.fecha || row.created_at || '',
+      categoria: row.tipo || 'General',
+      descripcion: row.descripcion || row.referencia || 'Gasto registrado',
+      monto: num(row.monto),
+      metodo: row.metodo_pago || row.metodo || '—',
+      referencia: row.referencia || '',
+      clienteId: row.cliente_id || '',
+      cotizacionId: row.cotizacion_id || '',
+      createdAt: row.created_at || ''
+    };
+  }
 
   function normalizePago(row) {
     return {
       id: row.id,
-      proyectoId: row.proyecto_id || row.proyectoId || '',
+      proyectoId: row.proyecto_id || '',
       fecha: row.fecha || row.created_at || '',
-      concepto: row.concepto || row.descripcion || 'Pago recibido',
+      concepto: row.concepto || row.descripcion || row.referencia || 'Pago recibido',
       monto: num(row.monto),
-      metodo: row.metodo || row.metodo_pago || row.forma_pago || '—',
+      metodo: row.metodo_pago || row.metodo || row.forma_pago || '—',
       estado: row.estado || 'registrado',
+      referencia: row.referencia || '',
+      clienteId: row.cliente_id || '',
+      cotizacionId: row.cotizacion_id || '',
       createdAt: row.created_at || ''
     };
   }
@@ -191,10 +196,10 @@ function normalizeGasto(row) {
   function normalizeTarea(row) {
     return {
       id: row.id,
-      proyectoId: row.proyecto_id || row.proyectoId || '',
+      proyectoId: row.proyecto_id || '',
       titulo: row.titulo || row.nombre || 'Tarea',
       asignado: row.asignado || row.responsable || '',
-      fechaLimite: row.fecha_limite || row.fechaLimite || '',
+      fechaLimite: row.fecha_limite || '',
       estado: row.estado || 'pendiente',
       descripcion: row.descripcion || '',
       createdAt: row.created_at || ''
@@ -258,17 +263,16 @@ function normalizeGasto(row) {
     return null;
   }
 
-async function obtenerFilasProyectoCompat(tableKey, proyectoId) {
-  var tableName = getStorageKey(tableKey, tableKey.toLowerCase());
+  async function obtenerFilasProyectoCompat(tableKey, proyectoId) {
+    var tableName = getStorageKey(tableKey, tableKey.toLowerCase());
 
-  var rows = await getFiltered(tableName, { proyecto_id: proyectoId }, {
-    orderBy: 'created_at',
-    ascending: false
-  });
-  if (rows.length) return rows;
+    var rows = await getFiltered(tableName, { proyecto_id: proyectoId }, {
+      orderBy: 'created_at',
+      ascending: false
+    });
 
-  return [];
-}
+    return rows.length ? rows : [];
+  }
 
   async function obtenerGastosProyecto(proyectoId) {
     var rows = await obtenerFilasProyectoCompat('GASTOS', proyectoId);
@@ -849,17 +853,67 @@ async function obtenerFilasProyectoCompat(tableKey, proyectoId) {
 
     if (form) form.reset();
     await verProyecto(PROYECTO_ACTUAL.id);
+    if (typeof window.actualizarKPIs === 'function') {
+      await window.actualizarKPIs();
+    }
+    return false;
+  }
+
+  function seleccionarProyectoEnFinanzas(proyecto) {
+    if (!proyecto) return;
+
+    var selectGasto = byId('gasto-proyecto');
+    if (selectGasto) selectGasto.value = proyecto.id;
+
+    var selectPago = byId('pago-proyecto');
+    if (selectPago) selectPago.value = proyecto.id;
+
+    var selectEstadoCuenta = byId('ec-proyecto');
+    if (selectEstadoCuenta) selectEstadoCuenta.value = proyecto.id;
+  }
+
+  function navegarAFinanzasConProyecto(tipo) {
+    if (!PROYECTO_ACTUAL) {
+      alert('No hay proyecto activo seleccionado.');
+      return false;
+    }
+
+    if (typeof window.switchSection === 'function') {
+      window.switchSection('finanzas');
+    }
+
+    if (typeof window.switchSubSection === 'function') {
+      window.switchSubSection('finanzas', 'estado-cuenta');
+    }
+
+    if (typeof window.actualizarSelectProyectosFinanzas === 'function') {
+      window.actualizarSelectProyectosFinanzas();
+    }
+
+    setTimeout(function() {
+      seleccionarProyectoEnFinanzas(PROYECTO_ACTUAL);
+
+      if (typeof window.generarEstadoCuenta === 'function') {
+        window.generarEstadoCuenta();
+      }
+
+      var targetId = tipo === 'gasto' ? 'form-gasto-finanzas' : 'form-pago-finanzas';
+      var target = byId(targetId);
+
+      if (target && target.scrollIntoView) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 120);
+
     return false;
   }
 
   function abrirModalGastoProyecto() {
-    alert('El modal rápido de gasto sigue pendiente; por ahora usa Finanzas o conectamos el modal en el siguiente paso.');
-    return false;
+    return navegarAFinanzasConProyecto('gasto');
   }
 
   function abrirModalPagoProyecto() {
-    alert('El modal rápido de pago sigue pendiente; por ahora usa Finanzas o conectamos el modal en el siguiente paso.');
-    return false;
+    return navegarAFinanzasConProyecto('pago');
   }
 
   async function inicializarProyectos() {
