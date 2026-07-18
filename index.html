@@ -348,50 +348,18 @@
       <!-- SUB: CATÁLOGO & GRUPOS -->
       <div id="negocio-catalogo" class="sub-section">
         
-        <!-- Grupos -->
-        <div class="section">
-          <div class="section-header">
-            <h2 class="section-title">📁 Grupos de Servicios</h2>
-            <div class="section-actions">
-              <button class="btn-secondary" onclick="abrirModalGrupo()">➕ Nuevo Grupo</button>
-            </div>
-          </div>
-
-          <div class="grupos-grid" id="gruposVisuales">
-            <!-- Se renderizan como tarjetas visuales -->
-          </div>
-
-          <div class="table-container" style="margin-top:20px;">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Código</th>
-                  <th>Nombre</th>
-                  <th>Descripción</th>
-                  <th>Color</th>
-                  <th>Orden</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody id="tbodyGrupos"></tbody>
-            </table>
-          </div>
-
-          <div class="dashboard-grid" style="margin-top:20px;">
-            <div class="section">
-              <div class="section-header">
-                <h3 class="section-title">🗂️ Servicios por Grupo</h3>
+        <!-- Resumen compacto de grupos: chips que filtran el catálogo -->
+          <div class="section">
+            <div class="section-header">
+              <h2 class="section-title">📁 Grupos de Servicios</h2>
+              <div class="section-actions">
+                <button class="btn-secondary" onclick="abrirModalGrupo()">➕ Nuevo grupo</button>
               </div>
-              <div id="serviciosPorGrupo"></div>
             </div>
-            <div class="section">
-              <div class="section-header">
-                <h3 class="section-title">📌 Servicios sin Grupo</h3>
-              </div>
-              <div id="serviciosSinGrupo"></div>
+            <div id="gruposResumenCatalogo" class="grupos-resumen">
+              <!-- Se rellena por JS: chips con nombre + color + contador -->
             </div>
           </div>
-        </div>
 
         <!-- Catálogo -->
         <div class="form-section">
@@ -401,13 +369,9 @@
           <form id="formServicio" onsubmit="return guardarServicio(event)">
             <div class="form-grid">
               <div class="form-group">
-                <label for="serv-codigo">Código <span class="required">*</span></label>
-                <input type="text" id="serv-codigo" placeholder="Ej: WEB-001" required maxlength="30">
-              </div>
-              <div class="form-group">
-                <label for="serv-grupo">Grupo <span class="required">*</span></label>
-                <select id="serv-grupo" required>
-                  <option value="">Selecciona un grupo</option>
+                            <label for="serv-grupo">Grupo <span class="optional">(opcional)</span></label>
+                          <select id="serv-grupo">
+                                <option value="">Sin grupo específico</option>
                 </select>
               </div>
               <div class="form-group full-width">
@@ -450,14 +414,29 @@
         <!-- Lista de Servicios -->
         <div class="section">
           <div class="section-header">
-            <h2 class="section-title">📋 Servicios por Grupo</h2>
+                      <h2 class="section-title">📋 Servicios del Catálogo</h2>
             <div class="section-actions">
               <input type="text" id="buscar-servicio" placeholder="🔍 Buscar servicio..." onkeyup="filtrarServicios()" class="search-input">
+                        <select id="filtro-servicio-grupo" onchange="filtrarServicios()" class="filter-btn">
+            <option value="todos">Todos los grupos</option>
+          </select>
             </div>
           </div>
-          <div id="servicios-por-grupo">
-            <!-- Se renderizan agrupados visualmente -->
-          </div>
+                  <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Servicio</th>
+                <th>Grupo</th>
+                <th>Unidad</th>
+                <th>Precio</th>
+                <th>ITBMS</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyServicios"></tbody>
+          </table>
         </div>
       </div>
 
