@@ -2624,3 +2624,61 @@ body.gn-auth-locked .top-navbar {
   border-color: rgba(107,189,69,0.4);
   color: var(--gn-green);
 }
+
+
+/* ============================================================
+   Editor de Alcance del Proyecto (Proforma)
+   ============================================================ */
+
+.editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.editor-toolbar button {
+  border: 1px solid var(--gn-border);
+  background: var(--gn-panel);
+  color: var(--gn-text-muted);
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: var(--gn-transition);
+}
+
+.editor-toolbar button:hover {
+  background: rgba(255,255,255,0.06);
+  color: var(--gn-text);
+  border-color: rgba(255,255,255,0.12);
+}
+
+.editor-area {
+  min-height: 160px;
+  padding: 10px 12px;
+  background: var(--gn-panel);
+  border: 1px solid var(--gn-border);
+  border-radius: 8px;
+  color: var(--gn-text);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-y: auto;
+}
+
+.editor-area:focus {
+  outline: none;
+  border-color: rgba(79,140,255,0.6);
+  box-shadow: 0 0 0 1px rgba(79,140,255,0.4);
+}
+
+/* Tabla de servicios en Propuesta Económica */
+#tbodyProformaServicios tr:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+#pf-total-propuesta {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gn-green);
+}
