@@ -2698,3 +2698,103 @@ body.gn-auth-locked .top-navbar {
 .link-button:hover {
   text-decoration: underline;
 }
+
+
+/* ============================================================
+   SALES PIPELINE - Dashboard
+   ============================================================ */
+.sales-pipeline {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: #111320;
+  border: 1px solid #202438;
+}
+
+.pipeline-stage {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #16192a, #101322);
+  border: 1px solid #262b40;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.stage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.stage-icon {
+  font-size: 16px;
+}
+
+.stage-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #e5e9ff;
+}
+
+.stage-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.stage-count {
+  font-size: 22px;
+  font-weight: 700;
+  color: #25d58f;
+  line-height: 1.2;
+}
+
+.stage-label {
+  font-size: 11px;
+  color: #8b92b3;
+}
+
+.pipeline-connector {
+  width: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pipeline-connector::before {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #3f8cff, #25d58f);
+  opacity: 0.65;
+}
+
+/* Colores diferenciados por etapa */
+#stage-cotizado  { border-color: #3f8cff55; }
+#stage-aprobado  { border-color: #25d58f55; }
+#stage-en-progreso { border-color: #ffd16655; }
+#stage-completado  { border-color: #7c5cff55; }
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .sales-pipeline {
+    flex-direction: column;
+  }
+  .pipeline-connector {
+    height: 12px;
+    width: 100%;
+  }
+  .pipeline-connector::before {
+    width: 40%;
+  }
+}
