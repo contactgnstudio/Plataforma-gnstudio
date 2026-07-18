@@ -1,6 +1,6 @@
 // ============================================================
 // js/app.js — Núcleo de inicialización y navegación
-// Versión limpia sobre utils.js + storage.js
+// Versión limpia sobre utils.js + storage.js + UI GN Studio OS 0.2
 // ============================================================
 
 (function(window, document) {
@@ -32,9 +32,17 @@
     subSections: {
       negocio: ['crm', 'catalogo', 'cotizaciones'],
       finanzas: ['estado-cuenta', 'itbms', 'reportes']
+    },
+    currentSection: 'dashboard',
+    currentSub: {
+      negocio: 'crm',
+      finanzas: 'estado-cuenta'
     }
   };
 
+  // ============================================================
+  // Helpers de ejecución segura
+  // ============================================================
   function safeCall(fnName) {
     if (typeof window[fnName] !== 'function') return null;
     var args = Array.prototype.slice.call(arguments, 1);
@@ -57,32 +65,171 @@
     }
   }
 
+  // ============================================================
+  // TOASTS (success, error, info, warning)
+  // ============================================================
+  var toastIdCounter = 0;
+
+  function showToast(options) {
+    var container = byId('toast-container');
+    if (!container) return;
+
+    var opts = typeof options === 'string'
+      ? { message: options }
+      : (options || {});
+
+    var type = opts.type || 'info';
+    var title = opts.title || (type === 'success'
+      ? 'Acción completada'
+      : type === 'error'
+      ? 'Ocurrió un problema'
+      : type === 'warning'
+      ? 'Atención'
+      : 'Información');
+    var message = opts.message || '';
+    var duration = typeof opts.duration === 'number' ? opts.duration : 4000;
+
+    var toast = document.createElement('div');
+    var id = 'toast-' + (++toastIdCounter);
+
+    toast.className = 'gn-toast gn-toast-' + type;
+    toast.setAttribute('data-toast-id', id);
+
+    toast.innerHTML =
+      '<div class="gn-toast-icon">' + getToastEmoji(type) + '</div>' +
+      '<div class="gn-toast-body">' +
+        '<div class="gn-toast-title">' + title + '</div>' +
+        (message ? '<div class="gn-toast-message">' + message + '</div>' : '') +
+      '</div>' +
+      '<button class="gn-toast-close" type="button" aria-label="Cerrar">×</button>';
+
+    container.appendChild(toast);
+
+    // Animación de entrada
+    requestAnimationFrame(function() {
+      toast.classList.add('gn-toast-visible');
+    });
+
+    // Cierre manual
+    var closeBtn = toast.querySelector('.gn-toast-close');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function() {
+        hideToast(toast);
+      });
+    }
+
+    // Autocierre
+    if (duration > 0) {
+      setTimeout(function() {
+        hideToast(toast);
+      }, duration);
+    }
+  }
+
+  function hideToast(toast) {
+    if (!toast || !toast.parentNode) return;
+    toast.classList.remove('gn-toast-visible');
+    toast.classList.add('gn-toast-leaving');
+    setTimeout(function() {
+      if (toast.parentNode) {
+        toast.parentNode.removeChild(toast);
+      }
+    }, 200);
+  }
+
+  function getToastEmoji(type) {
+    switch (type) {
+      case 'success': return '✅';
+      case 'error': return '⚠️';
+      case 'warning': return '⚠️';
+      default: return 'ℹ️';
+    }
+  }
+
+  // ============================================================
+  // Navegación: secciones, sub-secciones, breadcrumb y título
+  // ============================================================
   function hideAllSections() {
     APP_STATE.sections.forEach(function(sectionId) {
       var el = byId(sectionId);
-      if (el) el.style.display = 'none';
+      if (el) {
+        el.classList.remove('active');
+        el.style.display = 'none';
+      }
     });
   }
 
   function showSection(sectionId) {
     var el = byId(sectionId);
-    if (el) el.style.display = 'block';
+    if (el) {
+      el.style.display = 'block';
+      el.classList.add('active');
+    }
   }
 
   function setActiveNav(sectionId) {
-    qsa('.nav-link, .mobile-nav-link').forEach(function(link) {
-      link.classList.remove('active');
-      var attr = link.getAttribute('onclick') || '';
-      if (attr.indexOf("'" + sectionId + "'") !== -1 || attr.indexOf('"' + sectionId + '"') !== -1) {
+    qsa('.nav-link').forEach(function(link) {
+      var target = link.getAttribute('data-section');
+      if (target === sectionId) {
         link.classList.add('active');
+      } else {
+        link.classList.remove('active');
+      }
+    });
+
+    // Si hay overlay móvil, sincronizar enlaces allí
+    qsa('.mobile-nav-link').forEach(function(link) {
+      var target = link.getAttribute('data-section');
+      if (target === sectionId) {
+        link.classList.add('active');
+      } else {
+        link.classList.remove('active');
       }
     });
   }
 
+  function updateHeader(sectionId) {
+    var titleMap = {
+      dashboard: 'Dashboard',
+      negocio: 'Negocio',
+      proyectos: 'Proyectos',
+      finanzas: 'Finanzas'
+    };
+
+    var breadcrumbMap = {
+      dashboard: 'Inicio · Dashboard',
+      negocio: 'Negocio · CRM · Catálogo · Cotizaciones',
+      proyectos: 'Proyectos · Estado y detalle',
+      finanzas: 'Finanzas · Estado de cuenta · ITBMS · Reportes'
+    };
+
+    var titleEl = byId('page-title');
+    var breadcrumbEl = byId('breadcrumb');
+
+    if (titleEl) {
+      titleEl.textContent = titleMap[sectionId] || 'GN Studio OS';
+    }
+    if (breadcrumbEl) {
+      breadcrumbEl.textContent = breadcrumbMap[sectionId] || '';
+    }
+  }
+
   function switchSection(sectionId) {
+    if (APP_STATE.sections.indexOf(sectionId) === -1) {
+      log('warn', 'Sección desconocida: ' + sectionId);
+      return;
+    }
+
+    APP_STATE.currentSection = sectionId;
+
     hideAllSections();
     showSection(sectionId);
     setActiveNav(sectionId);
+    updateHeader(sectionId);
+
+    // Cerrar nav móvil si está abierto
+    closeMobileNav();
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -91,31 +238,68 @@
 
     sectionIds.forEach(function(id) {
       var el = byId(parentId + '-' + id);
-      if (el) el.style.display = 'none';
+      if (el) {
+        el.classList.remove('active');
+        el.style.display = 'none';
+      }
     });
 
     var active = byId(parentId + '-' + subId);
-    if (active) active.style.display = 'block';
+    if (active) {
+      active.style.display = 'block';
+      active.classList.add('active');
+    }
 
-    qsa('.sub-nav-link').forEach(function(link) {
-      link.classList.remove('active');
-      var attr = link.getAttribute('onclick') || '';
+    // Actualizar botones de sub-nav (los que ya tienes en HTML)
+    var subNavSelector = parentId === 'negocio'
+      ? '#negocio .sub-nav .sub-nav-item'
+      : parentId === 'finanzas'
+      ? '#finanzas .sub-nav .sub-nav-item'
+      : '.sub-nav-item';
+
+    qsa(subNavSelector).forEach(function(btn) {
+      btn.classList.remove('active');
+    });
+
+    // Marcar el botón correcto por texto/contenido
+    qsa(subNavSelector).forEach(function(btn) {
+      var onclickAttr = btn.getAttribute('onclick') || '';
       if (
-        attr.indexOf("'" + parentId + "', '" + subId + "'") !== -1 ||
-        attr.indexOf("'" + parentId + "','" + subId + "'") !== -1 ||
-        attr.indexOf('"' + parentId + '", "' + subId + '"') !== -1
+        onclickAttr.indexOf("'" + parentId + "', '" + subId + "'") !== -1 ||
+        onclickAttr.indexOf("'" + parentId + "','" + subId + "'") !== -1 ||
+        onclickAttr.indexOf('"' + parentId + '", "' + subId + '"') !== -1
       ) {
-        link.classList.add('active');
+        btn.classList.add('active');
       }
     });
+
+    APP_STATE.currentSub[parentId] = subId;
   }
 
+  // ============================================================
+  // Navegación móvil (overlay)
+  // ============================================================
   function toggleMobileNav() {
-    var nav = byId('mobileNav');
-    if (!nav) return;
-    nav.classList.toggle('is-open');
+    var overlay = byId('mobileNav');
+    if (!overlay) return;
+    var isOpen = overlay.classList.toggle('open');
+    if (isOpen) {
+      document.body.classList.add('mobile-nav-open');
+    } else {
+      document.body.classList.remove('mobile-nav-open');
+    }
   }
 
+  function closeMobileNav() {
+    var overlay = byId('mobileNav');
+    if (!overlay) return;
+    overlay.classList.remove('open');
+    document.body.classList.remove('mobile-nav-open');
+  }
+
+  // ============================================================
+  // Fechas por defecto
+  // ============================================================
   function setDefaultDates() {
     var today = getTodayISO();
 
@@ -136,11 +320,22 @@
     field.value = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
   }
 
+  // ============================================================
+  // Dashboard: actividad y KPIs
+  // ============================================================
   function renderActividadReciente() {
     var tbody = byId('tbodyActividadReciente');
     if (!tbody) return;
 
-    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">La actividad reciente se actualizará al completar la migración de módulos.</td></tr>';
+    tbody.innerHTML =
+      '<tr>' +
+        '<td colspan="5">' +
+          '<div class="tabla-vacia">' +
+            '<div class="tabla-vacia-icon">📑</div>' +
+            '<div>La actividad reciente se actualizará al completar la migración de módulos.</div>' +
+          '</div>' +
+        '</td>' +
+      '</tr>';
   }
 
   function renderPipelineMini() {
@@ -193,6 +388,9 @@
     }
   }
 
+  // ============================================================
+  // Vista JSON de depuración
+  // ============================================================
   async function actualizarVistaJSON() {
     var el = byId('jsonServicios') || byId('vista-json') || byId('servicios-json');
     if (!el) return;
@@ -211,27 +409,53 @@
     }
   }
 
+  // ============================================================
+  // Exportaciones placeholder (pendiente de migración)
+  // ============================================================
   function exportarTodo() {
     log('info', 'exportarTodo() pendiente de migración');
-    alert('La exportación global se reconectará después de migrar los módulos principales.');
+    showToast({
+      type: 'info',
+      title: 'Exportación pendiente',
+      message: 'La exportación global se reconectará después de migrar los módulos principales.'
+    });
   }
 
   function exportarEstadoCuentaPDF() {
-    alert('Exportación PDF pendiente de migración.');
+    showToast({
+      type: 'info',
+      title: 'PDF pendiente',
+      message: 'La exportación a PDF del Estado de Cuenta está pendiente de migración.'
+    });
   }
 
   function exportarEstadoCuentaExcel() {
-    alert('Exportación Excel pendiente de migración.');
+    showToast({
+      type: 'info',
+      title: 'Excel pendiente',
+      message: 'La exportación a Excel del Estado de Cuenta está pendiente de migración.'
+    });
   }
 
   function exportarITBMSPDF() {
-    alert('Exportación ITBMS PDF pendiente de migración.');
+    showToast({
+      type: 'info',
+      title: 'ITBMS pendiente',
+      message: 'La exportación de ITBMS para DGI está pendiente de migración.'
+    });
   }
 
   function sugerirGrupoIA() {
-    alert('Sugerencia IA pendiente de migración.');
+    showToast({
+      type: 'info',
+      title: 'IA pendiente',
+      message: 'La sugerencia automática de grupo con IA se activará en una fase posterior.'
+    });
   }
 
+  // ============================================================
+  // Inicialización de Finanzas
+  // ============================================================
   async function inicializarFinanzas() {
     if (typeof window.actualizarSelectProyectosFinanzas === 'function') {
       window.actualizarSelectProyectosFinanzas();
@@ -250,6 +474,9 @@
     }
   }
 
+  // ============================================================
+  // Inicialización general de módulos
+  // ============================================================
   async function inicializarAppGNStudio() {
     if (APP_STATE.initialized) return;
     APP_STATE.initialized = true;
@@ -272,6 +499,7 @@
     renderPipelineMini();
     await actualizarVistaJSON();
 
+    // Estado inicial de navegación
     switchSection('dashboard');
     switchSubSection('negocio', 'crm');
     switchSubSection('finanzas', 'estado-cuenta');
@@ -279,8 +507,17 @@
     if (typeof window.switchProyectoTab === 'function') {
       window.switchProyectoTab('resumen');
     }
+
+    showToast({
+      type: 'success',
+      title: 'GN Studio OS listo',
+      message: 'La plataforma se inicializó correctamente.'
+    });
   }
 
+  // ============================================================
+  // Exponer funciones al global
+  // ============================================================
   window.switchSection = switchSection;
   window.switchSubSection = switchSubSection;
   window.toggleMobileNav = toggleMobileNav;
@@ -295,7 +532,11 @@
   window.renderActividadReciente = renderActividadReciente;
   window.renderPipelineMini = renderPipelineMini;
   window.inicializarFinanzas = inicializarFinanzas;
+  window.showToast = showToast;
 
+  // ============================================================
+  // Bootstrap con Auth
+  // ============================================================
   document.addEventListener('DOMContentLoaded', function() {
     if (typeof window.gnAuthInit === 'function') {
       window.gnAuthInit(inicializarAppGNStudio);
