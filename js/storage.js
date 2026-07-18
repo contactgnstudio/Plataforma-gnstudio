@@ -22,7 +22,7 @@
     COTIZACION_ITEMS: 'cotizacion_items',
     PROYECTOS: 'proyectos',
         GASTOS: 'proyecto_gastos',
-    PAGOS: 'pagos',
+        PAGOS: 'proyecto_pagos',
     TAREAS: 'tareas',
     GRUPOS_SERVICIOS: 'gn_grupos_servicios',
     GRUPO_SERVICIO_MAP: 'gn_grupo_servicio_map'
@@ -396,6 +396,18 @@
     return false;
   }
 
+    // --- Gastos de Proyecto ---
+  function obtenerGastosProyecto(proyectoId) {
+    log('info', 'obtenerGastosProyecto: ' + proyectoId);
+    return getDataFiltered(STORAGE_KEYS.GASTOS, { proyecto_id: proyectoId });
+  }
+
+  // --- Pagos de Proyecto ---
+  function obtenerPagosProyecto(proyectoId) {
+    log('info', 'obtenerPagosProyecto: ' + proyectoId);
+    return getDataFiltered(STORAGE_KEYS.PAGOS, { proyecto_id: proyectoId });
+  }
+
   window.STORAGE_KEYS = STORAGE_KEYS;
   window.getData = getData;
   window.getDataFiltered = getDataFiltered;
@@ -404,6 +416,8 @@
   window.updateItem = updateItem;
   window.deleteItem = deleteItem;
   window.setData = setData;
+    window.obtenerGastosProyecto = obtenerGastosProyecto;
+  window.obtenerPagosProyecto = obtenerPagosProyecto;
 
   if (!window.GNStudio) {
     window.GNStudio = {};
@@ -417,7 +431,9 @@
     addItem: addItem,
     updateItem: updateItem,
     deleteItem: deleteItem,
-    setData: setData
+    setData: setData,
+        obtenerGastosProyecto: obtenerGastosProyecto,
+    obtenerPagosProyecto: obtenerPagosProyecto
   };
 
   log('info', 'storage.js cargado correctamente');
