@@ -134,6 +134,7 @@
 
   async function inicializarCatalogo() {
     await sembrarServiciosSiVacio();
+        renderResumenGruposCatalogo();
     await renderServicios();
     await actualizarVistaJSON();
   }
@@ -142,7 +143,7 @@
     if (event) event.preventDefault();
 
     var feedback = byId('feedback-servicio');
-    var codigo = ((byId('serv-codigo') || {}).value || '').trim().toUpperCase();
+        // codigo se genera automáticamente más abajo
     var descripcion = ((byId('serv-descripcion') || {}).value || '').trim();
     var unidad = ((byId('serv-unidad') || {}).value || 'und').trim() || 'und';
     var precio = parseFloat(((byId('serv-precio') || {}).value || '0'));
@@ -150,18 +151,13 @@
     var grupoId = obtenerGrupoIdFormularioServicio();
     var grupoNombre = obtenerNombreGrupoPorId(grupoId);
 
-    if (!codigo || !descripcion || !precio || precio <= 0) {
-      showFeedback(feedback, '❌ Completa código, descripción y precio válido', 'error');
+        if (!descripcion || !precio || precio <= 0) {
+      showFeedback(feedback, '❌ Completa descripción y precio válido', 'error');
       return false;
     }
 
     var servicios = await obtenerServicios();
-    for (var i = 0; i < servicios.length; i++) {
-      if (String(servicios[i].codigo || '').toUpperCase() === codigo) {
-        showFeedback(feedback, '❌ El código "' + codigo + '" ya existe', 'error');
-        return false;
-      }
-    }
+        var codigo = generarCodigoServicioNuevo(servicios);
 
     if (typeof window.addItem !== 'function') {
       showFeedback(feedback, '❌ No hay conexión de datos disponible', 'error');
@@ -192,6 +188,7 @@
 
     await renderServicios();
     await actualizarVistaJSON();
+        renderResumenGruposCatalogo();
 
     if (typeof window.actualizarSelectServicios === 'function') {
       await window.actualizarSelectServicios();
@@ -303,6 +300,72 @@
     target.textContent = JSON.stringify(servicios, null, 2);
   }
 
+    function generarCodigoServicioNuevo(servicios) {
+    var prefijo = 'S-';
+    var maxNumero = 0;
+    (servicios || []).forEach(function(servicio) {
+      var codigo = String(servicio.codigo || '');
+      if (codigo.indexOf(prefijo) === 0) {
+        var parte = codigo.slice(prefijo.length);
+        var num = parseInt(parte, 10);
+        if (!isNaN(num) && num > maxNumero) { maxNumero = num; }
+      }
+    });
+    var siguiente = maxNumero + 1;
+    return prefijo + String(siguiente).padStart(4, '0');
+  }
+
+  function renderResumenGruposCatalogo() {
+    var cont = byId('gruposResumenCatalogo');
+    if (!cont || typeof window.obtenerGrupos !== 'function') return;
+    var grupos = window.obtenerGrupos() || [];
+    if (!grupos.length) {
+      cont.innerHTML = '<div class="empty-state">No hay grupos definidos</div>';
+      return;
+    }
+    var html = grupos.map(function(grupo) {
+      var color = grupo.colorHex || grupo.color || '#6bbd45';
+      var nombre = escapeHtml(grupo.nombre || 'Grupo');
+      var id = escapeHtml(grupo.id || '');
+      return (
+        '<button type="button" class="grupo-chip" ' +
+        'data-grupo-id="' + id + '" ' +
+        'style="border-color:' + color + ';color:' + color + ';" ' +
+        'onclick="filtrarServiciosPorGrupo(\'' + id + '\')">' +
+          '<span class="grupo-chip-dot" style="background:' + color + ';"></span>' +
+          nombre +
+        '</button>'
+      );
+    }).join('');
+    cont.innerHTML = html;
+    // Actualizar select de filtro del catalogo
+    var sel = byId('filtro-servicio-grupo');
+    if (sel) {
+      var optsGrupo = '<option value="todos">Todos los grupos</option>';
+      grupos.forEach(function(g) {
+        optsGrupo += '<option value="' + escapeHtml(g.id || '') + '">' + escapeHtml(g.nombre || '') + '</option>';
+      });
+      sel.innerHTML = optsGrupo;
+    }
+    // Actualizar select del formulario
+    var selForm = byId('serv-grupo');
+    if (selForm) {
+      var optsForm = '<option value="">Sin grupo específico</option>';
+      grupos.forEach(function(g) {
+        optsForm += '<option value="' + escapeHtml(g.id || '') + '">' + escapeHtml(g.nombre || '') + '</option>';
+      });
+      selForm.innerHTML = optsForm;
+    }
+  }
+
+  function filtrarServiciosPorGrupo(grupoId) {
+    var filtroGrupoSelect = byId('filtro-servicio-grupo');
+    if (filtroGrupoSelect) {
+      filtroGrupoSelect.value = grupoId || 'todos';
+    }
+    filtrarServicios();
+  }
+
   window.inicializarCatalogo = inicializarCatalogo;
   window.obtenerServicios = obtenerServicios;
   window.guardarServicio = guardarServicio;
@@ -310,4 +373,7 @@
   window.renderServicios = renderServicios;
   window.filtrarServicios = filtrarServicios;
   window.actualizarVistaJSON = actualizarVistaJSON;
+    window.renderResumenGruposCatalogo = renderResumenGruposCatalogo;
+  window.filtrarServiciosPorGrupo = filtrarServiciosPorGrupo;
+  window.generarCodigoServicioNuevo = generarCodigoServicioNuevo;
 })(window, document);
