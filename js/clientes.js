@@ -1,13 +1,37 @@
 // ============================================================
 // js/clientes.js — GN Studio OS + Supabase
+// CRM con tabla simplificada y conteo de proyectos por cliente
 // ============================================================
 
 async function inicializarClientes() {
   await renderClientes();
+  await actualizarSelectClientes();
 }
 
+// Obtener clientes desde Supabase
 async function obtenerClientes() {
   return await getData(STORAGE_KEYS.CLIENTES);
+}
+
+// Obtener proyectos para conteo por cliente (usa STORAGE_KEYS.PROYECTOS)
+async function obtenerProyectos() {
+  const key = STORAGE_KEYS.PROYECTOS || 'proyectos';
+  return await getData(key);
+}
+
+// Construir mapa clienteId -> cantidad de proyectos
+async function obtenerConteoProyectosPorCliente() {
+  const proyectos = await obtenerProyectos();
+  const mapa = {};
+
+  (proyectos || []).forEach(function(p) {
+    const cid = String(p.cliente_id || p.clienteId || '').trim();
+    if (!cid) return;
+    if (!mapa[cid]) mapa[cid] = 0;
+    mapa[cid] += 1;
+  });
+
+  return mapa;
 }
 
 async function guardarCliente(event) {
@@ -81,13 +105,16 @@ async function eliminarCliente(id) {
   await actualizarSelectClientes();
 }
 
+// Render de la tabla de clientes con conteo de proyectos
 async function renderClientes() {
   var tbody = document.getElementById('tbodyClientes');
   if (!tbody) return;
 
   var clientes = await obtenerClientes();
+  var mapaProyectos = await obtenerConteoProyectosPorCliente();
 
   if (!Array.isArray(clientes) || clientes.length === 0) {
+    // ahora la tabla tiene 6 columnas
     tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No hay clientes registrados</td></tr>';
     return;
   }
@@ -95,12 +122,30 @@ async function renderClientes() {
   var html = '';
 
   clientes.forEach(function(c) {
+    var rucCompleto = c.ruc
+      ? (c.ruc + (c.dv ? '-' + c.dv : ''))
+      : '-';
+
+    var telefonoPrincipal = c.telefono || c.telefono_secundario || '-';
+    var contactoWhats = telefonoPrincipal;
+
+    var clienteId = String(c.id || '').trim();
+    var proyectosCount = clienteId && mapaProyectos[clienteId]
+      ? mapaProyectos[clienteId]
+      : 0;
+
     html += '<tr>';
-    html += '<td>' + escapeHtmlCliente(c.nombre || '-') + '</td>';
-    html += '<td>' + escapeHtmlCliente(c.ruc ? c.ruc + (c.dv ? '-' + c.dv : '') : '-') + '</td>';
+    // Nombre del cliente (razón social / comercial)
+    html += '<td>' + escapeHtmlCliente(c.nombre || c.nombre_comercial || 'Sin nombre') + '</td>';
+    // RUC
+    html += '<td>' + escapeHtmlCliente(rucCompleto) + '</td>';
+    // Correo
     html += '<td>' + escapeHtmlCliente(c.correo || '-') + '</td>';
-    html += '<td>' + escapeHtmlCliente(c.telefono || '-') + '</td>';
-    html += '<td>' + escapeHtmlCliente(c.tipo || 'activo') + '</td>';
+    // Teléfono / WhatsApp
+    html += '<td>' + escapeHtmlCliente(contactoWhats) + '</td>';
+    // Proyectos (conteo)
+    html += '<td>' + escapeHtmlCliente(String(proyectosCount)) + '</td>';
+    // Acciones
     html += '<td>';
     html += '<button class="btn-accion" onclick="editarCliente(\'' + c.id + '\')" title="Editar">✏️</button> ';
     html += '<button class="btn-accion btn-danger" onclick="eliminarCliente(\'' + c.id + '\')" title="Eliminar">🗑️</button>';
@@ -111,6 +156,7 @@ async function renderClientes() {
   tbody.innerHTML = html;
 }
 
+// Selects de clientes usados por otros módulos (cotizaciones, proyectos, etc.)
 async function actualizarSelectClientes() {
   var clientes = await obtenerClientes();
   var selects = Array.prototype.slice.call(document.querySelectorAll('.select-cliente'));
@@ -133,7 +179,8 @@ async function actualizarSelectClientes() {
     clientes.forEach(function(c) {
       var opt = document.createElement('option');
       opt.value = c.id;
-      opt.textContent = (c.nombre || 'Sin nombre') + (c.ruc ? ' (' + c.ruc + ')' : '');
+      opt.textContent = (c.nombre || c.nombre_comercial || 'Sin nombre') +
+        (c.ruc ? ' (' + c.ruc + ')' : '');
       sel.appendChild(opt);
     });
 
@@ -151,7 +198,7 @@ function escapeHtmlCliente(str) {
 }
 
 // ============================================================
-// Modal de cliente — Nuevo y Editar
+// Modal de cliente — Nuevo y Editar (sin cambios de estructura)
 // ============================================================
 
 function abrirModalCliente(id) {
@@ -211,7 +258,7 @@ function abrirModalCliente(id) {
 
           <div>
             <label style="color:#aaa;font-size:12px;display:block;margin-bottom:6px;">TELÉFONO</label>
-            <input id="cli-telefono" type="text" placeholder="Teléfono principal" style="width:100%;padding:10px;background:#0f0f23;border:1px solid #333;border-radius:8px;color:#fff;box-sizing:border-box;" />
+            <input id="cli-telefono" type="text" placeholder="Teléfono principal / WhatsApp" style="width:100%;padding:10px;background:#0f0f23;border:1px solid #333;border-radius:8px;color:#fff;box-sizing:border-box;" />
           </div>
 
           <div>
