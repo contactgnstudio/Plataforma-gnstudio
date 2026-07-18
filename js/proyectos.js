@@ -258,17 +258,17 @@ function normalizeGasto(row) {
     return null;
   }
 
-  async function obtenerFilasProyectoCompat(tableKey, proyectoId) {
-    var tableName = getStorageKey(tableKey, tableKey.toLowerCase());
+async function obtenerFilasProyectoCompat(tableKey, proyectoId) {
+  var tableName = getStorageKey(tableKey, tableKey.toLowerCase());
 
-    var rows = await getFiltered(tableName, { proyecto_id: proyectoId }, { orderBy: 'created_at', ascending: false });
-    if (rows.length) return rows;
+  var rows = await getFiltered(tableName, { proyecto_id: proyectoId }, {
+    orderBy: 'created_at',
+    ascending: false
+  });
+  if (rows.length) return rows;
 
-    rows = await getFiltered(tableName, { proyectoId: proyectoId }, { orderBy: 'created_at', ascending: false });
-    if (rows.length) return rows;
-
-    return [];
-  }
+  return [];
+}
 
   async function obtenerGastosProyecto(proyectoId) {
     var rows = await obtenerFilasProyectoCompat('GASTOS', proyectoId);
