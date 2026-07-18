@@ -89,9 +89,32 @@
       </a>
     </div>
     
-    <div class="nav-actions">
+        <div class="nav-actions">
       <button class="btn-header" onclick="exportarTodo()" title="Exportar todo">⬇️</button>
       <button class="btn-header" onclick="window.print()" title="Imprimir">🖨️</button>
+
+      <!-- Menú de usuario / sesión -->
+      <div class="nav-user" id="nav-user">
+        <div class="nav-user-avatar">GF</div>
+        <div class="nav-user-info">
+          <span class="nav-user-name" id="nav-user-name">Cuenta iniciada</span>
+          <span class="nav-user-email" id="nav-user-email">contact@gnstudio.space</span>
+        </div>
+        <button
+          class="nav-user-toggle"
+          type="button"
+          onclick="toggleUserMenu()"
+          aria-label="Menú de usuario"
+        >
+          ▾
+        </button>
+
+        <div class="nav-user-menu" id="nav-user-menu">
+          <button type="button" class="nav-user-item" onclick="gnCerrarSesion()">
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
     </div>
     
     <button class="nav-mobile-toggle" onclick="toggleMobileNav()">☰</button>
