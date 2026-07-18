@@ -291,6 +291,15 @@
   }
 
   // ============================================================
+  // Menú de usuario (header, logout)
+  // ============================================================
+  function toggleUserMenu() {
+    var menu = document.getElementById('nav-user-menu');
+    if (!menu) return;
+    menu.classList.toggle('open');
+  }
+
+  // ============================================================
   // Fechas por defecto
   // ============================================================
   function setDefaultDates() {
@@ -623,6 +632,7 @@
   window.switchSection = switchSection;
   window.switchSubSection = switchSubSection;
   window.toggleMobileNav = toggleMobileNav;
+  window.toggleUserMenu = toggleUserMenu;
   window.actualizarKPIs = actualizarKPIs;
   window.actualizarVistaJSON = actualizarVistaJSON;
   window.exportarTodo = exportarTodo;
