@@ -938,7 +938,147 @@
           </div>
         </div>
       </div>
+      
+      <!-- SUB: REGISTRO DE GASTOS Y PAGOS -->
+      <div class="sub-section">
+        
+        <!-- Registro de Gasto -->
+        <div class="section">
+          <div class="section-header">
+            <h2 class="section-title">💸 Registrar Gasto</h2>
+            <p class="section-desc">
+              Registra gastos operativos y vincúlalos a un proyecto para que aparezcan en el Estado de Cuenta y en el detalle del proyecto.
+            </p>
+          </div>
 
+          <form id="form-gasto-finanzas" class="form-section" onsubmit="return registrarGastoFinanzas(event)">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="gasto-fecha">Fecha</label>
+                <input type="date" id="gasto-fecha" required>
+              </div>
+
+              <div class="form-group">
+                <label for="gasto-proyecto">Proyecto</label>
+                <select id="gasto-proyecto">
+                  <option value="">Sin proyecto (general)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="gasto-tipo">Tipo de gasto</label>
+                <select id="gasto-tipo">
+                  <option value="operativo">Operativo</option>
+                  <option value="materiales">Materiales</option>
+                  <option value="servicios">Servicios de terceros</option>
+                  <option value="viajes">Viajes</option>
+                  <option value="otros">Otros</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="gasto-descripcion">Descripción</label>
+                <input type="text" id="gasto-descripcion" placeholder="Ej: Compra de materiales, gasolina, etc." required>
+              </div>
+
+              <div class="form-group">
+                <label for="gasto-referencia">Factura / Referencia</label>
+                <input type="text" id="gasto-referencia" placeholder="Ej: FAC-00123, REF-7890">
+              </div>
+
+              <div class="form-group">
+                <label for="gasto-monto">Monto</label>
+                <input type="number" id="gasto-monto" step="0.01" min="0" required>
+              </div>
+
+              <div class="form-group">
+                <label for="gasto-metodo">Método de pago</label>
+                <select id="gasto-metodo">
+                  <option value="efectivo">Efectivo</option>
+                  <option value="transferencia">Transferencia</option>
+                  <option value="tarjeta">Tarjeta</option>
+                  <option value="cheque">Cheque</option>
+                  <option value="otros">Otros</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>&nbsp;</label>
+                <button type="submit" class="btn-primary">💾 Guardar Gasto</button>
+              </div>
+            </div>
+            <div class="form-feedback" id="feedback-gasto-finanzas" style="display:none;"></div>
+          </form>
+        </div>
+
+        <!-- Registro de Pago -->
+        <div class="section">
+          <div class="section-header">
+            <h2 class="section-title">💰 Registrar Pago de Cliente</h2>
+            <p class="section-desc">
+              Registra pagos recibidos de clientes y vincúlalos al proyecto correspondiente para reflejar avances de cobro.
+            </p>
+          </div>
+
+          <form id="form-pago-finanzas" class="form-section" onsubmit="return registrarPagoFinanzas(event)">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="pago-fecha">Fecha</label>
+                <input type="date" id="pago-fecha" required>
+              </div>
+
+              <div class="form-group">
+                <label for="pago-proyecto">Proyecto</label>
+                <select id="pago-proyecto">
+                  <option value="">Selecciona proyecto</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="pago-concepto">Concepto / Descripción</label>
+                <input type="text" id="pago-concepto" placeholder="Ej: Adelanto, pago parcial, pago final" required>
+              </div>
+
+              <div class="form-group">
+                <label for="pago-referencia">Referencia</label>
+                <input type="text" id="pago-referencia" placeholder="Ej: TRANS-1234, DEP-5678">
+              </div>
+
+              <div class="form-group">
+                <label for="pago-monto">Monto recibido</label>
+                <input type="number" id="pago-monto" step="0.01" min="0" required>
+              </div>
+
+              <div class="form-group">
+                <label for="pago-metodo">Método de pago</label>
+                <select id="pago-metodo">
+                  <option value="transferencia">Transferencia</option>
+                  <option value="efectivo">Efectivo</option>
+                  <option value="tarjeta">Tarjeta</option>
+                  <option value="cheque">Cheque</option>
+                  <option value="otros">Otros</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="pago-estado">Estado del pago</label>
+                <select id="pago-estado">
+                  <option value="registrado">Registrado</option>
+                  <option value="confirmado">Confirmado</option>
+                  <option value="reversado">Reversado</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>&nbsp;</label>
+                <button type="submit" class="btn-primary">💾 Guardar Pago</button>
+              </div>
+            </div>
+            <div class="form-feedback" id="feedback-pago-finanzas" style="display:none;"></div>
+          </form>
+        </div>
+
+      </div>
       <!-- SUB: DECLARACIÓN ITBMS -->
       <div id="finanzas-itbms" class="sub-section">
         
