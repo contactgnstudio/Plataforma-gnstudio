@@ -756,7 +756,45 @@ body {
   border-color: var(--gn-green);
   background: rgba(107,189,69,0.04);
 }
+.search-input {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--gn-border);
+  border-radius: 10px;
+  padding: 9px 14px;
+  color: var(--gn-text);
+  font-size: 14px;
+  font-family: inherit;
+  width: 220px;
+  outline: none;
+  transition: var(--gn-transition);
+}
 
+.search-input:focus {
+  border-color: var(--gn-green);
+  background: rgba(107,189,69,0.04);
+}
+/* Botones de acción en tablas (Eliminar) */
+.btn-table {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--gn-border);
+  background: rgba(239,68,68,0.08);
+  color: var(--gn-red);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: var(--gn-transition);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+.btn-table:hover {
+  background: var(--gn-red);
+  color: #fff;
+  border-color: rgba(239,68,68,0.6);
+}
 /* ============================================================
    TABLES
    ============================================================ */
@@ -1964,7 +2002,76 @@ body.gn-auth-locked .top-navbar {
     text-align: center;
   }
 }
+/* ============================================================
+   Toast de sistema GN Studio OS
+   ============================================================ */
 
+.toast-container {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 1500;
+  max-width: 340px;
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  background: var(--gn-card);
+  border: 1px solid var(--gn-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--gn-text);
+  font-size: 13px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+}
+
+/* icono (checkbox verde) */
+.toast-icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: var(--gn-green-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--gn-green);
+}
+
+/* texto */
+.toast-body {
+  flex: 1;
+}
+
+.toast-title {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.toast-message {
+  font-size: 12px;
+  color: var(--gn-text-muted);
+}
+
+/* botón de cierre (la “x”) */
+.toast-close {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--gn-text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.toast-close:hover {
+  color: var(--gn-red);
+}
 /* ============================================================
    PRINT STYLES
    ============================================================ */
