@@ -945,6 +945,143 @@
   window.switchProyectoTab = switchProyectoTab;
   window.guardarNotasProyecto = guardarNotasProyecto;
   window.guardarTareaProyecto = guardarTareaProyecto;
+
+    // ============================================================
+  // Guardar proyecto + cotización desde formulario de proforma
+  // ============================================================
+  async function guardarProformaProyecto(event) {
+    if (event) event.preventDefault();
+
+    var form = byId('formProformaProyecto');
+    var feedback = byId('feedback-proforma');
+
+    if (!form) return false;
+
+    if (feedback) {
+      feedback.className = 'form-feedback';
+      feedback.style.display = 'none';
+      feedback.textContent = '';
+    }
+
+    try {
+      var nombreProyecto = byId('pf-nombre-proyecto') ? byId('pf-nombre-proyecto').value.trim() : '';
+      var fecha = byId('pf-fecha') ? byId('pf-fecha').value : todayISO();
+      var clienteSelect = byId('pf-cliente');
+      var alcanceEditor = byId('pf-alcance-editor');
+      var alcanceTextarea = byId('pf-alcance');
+
+      if (!nombreProyecto || !clienteSelect || !clienteSelect.value) {
+        if (feedback) {
+          feedback.className = 'form-feedback error';
+          feedback.textContent = '❌ Completa nombre de proyecto y cliente.';
+          feedback.style.display = 'block';
+        }
+        return false;
+      }
+
+      var clienteId = clienteSelect.value;
+      var clienteNombre = (clienteSelect.options[clienteSelect.selectedIndex] || {}).text || 'Cliente';
+
+      if (alcanceEditor && alcanceTextarea) {
+        alcanceTextarea.value = alcanceEditor.innerHTML;
+      }
+
+      var alcanceHtml = alcanceTextarea ? alcanceTextarea.value : '';
+
+      var tbody = byId('tbodyProformaServicios');
+      var items = [];
+      var totalPropuesta = 0;
+
+      if (tbody) {
+        Array.prototype.slice.call(tbody.querySelectorAll('tr')).forEach(function(tr) {
+          var celdas = tr.querySelectorAll('td');
+          if (celdas.length < 5) return;
+          var descripcion = (celdas[0].textContent || '').trim();
+          var unidad = (celdas[1].textContent || '').trim();
+          var cant = parseFloat((celdas[2].textContent || '1').replace(',', '.')) || 1;
+          var precio = parseFloat((celdas[3].textContent || '0').replace(',', '.')) || 0;
+          var total = cant * precio;
+          totalPropuesta += total;
+          items.push({ descripcion: descripcion, unidad: unidad, cantidad: cant, precio: precio, total: total });
+        });
+      }
+
+      if (!items.length || totalPropuesta <= 0) {
+        if (feedback) {
+          feedback.className = 'form-feedback error';
+          feedback.textContent = '❌ Añade al menos un servicio a la propuesta económica.';
+          feedback.style.display = 'block';
+        }
+        return false;
+      }
+
+      if (typeof window.crearCotizacionDesdeProforma !== 'function') {
+        alert('No está disponible la función para crear cotizaciones desde la proforma.');
+        return false;
+      }
+
+      var cotizacion = await window.crearCotizacionDesdeProforma({
+        clienteId: clienteId,
+        clienteNombre: clienteNombre,
+        fecha: fecha,
+        nombreProyecto: nombreProyecto,
+        alcanceHtml: alcanceHtml,
+        items: items,
+        total: totalPropuesta
+      });
+
+      var payloadProyecto = {
+        cliente_id: clienteId,
+        cotizacion_id: cotizacion.codigo || '',
+        nombre: nombreProyecto,
+        descripcion: alcanceHtml,
+        fecha_inicio: fecha || todayISO(),
+        estado: 'en_progreso',
+        presupuesto: totalPropuesta,
+        total_cobrado: 0,
+        total_gastado: 0,
+        notas: ''
+      };
+
+      var result = await insertRow(getStorageKey('PROYECTOS', 'proyectos'), payloadProyecto);
+
+      if (!result) {
+        if (feedback) {
+          feedback.className = 'form-feedback error';
+          feedback.textContent = '❌ No se pudo guardar el proyecto.';
+          feedback.style.display = 'block';
+        }
+        return false;
+      }
+
+      if (feedback) {
+        feedback.className = 'form-feedback success';
+        feedback.textContent = '✅ Proyecto y cotización creados correctamente.';
+        feedback.style.display = 'block';
+      }
+
+      form.reset();
+      if (byId('pf-fecha')) byId('pf-fecha').value = todayISO();
+      if (alcanceEditor) alcanceEditor.innerHTML = '';
+
+      await renderProyectos('todos');
+
+      if (typeof window.actualizarKPIs === 'function') window.actualizarKPIs();
+      if (typeof window.actualizarSelectProyectosFinanzas === 'function') window.actualizarSelectProyectosFinanzas();
+
+      return false;
+    } catch (error) {
+      console.error('Error guardando proforma de proyecto', error);
+      if (feedback) {
+        feedback.className = 'form-feedback error';
+        feedback.textContent = '❌ Ocurrió un error al guardar la proforma.';
+        feedback.style.display = 'block';
+      }
+      return false;
+    }
+  }
+
+  window.guardarProformaProyecto = guardarProformaProyecto;
   window.abrirModalGastoProyecto = abrirModalGastoProyecto;
   window.abrirModalPagoProyecto = abrirModalPagoProyecto;
 
