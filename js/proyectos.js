@@ -400,50 +400,95 @@
       + '</div>';
   }
 
-  async function renderProyectos(filtro) {
-    var grid = byId('proyectos-grid');
-    if (!grid) return false;
+// ID legible de proyecto basado en fecha: PRO-DDMMAA
+    function generarIdProyectoLegible(proyecto) {
+      var fecha = proyecto.fechaInicio || proyecto.createdAt || todayISO();
+      var d = new Date(fecha);
+      if (isNaN(d.getTime())) { d = new Date(); }
+      var dia = String(d.getDate()).padStart(2, '0');
+      var mes = String(d.getMonth() + 1).padStart(2, '0');
+      var ano = String(d.getFullYear()).slice(-2);
+      return 'PRO-' + dia + mes + ano;
+    }
 
-    var proyectos = await obtenerProyectos();
+async function renderProyectos(filtro) {
+      var tbody = byId('tbodyProyectos');
+      if (!tbody) return false;
 
-    if (filtro && filtro !== 'todos') {
-      proyectos = proyectos.filter(function(p) {
-        return p.estado === filtro;
+      var proyectos = await obtenerProyectos();
+
+      if (filtro && filtro !== 'todos') {
+        proyectos = proyectos.filter(function(p) { return p.estado === filtro; });
+      }
+
+      if (!proyectos.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No hay proyectos registrados</td></tr>';
+        return false;
+      }
+
+      var html = '';
+      proyectos.forEach(function(p) {
+        var fecha = formatDateSafe(p.fechaInicio || p.createdAt || '');
+        var idLegible = generarIdProyectoLegible(p);
+        var presupuesto = money(p.presupuesto);
+        var cobrado = money(p.totalCobrado);
+        var gastado = money(p.totalGastado);
+        html += '<tr>';
+        html += '<td>' + esc(fecha) + '</td>';
+        html += '<td>' + esc(idLegible) + '</td>';
+        html += '<td><button type="button" class="link-button" onclick="verProyecto(\'' + esc(p.id) + '\')">' + esc(p.nombre || 'Proyecto') + '</button></td>';
+        html += '<td>' + esc(p.clienteNombre || 'Sin cliente') + '</td>';
+        html += '<td>' + esc(presupuesto) + '</td>';
+        html += '<td>' + esc(cobrado) + '</td>';
+        html += '<td>' + esc(gastado) + '</td>';
+        html += '</tr>';
       });
-    }
-
-    if (!proyectos.length) {
-      grid.innerHTML = '<div class="empty-state">No hay proyectos registrados</div>';
+      tbody.innerHTML = html;
       return false;
     }
 
-    grid.innerHTML = proyectos.map(renderProyectoCard).join('');
-    return false;
-  }
+    
+async function buscarProyectos() {
+      var input = byId('buscar-proyecto');
+      var term = input ? input.value.trim().toLowerCase() : '';
 
-  async function buscarProyectos() {
-    var input = byId('buscar-proyecto');
-    var grid = byId('proyectos-grid');
-    if (!grid) return false;
+      var proyectos = await obtenerProyectos();
 
-    var term = input ? input.value.trim().toLowerCase() : '';
-    var proyectos = await obtenerProyectos();
+      proyectos = proyectos.filter(function(p) {
+        if (!term) return true;
+        return (p.nombre || '').toLowerCase().indexOf(term) !== -1
+          || (p.clienteNombre || '').toLowerCase().indexOf(term) !== -1
+          || (p.descripcion || '').toLowerCase().indexOf(term) !== -1;
+      });
 
-    proyectos = proyectos.filter(function(p) {
-      if (!term) return true;
-      return (p.nombre || '').toLowerCase().indexOf(term) !== -1
-        || (p.clienteNombre || '').toLowerCase().indexOf(term) !== -1
-        || (p.descripcion || '').toLowerCase().indexOf(term) !== -1;
-    });
+      var tbody = byId('tbodyProyectos');
+      if (!tbody) return false;
 
-    if (!proyectos.length) {
-      grid.innerHTML = '<div class="empty-state">No se encontraron proyectos</div>';
+      if (!proyectos.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No se encontraron proyectos</td></tr>';
+        return false;
+      }
+
+      var html = '';
+      proyectos.forEach(function(p) {
+        var fecha = formatDateSafe(p.fechaInicio || p.createdAt || '');
+        var idLegible = generarIdProyectoLegible(p);
+        var presupuesto = money(p.presupuesto);
+        var cobrado = money(p.totalCobrado);
+        var gastado = money(p.totalGastado);
+        html += '<tr>';
+        html += '<td>' + esc(fecha) + '</td>';
+        html += '<td>' + esc(idLegible) + '</td>';
+        html += '<td><button type="button" class="link-button" onclick="verProyecto(\'' + esc(p.id) + '\')">' + esc(p.nombre || 'Proyecto') + '</button></td>';
+        html += '<td>' + esc(p.clienteNombre || 'Sin cliente') + '</td>';
+        html += '<td>' + esc(presupuesto) + '</td>';
+        html += '<td>' + esc(cobrado) + '</td>';
+        html += '<td>' + esc(gastado) + '</td>';
+        html += '</tr>';
+      });
+      tbody.innerHTML = html;
       return false;
     }
-
-    grid.innerHTML = proyectos.map(renderProyectoCard).join('');
-    return false;
-  }
 
   async function filtrarProyectos(estado) {
     await renderProyectos(estado || 'todos');
