@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#0B0B0D">
+  <meta name="theme-color" content="#0A0F0C">
 
   <meta name="robots" content="noindex, nofollow">
   <title>GN Studio OS — Gestión Integral</title>
@@ -11,6 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<base target="_blank">
 <base target="_blank">
 </head>
 <body>
@@ -137,7 +138,7 @@
       <!-- KPIs Principales -->
       <div class="kpi-grid kpi-dashboard">
         <div class="kpi-card kpi-highlight">
-          <div class="kpi-icon" style="background:rgba(107,189,69,0.12);color:#6bbd45;"><i class="ph ph-currency-dollar"></i></div>
+          <div class="kpi-icon" style="background:rgba(18,53,36,0.25);color:#2D8B5E;"><i class="ph ph-currency-dollar"></i></div>
           <div class="kpi-info">
             <span class="kpi-value" id="kpi-ingresos">USD 0.00</span>
             <span class="kpi-label">Ingresos del Mes</span>
@@ -145,7 +146,7 @@
           </div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-icon" style="background:rgba(231,76,60,0.12);color:#e74c3c;"><i class="ph ph-money"></i></div>
+          <div class="kpi-icon" style="background:rgba(248,113,113,0.12);color:#F87171;"><i class="ph ph-money"></i></div>
           <div class="kpi-info">
             <span class="kpi-value" id="kpi-gastos">USD 0.00</span>
             <span class="kpi-label">Gastos del Mes</span>
@@ -153,7 +154,7 @@
           </div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-icon" style="background:rgba(79,140,255,0.12);color:#4f8cff;"><i class="ph ph-trend-up"></i></div>
+          <div class="kpi-icon" style="background:rgba(197,162,83,0.15);color:#C5A253;"><i class="ph ph-trend-up"></i></div>
           <div class="kpi-info">
             <span class="kpi-value" id="kpi-balance">USD 0.00</span>
             <span class="kpi-label">Balance Neto</span>
@@ -161,21 +162,21 @@
           </div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-icon" style="background:rgba(245,185,35,0.12);color:#f5b923;"><i class="ph ph-file-text"></i></div>
+          <div class="kpi-icon" style="background:rgba(197,162,83,0.15);color:#C5A253;"><i class="ph ph-file-text"></i></div>
           <div class="kpi-info">
             <span class="kpi-value" id="kpi-cotizaciones">0</span>
             <span class="kpi-label">Cotizaciones Pendientes</span>
           </div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-icon" style="background:rgba(168,85,247,0.12);color:#a855f7;"><i class="ph ph-buildings"></i>️</div>
+          <div class="kpi-icon" style="background:rgba(197,162,83,0.15);color:#C5A253;"><i class="ph ph-buildings"></i>️</div>
           <div class="kpi-info">
             <span class="kpi-value" id="kpi-proyectos">0</span>
             <span class="kpi-label">Proyectos Activos</span>
           </div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-icon" style="background:rgba(20,184,166,0.12);color:#14b8a6;"><i class="ph ph-users"></i></div>
+          <div class="kpi-icon" style="background:rgba(45,139,94,0.15);color:#2D8B5E;"><i class="ph ph-users"></i></div>
           <div class="kpi-info">
             <span class="kpi-value" id="kpi-clientes">0</span>
             <span class="kpi-label">Clientes Activos</span>
@@ -191,15 +192,15 @@
           </div>
           <div id="alertas-container">
             <div class="alerta-item">
-              <span class="alerta-dot" style="background:#f59e0b;"></span>
+              <span class="alerta-dot" style="background:#C5A253;"></span>
               <span class="alerta-text">Cotización #COT-150726-128 vence en 3 días</span>
             </div>
             <div class="alerta-item">
-              <span class="alerta-dot" style="background:#ef4444;"></span>
+              <span class="alerta-dot" style="background:#F87171;"></span>
               <span class="alerta-text">Pago pendiente: Proyecto ACME Web ($1,200)</span>
             </div>
             <div class="alerta-item">
-              <span class="alerta-dot" style="background:#6bbd45;"></span>
+              <span class="alerta-dot" style="background:#2D8B5E;"></span>
               <span class="alerta-text">Proyecto "Rediseño Nano" completado al 100%</span>
             </div>
           </div>
@@ -315,35 +316,35 @@
           <!-- Pipeline Visual -->
           <div class="pipeline-board">
             <div class="pipeline-column">
-              <div class="pipeline-col-header" style="border-top-color:#4f8cff;">
+              <div class="pipeline-col-header" style="border-top-color:#C5A253;">
                 <span>Prospecto</span>
                 <span class="pipeline-count" id="count-prospecto">0</span>
               </div>
               <div class="pipeline-col-body" id="pipeline-prospecto"></div>
             </div>
             <div class="pipeline-column">
-              <div class="pipeline-col-header" style="border-top-color:#f59e0b;">
+              <div class="pipeline-col-header" style="border-top-color:#C5A253;">
                 <span>Cotizado</span>
                 <span class="pipeline-count" id="count-cotizado">0</span>
               </div>
               <div class="pipeline-col-body" id="pipeline-cotizado"></div>
             </div>
             <div class="pipeline-column">
-              <div class="pipeline-col-header" style="border-top-color:#6bbd45;">
+              <div class="pipeline-col-header" style="border-top-color:#2D8B5E;">
                 <span>Aprobado</span>
                 <span class="pipeline-count" id="count-aprobado">0</span>
               </div>
               <div class="pipeline-col-body" id="pipeline-aprobado"></div>
             </div>
             <div class="pipeline-column">
-              <div class="pipeline-col-header" style="border-top-color:#a855f7;">
+              <div class="pipeline-col-header" style="border-top-color:#C5A253;">
                 <span>En Progreso</span>
                 <span class="pipeline-count" id="count-progreso">0</span>
               </div>
               <div class="pipeline-col-body" id="pipeline-progreso"></div>
             </div>
             <div class="pipeline-column">
-              <div class="pipeline-col-header" style="border-top-color:#14b8a6;">
+              <div class="pipeline-col-header" style="border-top-color:#2D8B5E;">
                 <span>Completado</span>
                 <span class="pipeline-count" id="count-completado">0</span>
               </div>
@@ -558,7 +559,7 @@
               <div class="progreso-circular" id="proyecto-progreso-visual">
                 <svg viewBox="0 0 100 100">
                   <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="8"/>
-                  <circle cx="50" cy="50" r="45" fill="none" stroke="#6bbd45" stroke-width="8" 
+                  <circle cx="50" cy="50" r="45" fill="none" stroke="#2D8B5E" stroke-width="8" 
                           stroke-dasharray="283" stroke-dashoffset="200" stroke-linecap="round"
                           transform="rotate(-90 50 50)"/>
                 </svg>
@@ -575,15 +576,15 @@
                 </div>
                 <div class="fin-row">
                   <span>Gastos del Proyecto</span>
-                  <strong id="resumen-gastos" style="color:#ef4444;">$0.00</strong>
+                  <strong id="resumen-gastos" style="color:#F87171;">$0.00</strong>
                 </div>
                 <div class="fin-row">
                   <span>Pagos Recibidos</span>
-                  <strong id="resumen-pagos" style="color:#6bbd45;">$0.00</strong>
+                  <strong id="resumen-pagos" style="color:#2D8B5E;">$0.00</strong>
                 </div>
                 <div class="fin-row">
                   <span>Por Cobrar</span>
-                  <strong id="resumen-por-cobrar" style="color:#f59e0b;">$0.00</strong>
+                  <strong id="resumen-por-cobrar" style="color:#C5A253;">$0.00</strong>
                 </div>
                 <div class="fin-row fin-total">
                   <span>Utilidad Neta</span>
@@ -772,15 +773,15 @@
         <div class="dashboard-grid">
           <div class="dashboard-card">
             <div class="card-header"><h3><i class="ph ph-arrow-down-left"></i> Ingresos</h3></div>
-            <div class="ec-resumen-monto" id="ec-total-ingresos" style="color:#6bbd45;">$0.00</div>
+            <div class="ec-resumen-monto" id="ec-total-ingresos" style="color:#2D8B5E;">$0.00</div>
           </div>
           <div class="dashboard-card">
             <div class="card-header"><h3><i class="ph ph-arrow-up-right"></i> Gastos</h3></div>
-            <div class="ec-resumen-monto" id="ec-total-gastos" style="color:#ef4444;">$0.00</div>
+            <div class="ec-resumen-monto" id="ec-total-gastos" style="color:#F87171;">$0.00</div>
           </div>
           <div class="dashboard-card">
             <div class="card-header"><h3><i class="ph ph-scales"></i>️ Balance</h3></div>
-            <div class="ec-resumen-monto" id="ec-balance" style="color:#4f8cff;">$0.00</div>
+            <div class="ec-resumen-monto" id="ec-balance" style="color:#C5A253;">$0.00</div>
           </div>
         </div>
 
@@ -855,15 +856,15 @@
             </div>
             <div class="dashboard-card">
               <div class="card-header"><h3><i class="ph ph-arrow-up-right"></i> ITBMS Débito (Cobrado)</h3></div>
-              <div class="ec-resumen-monto" id="itbms-debito" style="color:#ef4444;">$0.00</div>
+              <div class="ec-resumen-monto" id="itbms-debito" style="color:#F87171;">$0.00</div>
             </div>
             <div class="dashboard-card">
               <div class="card-header"><h3><i class="ph ph-arrow-down-left"></i> ITBMS Crédito (Pagado)</h3></div>
-              <div class="ec-resumen-monto" id="itbms-credito" style="color:#6bbd45;">$0.00</div>
+              <div class="ec-resumen-monto" id="itbms-credito" style="color:#2D8B5E;">$0.00</div>
             </div>
             <div class="dashboard-card">
               <div class="card-header"><h3><i class="ph ph-scales"></i>️ ITBMS a Pagar</h3></div>
-              <div class="ec-resumen-monto" id="itbms-a-pagar" style="color:#f59e0b;">$0.00</div>
+              <div class="ec-resumen-monto" id="itbms-a-pagar" style="color:#C5A253;">$0.00</div>
             </div>
           </div>
 
