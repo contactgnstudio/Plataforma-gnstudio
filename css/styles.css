@@ -1,3 +1,5 @@
+@import url('https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css');
+
 /* ============================================================
    GN STUDIO — DASHBOARD STYLES (Responsive Completo)
    ============================================================ */
@@ -21,7 +23,6 @@
   --gn-red-dim: rgba(248,113,113,0.10);
   --gn-radius: 14px;
   --gn-transition: 0.25s cubic-bezier(0.4,0,0.2,1);
-}
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -42,7 +43,7 @@ body {
    ════════════════════════════════════════════════════════════ */
 
 /* Phosphor Icons */
-@import url('https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css');
+
 
 /* ── TOP NAVBAR MODERNO ── */
 .top-navbar {
