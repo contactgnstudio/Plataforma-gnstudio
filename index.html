@@ -12,10 +12,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
 <base target="_blank">
-<base target="_blank">
-<base target="_blank">
-<base target="_blank">
-<base target="_blank">
 </head>
 <body>
 
@@ -59,7 +55,6 @@
     </div>
   </div>
 
-  <!-- (BOTÓN FLOTANTE ANTIGUO SE ELIMINA) -->
   <!-- ============================================================
        TOP NAVBAR
        ============================================================ -->
@@ -74,7 +69,7 @@
         <span class="logo-tagline">OS</span>
       </div>
     </div>
-    
+
     <div class="nav-links">
       <a class="nav-link active" data-section="dashboard" onclick="switchSection('dashboard')">
         <span class="nav-icon"><i class="ph ph-squares-four"></i></span>
@@ -85,7 +80,7 @@
         <span>Negocio</span>
       </a>
       <a class="nav-link" data-section="proyectos" onclick="switchSection('proyectos')">
-        <span class="nav-icon"><i class="ph ph-buildings"></i>️</span>
+        <span class="nav-icon"><i class="ph ph-buildings"></i></span>
         <span>Proyectos</span>
       </a>
       <a class="nav-link" data-section="finanzas" onclick="switchSection('finanzas')">
@@ -93,23 +88,18 @@
         <span>Finanzas</span>
       </a>
     </div>
-    
+
     <div class="nav-actions">
       <button class="btn-header" onclick="exportarTodo()" title="Exportar todo"><i class="ph ph-download-simple"></i></button>
-      <button class="btn-header" onclick="window.print()" title="Imprimir"><i class="ph ph-printer"></i>️</button>
+      <button class="btn-header" onclick="window.print()" title="Imprimir"><i class="ph ph-printer"></i></button>
 
-      <!-- Menú de usuario / sesión (todo el chip es clicable) -->
       <div class="nav-user" id="nav-user" onclick="toggleUserMenu()">
         <div class="nav-user-avatar">GF</div>
         <div class="nav-user-info">
           <span class="nav-user-name" id="nav-user-name">Cuenta iniciada</span>
           <span class="nav-user-email" id="nav-user-email">contact@gnstudio.space</span>
         </div>
-        <button
-          class="nav-user-toggle"
-          type="button"
-          aria-label="Menú de usuario"
-        >
+        <button class="nav-user-toggle" type="button" aria-label="Menú de usuario">
           <i class="ph ph-caret-down"></i>
         </button>
 
@@ -120,13 +110,13 @@
         </div>
       </div>
     </div>
-    
+
     <button class="nav-mobile-toggle" onclick="toggleMobileNav()"><i class="ph ph-list"></i></button>
   </nav>
 
   <!-- MAIN CONTENT -->
   <main class="main-content">
-    
+
     <!-- HEADER -->
     <header class="top-header">
       <h1 class="page-title" id="page-title">Dashboard</h1>
@@ -137,7 +127,7 @@
          SECCION: DASHBOARD (Resumen Ejecutivo)
          ============================================================ -->
     <section id="dashboard" class="section-panel active">
-      
+
       <!-- KPIs Principales -->
       <div class="kpi-grid kpi-dashboard">
         <div class="kpi-card kpi-highlight">
@@ -172,7 +162,7 @@
           </div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-icon" style="background:rgba(197,162,83,0.15);color:#C5A253;"><i class="ph ph-buildings"></i>️</div>
+          <div class="kpi-icon" style="background:rgba(197,162,83,0.15);color:#C5A253;"><i class="ph ph-buildings"></i></div>
           <div class="kpi-info">
             <span class="kpi-value" id="kpi-proyectos">0</span>
             <span class="kpi-label">Proyectos Activos</span>
@@ -187,7 +177,7 @@
         </div>
       </div>
 
-      <!-- Alertas & Tareas -->
+      <!-- Alertas & Pipeline -->
       <div class="dashboard-grid">
         <div class="dashboard-card">
           <div class="card-header">
@@ -208,57 +198,57 @@
             </div>
           </div>
         </div>
-        
+
         <div class="section">
-              <div class="section-header">
-                <h2 class="section-title"><i class="ph ph-arrows-left-right"></i> Pipeline de Ventas</h2>
+          <div class="section-header">
+            <h2 class="section-title"><i class="ph ph-arrows-left-right"></i> Pipeline de Ventas</h2>
+          </div>
+          <div class="sales-pipeline">
+            <div class="pipeline-stage" id="stage-cotizado">
+              <div class="stage-header">
+                <span class="stage-icon"><i class="ph ph-file-text"></i></span>
+                <span class="stage-title">Cotizado</span>
               </div>
-              <div class="sales-pipeline">
-                <div class="pipeline-stage" id="stage-cotizado">
-                  <div class="stage-header">
-                    <span class="stage-icon"><i class="ph ph-file-text"></i></span>
-                    <span class="stage-title">Cotizado</span>
-                  </div>
-                  <div class="stage-body">
-                    <span class="stage-count" id="pipeline-cotizado">0</span>
-                    <span class="stage-label">Oportunidades</span>
-                  </div>
-                </div>
-                <div class="pipeline-connector"></div>
-                <div class="pipeline-stage" id="stage-aprobado">
-                  <div class="stage-header">
-                    <span class="stage-icon"><i class="ph ph-check-circle"></i></span>
-                    <span class="stage-title">Aprobado</span>
-                  </div>
-                  <div class="stage-body">
-                    <span class="stage-count" id="pipeline-aprobado">0</span>
-                    <span class="stage-label">Proyectos</span>
-                  </div>
-                </div>
-                <div class="pipeline-connector"></div>
-                <div class="pipeline-stage" id="stage-en-progreso">
-                  <div class="stage-header">
-                    <span class="stage-icon"><i class="ph ph-rocket"></i></span>
-                    <span class="stage-title">En progreso</span>
-                  </div>
-                  <div class="stage-body">
-                    <span class="stage-count" id="pipeline-en-progreso">0</span>
-                    <span class="stage-label">Proyectos</span>
-                  </div>
-                </div>
-                <div class="pipeline-connector"></div>
-                <div class="pipeline-stage" id="stage-completado">
-                  <div class="stage-header">
-                    <span class="stage-icon"><i class="ph ph-flag"></i></span>
-                    <span class="stage-title">Completado</span>
-                  </div>
-                  <div class="stage-body">
-                    <span class="stage-count" id="pipeline-completado">0</span>
-                    <span class="stage-label">Proyectos</span>
-                  </div>
-                </div>
+              <div class="stage-body">
+                <span class="stage-count" id="pipeline-cotizado">0</span>
+                <span class="stage-label">Oportunidades</span>
               </div>
             </div>
+            <div class="pipeline-connector"></div>
+            <div class="pipeline-stage" id="stage-aprobado">
+              <div class="stage-header">
+                <span class="stage-icon"><i class="ph ph-check-circle"></i></span>
+                <span class="stage-title">Aprobado</span>
+              </div>
+              <div class="stage-body">
+                <span class="stage-count" id="pipeline-aprobado">0</span>
+                <span class="stage-label">Proyectos</span>
+              </div>
+            </div>
+            <div class="pipeline-connector"></div>
+            <div class="pipeline-stage" id="stage-en-progreso">
+              <div class="stage-header">
+                <span class="stage-icon"><i class="ph ph-rocket"></i></span>
+                <span class="stage-title">En progreso</span>
+              </div>
+              <div class="stage-body">
+                <span class="stage-count" id="pipeline-en-progreso">0</span>
+                <span class="stage-label">Proyectos</span>
+              </div>
+            </div>
+            <div class="pipeline-connector"></div>
+            <div class="pipeline-stage" id="stage-completado">
+              <div class="stage-header">
+                <span class="stage-icon"><i class="ph ph-flag"></i></span>
+                <span class="stage-title">Completado</span>
+              </div>
+              <div class="stage-body">
+                <span class="stage-count" id="pipeline-completado">0</span>
+                <span class="stage-label">Proyectos</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Gráficas -->
@@ -299,12 +289,11 @@
          SECCION: NEGOCIO (CRM + Catálogo + Cotizaciones)
          ============================================================ -->
     <section id="negocio" class="section-panel">
-      
+
       <!-- SUB-NAV INTERNO -->
       <div class="sub-nav">
         <button class="sub-nav-item active" onclick="switchSubSection('negocio', 'crm')"><i class="ph ph-address-book"></i> CRM</button>
         <button class="sub-nav-item" onclick="switchSubSection('negocio', 'catalogo')"><i class="ph ph-list-checks"></i> Catálogo & Grupos</button>
-
       </div>
 
       <!-- SUB: CRM -->
@@ -316,7 +305,7 @@
               <button class="btn-secondary" onclick="abrirModalCliente()"><i class="ph ph-plus"></i> Nuevo Cliente</button>
             </div>
           </div>
-          
+
           <!-- Pipeline Visual -->
           <div class="pipeline-board">
             <div class="pipeline-column">
@@ -369,7 +358,7 @@
             <table id="tablaClientes">
               <thead>
                 <tr>
-                                <th>Nombre</th>
+                  <th>Nombre</th>
                   <th>Código</th>
                   <th>Correo</th>
                   <th>Teléfono / WhatsApp</th>
@@ -384,120 +373,114 @@
       </div>
 
       <!-- SUB: CATÁLOGO & GRUPOS -->
-<div id="negocio-catalogo" class="sub-section">
+      <div id="negocio-catalogo" class="sub-section">
 
-          <!-- 1) Formulario: Añadir Servicio al Catálogo -->
-          <div class="form-section">
-            <div class="form-header">
-              <h2 class="section-title"><i class="ph ph-plus"></i> Añadir Servicio al Catálogo</h2>
-            </div>
-            <form id="formServicio" onsubmit="return guardarServicio(event)">
-              <div class="form-grid">
-
-                <div class="form-group full-width">
-                  <label for="serv-descripcion">Descripción del servicio <span class="required">*</span></label>
-                  <input type="text" id="serv-descripcion"
-                         placeholder="Ej: Diseño de landing page de alto impacto"
-                         required maxlength="300">
-                </div>
-
-                <div class="form-group">
-                  <label for="serv-grupo">Grupo (opcional)</label>
-                  <select id="serv-grupo">
-                    <option value="">Sin grupo específico</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="serv-unidad">Unidad <span class="required">*</span></label>
-                  <select id="serv-unidad" required>
-                    <option value="und">und</option>
-                    <option value="hr">hr</option>
-                    <option value="dia">día</option>
-                    <option value="mes">mes</option>
-                    <option value="pagina">pág</option>
-                    <option value="proyecto">proy</option>
-                    <option value="paquete">paq</option>
-                  </select>
-                </div>
-
-                <div class="form-group">
-                  <label for="serv-precio">Precio Unitario (USD) <span class="required">*</span></label>
-                  <input type="number" id="serv-precio" placeholder="0.00"
-                         required min="0.01" step="0.01">
-                </div>
-
-                <div class="form-group">
-                  <label for="serv-itbms">¿Aplica ITBMS?</label>
-                  <select id="serv-itbms">
-                    <option value="1">Sí (7%)</option>
-                    <option value="0">No</option>
-                  </select>
-                </div>
-
-              </div>
-              <div class="form-actions">
-                <button type="submit" class="btn-primary"><i class="ph ph-floppy-disk"></i> Guardar Servicio</button>
-                <button type="reset" class="btn-secondary"><i class="ph ph-arrow-counter-clockwise"></i> Limpiar</button>
-              </div>
-            </form>
-            <div class="form-feedback" id="feedback-servicio"></div>
+        <!-- 1) Formulario: Añadir Servicio al Catálogo -->
+        <div class="form-section">
+          <div class="form-header">
+            <h2 class="section-title"><i class="ph ph-plus"></i> Añadir Servicio al Catálogo</h2>
           </div>
+          <form id="formServicio" onsubmit="return guardarServicio(event)">
+            <div class="form-grid">
 
-          <!-- 2) Resumen de Grupos (pequeño, como filtro del catálogo) -->
-          <div class="section">
-            <div class="section-header">
-              <h2 class="section-title"><i class="ph ph-folder"></i> Grupos de Servicios</h2>
-              <div class="section-actions">
-                <button class="btn-secondary" onclick="abrirModalGrupo()"><i class="ph ph-plus"></i> Nuevo grupo</button>
+              <div class="form-group full-width">
+                <label for="serv-descripcion">Descripción del servicio <span class="required">*</span></label>
+                <input type="text" id="serv-descripcion"
+                       placeholder="Ej: Diseño de landing page de alto impacto"
+                       required maxlength="300">
               </div>
-            </div>
-            <div id="gruposResumenCatalogo" class="grupos-resumen">
-              <!-- Se rellena desde catalogo.js / grupos.js -->
-            </div>
-          </div>
 
-          <!-- 3) Lista del Catálogo de Servicios -->
-          <div class="section">
-            <div class="section-header">
-              <h2 class="section-title"><i class="ph ph-list-checks"></i> Servicios del Catálogo</h2>
-              <div class="section-actions">
-                <input type="text" id="buscar-servicio"
-                       placeholder="Buscar servicio..."
-                       onkeyup="filtrarServicios()" class="search-input">
-                <select id="filtro-servicio-grupo"
-                        onchange="filtrarServicios()" class="filter-btn">
-                  <option value="todos">Todos los grupos</option>
+              <div class="form-group">
+                <label for="serv-grupo">Grupo (opcional)</label>
+                <select id="serv-grupo">
+                  <option value="">Sin grupo específico</option>
                 </select>
               </div>
-            </div>
-            <div class="table-wrap">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Código</th>
-                    <th>Servicio</th>
-                    <th>Unidad</th>
-                    <th>Precio</th>
-                    <th>ITBMS</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody id="tbodyServicios"></tbody>
-              </table>
-            </div>
-          </div>
 
+              <div class="form-group">
+                <label for="serv-unidad">Unidad <span class="required">*</span></label>
+                <select id="serv-unidad" required>
+                  <option value="und">und</option>
+                  <option value="hr">hr</option>
+                  <option value="dia">día</option>
+                  <option value="mes">mes</option>
+                  <option value="pagina">pág</option>
+                  <option value="proyecto">proy</option>
+                  <option value="paquete">paq</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="serv-precio">Precio Unitario (USD) <span class="required">*</span></label>
+                <input type="number" id="serv-precio" placeholder="0.00"
+                       required min="0.01" step="0.01">
+              </div>
+
+              <div class="form-group">
+                <label for="serv-itbms">¿Aplica ITBMS?</label>
+                <select id="serv-itbms">
+                  <option value="1">Sí (7%)</option>
+                  <option value="0">No</option>
+                </select>
+              </div>
+
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn-primary"><i class="ph ph-floppy-disk"></i> Guardar Servicio</button>
+              <button type="reset" class="btn-secondary"><i class="ph ph-arrow-counter-clockwise"></i> Limpiar</button>
+            </div>
+          </form>
+          <div class="form-feedback" id="feedback-servicio"></div>
         </div>
 
-    
+        <!-- 2) Resumen de Grupos -->
+        <div class="section">
+          <div class="section-header">
+            <h2 class="section-title"><i class="ph ph-folder"></i> Grupos de Servicios</h2>
+            <div class="section-actions">
+              <button class="btn-secondary" onclick="abrirModalGrupo()"><i class="ph ph-plus"></i> Nuevo grupo</button>
+            </div>
+          </div>
+          <div id="gruposResumenCatalogo" class="grupos-resumen"></div>
+        </div>
+
+        <!-- 3) Lista del Catálogo de Servicios -->
+        <div class="section">
+          <div class="section-header">
+            <h2 class="section-title"><i class="ph ph-list-checks"></i> Servicios del Catálogo</h2>
+            <div class="section-actions">
+              <input type="text" id="buscar-servicio"
+                     placeholder="Buscar servicio..."
+                     onkeyup="filtrarServicios()" class="search-input">
+              <select id="filtro-servicio-grupo"
+                      onchange="filtrarServicios()" class="filter-btn">
+                <option value="todos">Todos los grupos</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Código</th>
+                  <th>Servicio</th>
+                  <th>Unidad</th>
+                  <th>Precio</th>
+                  <th>ITBMS</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyServicios"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- ============================================================
          SECCION: PROYECTOS (Lista + Detalle Interno)
          ============================================================ -->
     <section id="proyectos" class="section-panel">
-      
 
       <!-- PANEL: NUEVA PROPUESTA / PROFORMA -->
       <div id="proyecto-proforma-panel" class="section" style="margin-bottom:24px;display:none;">
@@ -543,12 +526,11 @@
           <div style="margin-top:24px;">
             <h3 class="sub-title"><i class="ph ph-currency-dollar"></i> Propuesta Económica</h3>
 
-            <!-- Select para agregar servicio del catálogo -->
             <div style="margin-bottom:16px;display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
               <div style="flex:1;min-width:200px;">
                 <label style="font-size:12px;color:var(--gn-text-muted);display:block;margin-bottom:6px;">Agregar desde Catálogo</label>
                 <select id="pf-select-servicio-catalogo" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--gn-border);background:rgba(18,53,36,0.15);color:var(--gn-text);font-size:14px;">
-                  <option value="">-- Selecciona un servicio del catálogo --</option>
+                  <option value="">-- Selecciona un servicio del catalogo --</option>
                 </select>
               </div>
               <button type="button" class="btn-secondary" onclick="agregarServicioCatalogoAProforma()" style="min-height:44px;"><i class="ph ph-plus"></i> Agregar</button>
@@ -572,7 +554,6 @@
               </table>
             </div>
 
-            <!-- Opción ITBMS global -->
             <div style="margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
               <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
                 <input type="checkbox" id="pf-aplica-itbms" checked style="width:18px;height:18px;accent-color:#C5A253;">
@@ -604,35 +585,35 @@
       <div id="proyectos-lista">
         <div class="section">
           <div class="section-header">
-            <h2 class="section-title"><i class="ph ph-buildings"></i>️ Proyectos Activos</h2>
+            <h2 class="section-title"><i class="ph ph-buildings"></i> Proyectos Activos</h2>
             <div class="section-actions">
               <button class="btn-secondary" onclick="filtrarProyectos('todos')">Todos</button>
               <button class="btn-secondary" onclick="filtrarProyectos('en_progreso')">En Progreso</button>
               <button class="btn-secondary" onclick="filtrarProyectos('completado')">Completados</button>
-                            <input type="text" id="buscar-proyecto" placeholder="Buscar proyecto..." onkeyup="buscarProyectos()" class="search-input">
-                            <button class="btn-primary" onclick="togglePanelProforma()"><i class="ph ph-plus"></i> Nueva propuesta / proyecto</button>
+              <input type="text" id="buscar-proyecto" placeholder="Buscar proyecto..." onkeyup="buscarProyectos()" class="search-input">
+              <button class="btn-primary" onclick="togglePanelProforma()"><i class="ph ph-plus"></i> Nueva propuesta / proyecto</button>
             </div>
           </div>
           <div class="table-wrap">
-              <table id="tablaProyectos" class="data-table">
-                <thead>
-                  <tr>
-                    <th>Fecha</th>
-                    <th>ID Proyecto</th>
-                    <th>Nombre</th>
-                    <th>Cliente</th>
-                    <th>Presupuesto</th>
-                    <th>Cobrado</th>
-                    <th>Gastado</th>
-                  </tr>
-                </thead>
-                <tbody id="tbodyProyectos"></tbody>
-              </table>
-            </div>
+            <table id="tablaProyectos" class="data-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>ID Proyecto</th>
+                  <th>Nombre</th>
+                  <th>Cliente</th>
+                  <th>Presupuesto</th>
+                  <th>Cobrado</th>
+                  <th>Gastado</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyProyectos"></tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-   <!-- VISTA DETALLE (se muestra al hacer click en un proyecto) -->
+      <!-- VISTA DETALLE (única, sin duplicados) -->
       <div id="proyecto-detalle" style="display:none;">
 
         <!-- Header del Proyecto -->
@@ -739,9 +720,7 @@
             <div class="section-header">
               <h2 class="section-title"><i class="ph ph-calendar"></i> Línea de Tiempo</h2>
             </div>
-            <div class="timeline" id="proyecto-timeline">
-              <!-- Se renderiza dinámicamente -->
-            </div>
+            <div class="timeline" id="proyecto-timeline"></div>
           </div>
         </div>
 
@@ -830,9 +809,7 @@
             <div class="section-header">
               <h2 class="section-title"><i class="ph ph-list-checks"></i> Tareas del Proyecto</h2>
             </div>
-            <div class="tareas-kanban" id="tareas-kanban">
-              <!-- Kanban board de tareas -->
-            </div>
+            <div class="tareas-kanban" id="tareas-kanban"></div>
           </div>
         </div>
 
@@ -858,189 +835,6 @@
             <div class="form-group full-width">
               <label for="proyecto-notas">Notas adicionales</label>
               <textarea id="proyecto-notas" rows="6" placeholder="Reuniones, decisiones, feedback del cliente..."></textarea>
-            </div>
-            <div class="form-actions">
-              <button type="button" class="btn-primary" onclick="guardarNotasProyecto()"><i class="ph ph-floppy-disk"></i> Guardar Notas</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-        <!-- TAB: FINANCIERO -->
-        <div id="proyecto-tab-financiero" class="proyecto-tab-content">
-          <div class="section">
-            <div class="section-header">
-              <h2 class="section-title"><i class="ph ph-money"></i> Gastos del Proyecto</h2>
-              <button class="btn-secondary" onclick="abrirModalGastoProyecto()"><i class="ph ph-plus"></i> Registrar Gasto</button>
-            </div>
-            <div class="table-wrap">
-              <table id="tablaGastosProyecto">
-                <thead>
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Categoría</th>
-                    <th>Descripción</th>
-                    <th>Monto</th>
-                    <th>Método</th>
-                  </tr>
-                </thead>
-                <tbody id="tbodyGastosProyecto"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="section">
-            <div class="section-header">
-              <h2 class="section-title"><i class="ph ph-currency-dollar"></i> Pagos Recibidos</h2>
-              <button class="btn-secondary" onclick="abrirModalPagoProyecto()"><i class="ph ph-plus"></i> Registrar Pago</button>
-            </div>
-            <div class="table-wrap">
-              <table id="tablaPagosProyecto">
-                <thead>
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Concepto</th>
-                    <th>Monto</th>
-                    <th>Método</th>
-                    <th>Estado</th>
-                  </tr>
-                </thead>
-                <tbody id="tbodyPagosProyecto"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- TAB: TAREAS -->
-        <div id="proyecto-tab-tareas" class="proyecto-tab-content">
-          <div class="form-section">
-            <div class="form-header">
-              <h2 class="section-title"><i class="ph ph-plus"></i> Nueva Tarea</h2>
-            </div>
-            <form id="formTareaProyecto" onsubmit="return guardarTareaProyecto(event)">
-              <div class="form-grid">
-                <div class="form-group full-width">
-                  <label for="tarea-titulo">Título <span class="required">*</span></label>
-                  <input type="text" id="tarea-titulo" required>
-                </div>
-                <div class="form-group">
-                  <label for="tarea-asignado">Asignado a</label>
-                  <input type="text" id="tarea-asignado" placeholder="Ej: Diseñador UX">
-                </div>
-                <div class="form-group">
-                  <label for="tarea-fecha-limite">Fecha Límite</label>
-                  <input type="date" id="tarea-fecha-limite">
-                </div>
-                <div class="form-group">
-                  <label for="tarea-estado">Estado</label>
-                  <select id="tarea-estado">
-                    <option value="pendiente">Pendiente</option>
-                    <option value="en_progreso">En Progreso</option>
-                    <option value="revision">En Revisión</option>
-                    <option value="completada">Completada</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-actions">
-                <button type="submit" class="btn-primary"><i class="ph ph-floppy-disk"></i> Guardar Tarea</button>
-              </div>
-            </form>
-          </div>
-
-          <div class="section">
-            <div class="section-header">
-              <h2 class="section-title"><i class="ph ph-list-checks"></i> Tareas del Proyecto</h2>
-            </div>
-            <div class="tareas-kanban" id="tareas-kanban">
-              <!-- Kanban board de tareas -->
-            </div>
-          </div>
-        </div>
-
-        <!-- TAB: DOCUMENTOS -->
-        <div id="proyecto-tab-documentos" class="proyecto-tab-content">
-          <div class="section">
-            <div class="section-header">
-              <h2 class="section-title"><i class="ph ph-file-text"></i> Cotización del Proyecto</h2>
-              <div class="section-actions">
-                <button class="btn-secondary" onclick="imprimirCotizacionProyecto()"><i class="ph ph-printer"></i> Imprimir</button>
-                <button class="btn-secondary" onclick="descargarCotizacionPDF()"><i class="ph ph-download-simple"></i> Descargar PDF</button>
-              </div>
-            </div>
-            <div id="cotizacion-documento-container">
-              <div class="empty-state">Cargando cotización...</div>
-            </div>
-          </div>
-
-          <div class="form-section" style="margin-top:24px;">
-            <div class="form-header">
-              <h2 class="section-title"><i class="ph ph-pencil-simple"></i> Notas del Proyecto</h2>
-            </div>
-            <div class="form-group full-width">
-              <label for="proyecto-notas">Notas adicionales</label>
-              <textarea id="proyecto-notas" rows="6" placeholder="Reuniones, decisiones, feedback del cliente..."></textarea>
-            </div>
-            <div class="form-actions">
-              <button type="button" class="btn-primary" onclick="guardarNotasProyecto()"><i class="ph ph-floppy-disk"></i> Guardar Notas</button>
-            </div>
-          </div>
-        </div>
-      </div>
-        <!-- TAB: TAREAS -->
-        <div id="proyecto-tab-tareas" class="proyecto-tab-content">
-          <div class="form-section">
-            <div class="form-header">
-              <h2 class="section-title"><i class="ph ph-plus"></i> Nueva Tarea</h2>
-            </div>
-            <form id="formTareaProyecto" onsubmit="return guardarTareaProyecto(event)">
-              <div class="form-grid">
-                <div class="form-group full-width">
-                  <label for="tarea-titulo">Título <span class="required">*</span></label>
-                  <input type="text" id="tarea-titulo" required>
-                </div>
-                <div class="form-group">
-                  <label for="tarea-asignado">Asignado a</label>
-                  <input type="text" id="tarea-asignado" placeholder="Ej: Diseñador UX">
-                </div>
-                <div class="form-group">
-                  <label for="tarea-fecha-limite">Fecha Límite</label>
-                  <input type="date" id="tarea-fecha-limite">
-                </div>
-                <div class="form-group">
-                  <label for="tarea-estado">Estado</label>
-                  <select id="tarea-estado">
-                    <option value="pendiente">Pendiente</option>
-                    <option value="en_progreso">En Progreso</option>
-                    <option value="revision">En Revisión</option>
-                    <option value="completada">Completada</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-actions">
-                <button type="submit" class="btn-primary"><i class="ph ph-floppy-disk"></i> Guardar Tarea</button>
-              </div>
-            </form>
-          </div>
-
-          <div class="section">
-            <div class="section-header">
-              <h2 class="section-title"><i class="ph ph-list-checks"></i> Tareas del Proyecto</h2>
-            </div>
-            <div class="tareas-kanban" id="tareas-kanban">
-              <!-- Kanban board de tareas -->
-            </div>
-          </div>
-        </div>
-
-        <!-- TAB: DOCUMENTOS -->
-        <div id="proyecto-tab-documentos" class="proyecto-tab-content">
-          <div class="form-section">
-            <div class="form-header">
-              <h2 class="section-title"><i class="ph ph-pencil-simple"></i> Notas & Documentos</h2>
-            </div>
-            <div class="form-group full-width">
-              <label for="proyecto-notas">Notas del Proyecto</label>
-              <textarea id="proyecto-notas" rows="10" placeholder="Reuniones, decisiones, feedback del cliente..."></textarea>
             </div>
             <div class="form-actions">
               <button type="button" class="btn-primary" onclick="guardarNotasProyecto()"><i class="ph ph-floppy-disk"></i> Guardar Notas</button>
@@ -1054,7 +848,7 @@
          SECCION: FINANZAS (Estado de Cuenta + ITBMS + Reportes)
          ============================================================ -->
     <section id="finanzas" class="section-panel">
-      
+
       <!-- SUB-NAV INTERNO -->
       <div class="sub-nav">
         <button class="sub-nav-item active" onclick="switchSubSection('finanzas', 'estado-cuenta')"><i class="ph ph-scroll"></i> Estado de Cuenta</button>
@@ -1064,7 +858,7 @@
 
       <!-- SUB: ESTADO DE CUENTA -->
       <div id="finanzas-estado-cuenta" class="sub-section active">
-        
+
         <!-- Filtros -->
         <div class="form-section">
           <div class="form-header">
@@ -1111,18 +905,17 @@
             <div class="ec-resumen-monto" id="ec-total-gastos" style="color:#F87171;">$0.00</div>
           </div>
           <div class="dashboard-card">
-            <div class="card-header"><h3><i class="ph ph-scales"></i>️ Balance</h3></div>
+            <div class="card-header"><h3><i class="ph ph-scales"></i> Balance</h3></div>
             <div class="ec-resumen-monto" id="ec-balance" style="color:#C5A253;">$0.00</div>
           </div>
         </div>
-
 
         <!-- Tabla unificada -->
         <div class="section">
           <div class="section-header">
             <h2 class="section-title"><i class="ph ph-scroll"></i> Movimientos</h2>
             <div class="section-actions">
-              <button class="btn-secondary" onclick="exportarEstadoCuentaPDF()"><i class="ph ph-printer"></i>️ Exportar PDF</button>
+              <button class="btn-secondary" onclick="exportarEstadoCuentaPDF()"><i class="ph ph-printer"></i> Exportar PDF</button>
               <button class="btn-secondary" onclick="exportarEstadoCuentaExcel()"><i class="ph ph-squares-four"></i> Exportar Excel</button>
             </div>
           </div>
@@ -1147,7 +940,7 @@
 
       <!-- SUB: DECLARACIÓN ITBMS -->
       <div id="finanzas-itbms" class="sub-section">
-        
+
         <div class="section">
           <div class="section-header">
             <h2 class="section-title"><i class="ph ph-squares-four"></i> Declaración ITBMS Panamá (Formulario D-010)</h2>
@@ -1195,7 +988,7 @@
               <div class="ec-resumen-monto" id="itbms-credito" style="color:#2D8B5E;">$0.00</div>
             </div>
             <div class="dashboard-card">
-              <div class="card-header"><h3><i class="ph ph-scales"></i>️ ITBMS a Pagar</h3></div>
+              <div class="card-header"><h3><i class="ph ph-scales"></i> ITBMS a Pagar</h3></div>
               <div class="ec-resumen-monto" id="itbms-a-pagar" style="color:#C5A253;">$0.00</div>
             </div>
           </div>
@@ -1205,10 +998,10 @@
             <div class="section-header">
               <h2 class="section-title"><i class="ph ph-list-checks"></i> Detalle de Operaciones</h2>
               <div class="section-actions">
-                <button class="btn-secondary" onclick="exportarITBMSPDF()"><i class="ph ph-printer"></i>️ Exportar para DGI</button>
+                <button class="btn-secondary" onclick="exportarITBMSPDF()"><i class="ph ph-printer"></i> Exportar para DGI</button>
               </div>
             </div>
-            
+
             <h3 class="sub-title"><i class="ph ph-arrow-up-right"></i> Ventas con ITBMS (Débito Fiscal)</h3>
             <div class="table-wrap">
               <table id="tablaITBMSDebito">
@@ -1280,12 +1073,11 @@
 
   </main>
 
-<!-- TOAST: GN Studio OS -->
-<div class="toast-container" id="toast-container" style="display:none;"></div>
-  
+  <!-- TOAST -->
+  <div class="toast-container" id="toast-container" style="display:none;"></div>
+
   <!-- SCRIPTS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
   <script src="js/auth.js"></script>
   <script src="js/data.js"></script>
   <script src="js/utils.js"></script>
