@@ -21,8 +21,8 @@
     COTIZACIONES: 'cotizaciones',
     COTIZACION_ITEMS: 'cotizacion_items',
     PROYECTOS: 'proyectos',
-        GASTOS: 'proyecto_gastos',
-        PAGOS: 'proyecto_pagos',
+    GASTOS: 'proyecto_gastos',
+    PAGOS: 'proyecto_pagos',
     TAREAS: 'tareas',
     GRUPOS_SERVICIOS: 'gn_grupos_servicios',
     GRUPO_SERVICIO_MAP: 'gn_grupo_servicio_map'
@@ -396,7 +396,7 @@
     return false;
   }
 
-    // --- Gastos de Proyecto ---
+  // --- Gastos de Proyecto ---
   function obtenerGastosProyecto(proyectoId) {
     log('info', 'obtenerGastosProyecto: ' + proyectoId);
     return getDataFiltered(STORAGE_KEYS.GASTOS, { proyecto_id: proyectoId });
@@ -408,6 +408,21 @@
     return getDataFiltered(STORAGE_KEYS.PAGOS, { proyecto_id: proyectoId });
   }
 
+  // --- Cotización de Proyecto ---
+  async function obtenerCotizacionProyecto(proyectoId) {
+    log('info', 'obtenerCotizacionProyecto: ' + proyectoId);
+    if (!proyectoId) return null;
+    var rows = await getDataFiltered(STORAGE_KEYS.COTIZACIONES, { proyecto_id: proyectoId }, { orderBy: 'created_at', ascending: false });
+    return rows && rows.length ? rows[0] : null;
+  }
+
+  // --- Items de Cotización ---
+  async function obtenerItemsCotizacion(cotizacionId) {
+    log('info', 'obtenerItemsCotizacion: ' + cotizacionId);
+    if (!cotizacionId) return [];
+    return await getDataFiltered(STORAGE_KEYS.COTIZACION_ITEMS, { cotizacion_id: cotizacionId }, { orderBy: 'orden', ascending: true });
+  }
+
   window.STORAGE_KEYS = STORAGE_KEYS;
   window.getData = getData;
   window.getDataFiltered = getDataFiltered;
@@ -416,8 +431,10 @@
   window.updateItem = updateItem;
   window.deleteItem = deleteItem;
   window.setData = setData;
-    window.obtenerGastosProyecto = obtenerGastosProyecto;
+  window.obtenerGastosProyecto = obtenerGastosProyecto;
   window.obtenerPagosProyecto = obtenerPagosProyecto;
+  window.obtenerCotizacionProyecto = obtenerCotizacionProyecto;
+  window.obtenerItemsCotizacion = obtenerItemsCotizacion;
 
   if (!window.GNStudio) {
     window.GNStudio = {};
@@ -432,8 +449,10 @@
     updateItem: updateItem,
     deleteItem: deleteItem,
     setData: setData,
-        obtenerGastosProyecto: obtenerGastosProyecto,
-    obtenerPagosProyecto: obtenerPagosProyecto
+    obtenerGastosProyecto: obtenerGastosProyecto,
+    obtenerPagosProyecto: obtenerPagosProyecto,
+    obtenerCotizacionProyecto: obtenerCotizacionProyecto,
+    obtenerItemsCotizacion: obtenerItemsCotizacion
   };
 
   log('info', 'storage.js cargado correctamente');
