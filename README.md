@@ -1,76 +1,136 @@
-# 📊 Dashboard Financiero - Proyintel
+# 🧩 GN Studio OS — Dashboard Interno
 
-Dashboard interactivo para el control total de gastos e ingresos de Proyintel.
+GN Studio OS es la plataforma interna de gestión para GN Studio (Burunga, Panamá Oeste), pensada para centralizar **clientes, proyectos, finanzas y actividad diaria** en un solo dashboard ligero y accesible desde obra o oficina.
 
-## ✨ Funcionalidades
+Actualmente corre como sitio estático en **GitHub Pages** con frontend en HTML/CSS/JS y conexión a datos reales vía **Supabase**.
 
-- **📊 Dashboard** con KPIs, gráficas y resumen financiero
-- **➕ Ingresar Gastos** (Materiales, Operativo, Mano de Obra)
-- **💰 Ingresar Pagos** de clientes con seguimiento de estado
-- **📋 Registros completos** filtrables por categoría
-- **📄 Exportar a PDF** (imprimir desde navegador)
-- **💾 Datos persistentes** en el navegador (localStorage)
+---
 
-## 🚀 Cómo usar
+## ✨ Módulos principales
 
-1. Descarga o clona este repositorio
-2. Abre `index.html` en cualquier navegador moderno
-3. Navega entre secciones con las pestañas superiores
-4. Ingresa gastos y pagos desde los formularios
+- **AuthOS**  
+  Login por email/contraseña, panel inicial y estado de sesión en frontend.
+  
+- **FinanceOS**  
+  KPIs de ingresos, gastos, balance, proyectos activos y clientes activos, más gráficas de ingresos vs gastos y distribución por tipo de servicio.
 
-## 📁 Estructura
+- **ProjectOS**  
+  Registro de proyectos (con cliente, fechas, presupuesto, avance), pestañas de detalle (financiero, tareas, documentos) y línea de tiempo de actividad.
 
-```
-proyintel-informe/
-├── index.html          # Página principal
+- **AlertOS**  
+  Alertas de cotizaciones por vencer, pagos pendientes y proyectos completados listos para facturar.
+
+- **PipelineOS**  
+  Pipeline de ventas en el dashboard de inicio: etapas de **Cotizado → Aprobado → En progreso → Completado**, con conteo y montos por etapa.
+
+- **ReportOS**  
+  Gráficas y reportes rápidos: estado de cuenta, ITBMS, reportes de ingresos/gastos y actividad por proyecto.
+
+- **ActivityOS**  
+  Registro cronológico de actividad (gastos, pagos, tareas, notas) ligado a cada proyecto.
+
+---
+
+## 🧱 Stack actual
+
+- **Frontend**: HTML, CSS, JavaScript vanilla (sin frameworks pesados).
+- **Hosting**: GitHub Pages (sitio estático).
+- **Datos**: Supabase (PostgreSQL + APIs), tablas para:
+  - `clientes`
+  - `proyectos`
+  - `proyecto_gastos`
+  - `proyecto_pagos`
+- **Gráficas**: Librería ligera (Chart.js / equivalente) integrada en el dashboard.
+
+El foco actual es **retrocompatibilidad**: la UI original del dashboard se mantiene mientras se sustituyen datos estáticos por datos reales desde Supabase.
+
+---
+
+## 🚀 Cómo usar la plataforma
+
+1. Clona este repositorio.
+2. Abre `index.html` en un navegador moderno (Chrome, Edge, Firefox).
+3. Configura las claves de Supabase en tu entorno local (archivo JS de configuración, nunca commit directo de claves reales).
+4. Inicia sesión desde la pantalla de AuthOS.
+5. Navega por las secciones:
+   - Negocio (CRM de clientes y catálogo de servicios).
+   - Proyectos (ProjectOS).
+   - Finanzas (FinanceOS).
+   - Reportes y actividad.
+
+En producción, la versión está disponible vía GitHub Pages en la URL configurada para la plataforma.
+
+---
+
+## 📁 Estructura del proyecto
+
+```text
+gnstudio-os/
+├── index.html          # Dashboard principal (AuthOS, FinanceOS, ProjectOS, etc.)
 ├── css/
-│   └── styles.css      # Estilos del dashboard
+│   └── styles.css      # Estilos globales y componentes del dashboard
 ├── js/
-│   ├── data.js         # Datos de ejemplo y utilidades
-│   ├── storage.js      # Persistencia local con validación
-│   ├── charts.js       # Configuración de gráficas
-│   └── app.js          # Lógica principal
+│   ├── auth.js         # Lógica de autenticación frontend
+│   ├── clientes.js     # CRM de clientes (ClientOS básico)
+│   ├── proyectos.js    # Gestión de proyectos, pipeline y detalle
+│   ├── finanzas.js     # KPIs, estado de cuenta y gráficas financieras
+│   ├── supabase.js     # Helpers de conexión y storage (getAll, getFiltered, insertRow...)
+│   └── app.js          # Inicialización general del dashboard
 └── README.md
 ```
 
-## 📝 Agregar datos reales
+Los nombres exactos pueden variar, pero la organización sigue este patrón modular.
 
-Los datos se almacenan automáticamente en el navegador. Para empezar con datos limpios:
+---
 
-1. Abre la consola del navegador (F12)
-2. Ejecuta: `resetearDatos()`
-3. Confirma la eliminación
+## 🌐 Deploy en GitHub Pages
 
-O simplemente edita `js/data.js` con tus datos iniciales.
+1. En GitHub, entra a **Settings → Pages** del repositorio.
+2. Source: `Deploy from a branch`.
+3. Branch: `main` → `/ (root)`.
+4. Guarda y espera 1–5 minutos.
+5. La plataforma quedará accesible en:  
+   `https://TU_USUARIO.github.io/Plataforma-gnstudio/` (o la URL que hayas configurado).
 
-## 🌐 Publicar en GitHub Pages
+Para cambios en producción:
 
-1. Ve a **Settings** → **Pages** en tu repositorio
-2. Source: `Deploy from a branch`
-3. Branch: `main` → `/ (root)`
-4. Guarda y espera 1-5 minutos
-5. Tu URL: `https://TU_USUARIO.github.io/proyintel-informe/`
+- Trabajar en rama de `staging`.
+- Probar conexión a Supabase con datos de prueba.
+- Hacer merge a `main` solo cuando el dashboard cargue sin errores en consola.
 
-## 🎨 Colores corporativos
+---
 
-| Color | Código | Uso |
-|-------|--------|-----|
-| Verde | `#6bbd45` | Materiales, éxito |
-| Azul | `#243b86` | Operativo |
-| Amarillo | `#f5b923` | Mano de Obra |
-| Rojo | `#e74c3c` | Alertas, pérdidas |
+## 🔐 Notas de seguridad
 
-## ⚠️ Nota de seguridad
+- No exponer **API keys** de Supabase ni datos sensibles en el código público.
+- Evitar guardar credenciales de usuarios en `localStorage`; usar sesiones controladas o tokens.
+- Los datos de clientes y proyectos deben vivir en Supabase o repositorios privados, nunca como JSON plano en el frontend.
+- Para uso en producción con datos reales:
+  - Activar reglas de acceso en Supabase.
+  - Habilitar backups automáticos de la base de datos.
+  - Revisar inputs de formularios para evitar inyecciones/XSS.
 
-Este es un dashboard frontend estático. Los datos se guardan en `localStorage` del navegador.
-Para un entorno de producción con datos sensibles, se recomienda:
-- Backend con autenticación
-- Base de datos en servidor
-- Encriptación de datos en reposo
+---
 
-## 🔮 Próximas funcionalidades
+## 🛣️ Roadmap de evolución
 
-- [ ] Subir imagen de pago y reconocimiento automático (OCR)
-- [ ] Exportar datos a Excel/CSV
-- [ ] Múltiples usuarios con roles
-- [ ] Sincronización con backend
+**Fase 1 — Consolidación (actual)**  
+- Conectar todos los módulos existentes (Negocio, Proyectos, Finanzas, Reportes) a Supabase.  
+- Eliminar datos hardcodeados y mantener la UI actual.
+
+**Fase 2 — JAMstack**  
+- Migrar a Next.js o Astro con salida estática.  
+- Usar funciones serverless (Netlify/Vercel) como proxy seguro para APIs.  
+- Integrar Supabase Auth para autenticación real.
+
+**Fase 3 — Hosting propio**  
+- VPS con Node.js/Express + PostgreSQL y frontend React/Vue.  
+- Dominio dedicado (ej. `os.gnstudio.space`) con SSL, backups y CDN.  
+
+---
+
+## 📌 Estado actual
+
+- Dashboard operativo en GitHub Pages.
+- Módulos de proyectos y finanzas conectados a Supabase.
+- Pipeline de ventas y tablas de proyectos actualizadas para trabajar con datos reales.
