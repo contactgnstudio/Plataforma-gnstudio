@@ -1111,7 +1111,6 @@ async function buscarProyectos() {
 
       var payloadProyecto = {
         cliente_id: clienteId,
-        cotizacion_id: cotizacion.codigo || '',
         nombre: nombreProyecto,
         descripcion: alcanceHtml,
         fecha_inicio: fecha || todayISO(),
@@ -1220,13 +1219,13 @@ async function buscarProyectos() {
   // ============================================================
 
   var UNIDADES_OPCIONES = [
-    { value: 'und', label: 'und — Unidad' },
-    { value: 'hr', label: 'hr — Hora' },
-    { value: 'dia', label: 'dia — Dia' },
-    { value: 'mes', label: 'mes — Mes' },
-    { value: 'pagina', label: 'pagina — Pagina' },
-    { value: 'proyecto', label: 'proyecto — Proyecto' },
-    { value: 'paquete', label: 'paquete — Paquete' }
+    { value: 'und', label: 'und', step: '1' },
+    { value: 'hr', label: 'hr', step: '1' },
+    { value: 'dia', label: 'día', step: '0.01' },
+    { value: 'mes', label: 'mes', step: '0.01' },
+    { value: 'pagina', label: 'pág', step: '1' },
+    { value: 'proyecto', label: 'proy', step: '1' },
+    { value: 'paquete', label: 'paq', step: '1' }
   ];
 
   function togglePanelProforma() {
@@ -1327,10 +1326,19 @@ async function buscarProyectos() {
 
     var tr = document.createElement('tr');
 
+    // Determinar step inicial según la unidad
+    var stepInicial = '0.01';
+    for (var u = 0; u < UNIDADES_OPCIONES.length; u++) {
+      if (UNIDADES_OPCIONES[u].value === unidad) {
+        stepInicial = UNIDADES_OPCIONES[u].step;
+        break;
+      }
+    }
+
     var html = '';
     html += '<td><input type="text" class="pf-input-nombre" value="' + esc(nombre) + '" placeholder="Descripcion del servicio" style="width:100%;padding:6px 8px;background:transparent;border:1px solid rgba(18,53,36,0.25);border-radius:6px;color:#F0F0F5;font-size:13px;"></td>';
     html += '<td>' + buildUnidadSelect(unidad) + '</td>';
-    html += '<td><input type="number" class="pf-input-cantidad" value="' + esc(cantidad) + '" placeholder="0" min="0" step="0.01" style="width:80px;padding:6px 8px;background:transparent;border:1px solid rgba(18,53,36,0.25);border-radius:6px;color:#F0F0F5;font-size:13px;text-align:center;"></td>';
+    html += '<td><input type="number" class="pf-input-cantidad" value="' + esc(cantidad) + '" placeholder="0" min="0" step="' + stepInicial + '" style="width:80px;padding:6px 8px;background:transparent;border:1px solid rgba(18,53,36,0.25);border-radius:6px;color:#F0F0F5;font-size:13px;text-align:center;"></td>';
     html += '<td><input type="number" class="pf-input-precio" value="' + esc(precio) + '" placeholder="0.00" min="0" step="0.01" style="width:100px;padding:6px 8px;background:transparent;border:1px solid rgba(18,53,36,0.25);border-radius:6px;color:#F0F0F5;font-size:13px;text-align:right;"></td>';
     html += '<td style="text-align:center;"><input type="checkbox" class="pf-check-itbms" ' + (itbms ? 'checked' : '') + ' style="width:18px;height:18px;accent-color:#C5A253;cursor:pointer;"></td>';
     html += '<td class="pf-total-fila" style="font-weight:600;text-align:right;">0.00</td>';
@@ -1346,8 +1354,24 @@ async function buscarProyectos() {
       });
     }
 
+    // Listener especial para el select de unidad: cambia el step del input cantidad
+    var selectUnidad = tr.querySelector('.pf-select-unidad');
+    var inputCantidad = tr.querySelector('.pf-input-cantidad');
+    if (selectUnidad && inputCantidad) {
+      selectUnidad.addEventListener('change', function() {
+        for (var u = 0; u < UNIDADES_OPCIONES.length; u++) {
+          if (UNIDADES_OPCIONES[u].value === selectUnidad.value) {
+            inputCantidad.setAttribute('step', UNIDADES_OPCIONES[u].step);
+            break;
+          }
+        }
+        actualizarTotalesProforma();
+      });
+    }
+
     var inputs = tr.querySelectorAll('input, select');
     for (var k = 0; k < inputs.length; k++) {
+      if (inputs[k] === selectUnidad) continue; // ya tiene su propio listener
       inputs[k].addEventListener('input', function() { actualizarTotalesProforma(); });
       inputs[k].addEventListener('change', function() { actualizarTotalesProforma(); });
     }
