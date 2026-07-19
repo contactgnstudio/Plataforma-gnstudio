@@ -302,7 +302,8 @@
       <div class="sub-nav">
         <button class="sub-nav-item active" onclick="switchSubSection('negocio', 'crm')"><i class="ph ph-address-book"></i> CRM</button>
         <button class="sub-nav-item" onclick="switchSubSection('negocio', 'catalogo')"><i class="ph ph-list-checks"></i> Catálogo & Grupos</button>
-        </div>
+        <button class="sub-nav-item" onclick="switchSubSection('negocio', 'cotizaciones')"><i class="ph ph-file-text"></i> Cotizaciones</button>
+      </div>
 
       <!-- SUB: CRM -->
       <div id="negocio-crm" class="sub-section active">
@@ -495,6 +496,80 @@
          ============================================================ -->
     <section id="proyectos" class="section-panel">
       
+
+      <!-- PANEL: NUEVA PROPUESTA / PROFORMA -->
+      <div id="proyecto-proforma-panel" class="section" style="margin-bottom:24px;">
+        <div class="section-header">
+          <h2 class="section-title"><i class="ph ph-file-text"></i> Nueva Propuesta / Proyecto</h2>
+        </div>
+
+        <form id="formProformaProyecto" onsubmit="return guardarProformaProyecto(event)">
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label for="pf-nombre-proyecto">Nombre del Proyecto <span class="required">*</span></label>
+              <input type="text" id="pf-nombre-proyecto" placeholder="Ej: Rediseño web corporativo" required maxlength="200">
+            </div>
+            <div class="form-group">
+              <label for="pf-fecha">Fecha de Inicio <span class="required">*</span></label>
+              <input type="date" id="pf-fecha" required>
+            </div>
+            <div class="form-group">
+              <label for="pf-cliente">Cliente <span class="required">*</span></label>
+              <select id="pf-cliente" required>
+                <option value="">Selecciona un cliente</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Editor de Alcance -->
+          <div class="form-group full-width" style="margin-top:16px;">
+            <label>Alcance del Proyecto</label>
+            <div class="editor-toolbar">
+              <button type="button" data-cmd="bold" title="Negrita"><i class="ph ph-text-b"></i></button>
+              <button type="button" data-cmd="italic" title="Cursiva"><i class="ph ph-text-italic"></i></button>
+              <button type="button" data-cmd="unorderedList" title="Lista"><i class="ph ph-list-bullets"></i></button>
+              <button type="button" data-cmd="orderedList" title="Lista numerada"><i class="ph ph-list-numbers"></i></button>
+            </div>
+            <div id="pf-alcance-editor" class="editor-area" contenteditable="true" placeholder="Describe el alcance del proyecto..."></div>
+            <textarea id="pf-alcance" style="display:none;"></textarea>
+          </div>
+
+          <!-- Propuesta Económica -->
+          <div style="margin-top:24px;">
+            <h3 class="sub-title"><i class="ph ph-currency-dollar"></i> Propuesta Económica</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Descripción</th>
+                    <th>Unidad</th>
+                    <th>Cantidad</th>
+                    <th>Precio Unit.</th>
+                    <th>Total</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyProformaServicios"></tbody>
+              </table>
+            </div>
+            <div style="margin-top:12px;">
+              <button type="button" class="btn-secondary" onclick="agregarFilaProformaServicio()"><i class="ph ph-plus"></i> Agregar Servicio</button>
+            </div>
+            <div style="margin-top:16px;text-align:right;">
+              <span style="font-size:13px;color:var(--gn-text-muted);">Total Propuesta: </span>
+              <span id="pf-total-propuesta" style="font-size:18px;font-weight:700;color:#C5A253;">USD 0.00</span>
+            </div>
+          </div>
+
+          <div class="form-feedback" id="feedback-proforma" style="margin-top:16px;"></div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary"><i class="ph ph-floppy-disk"></i> Crear Proyecto y Cotización</button>
+            <button type="reset" class="btn-secondary" onclick="document.getElementById('pf-alcance-editor').innerHTML='';document.getElementById('tbodyProformaServicios').innerHTML='';"><i class="ph ph-arrow-counter-clockwise"></i> Limpiar</button>
+          </div>
+        </form>
+      </div>
+
       <!-- VISTA LISTA -->
       <div id="proyectos-lista">
         <div class="section">
@@ -783,6 +858,130 @@
           <div class="dashboard-card">
             <div class="card-header"><h3><i class="ph ph-scales"></i>️ Balance</h3></div>
             <div class="ec-resumen-monto" id="ec-balance" style="color:#C5A253;">$0.00</div>
+          </div>
+        </div>
+
+
+        <!-- Registro de Gastos y Pagos -->
+        <div class="dashboard-grid" style="margin-top:24px;">
+          <!-- Formulario Gasto -->
+          <div class="form-section">
+            <div class="form-header">
+              <h2 class="section-title"><i class="ph ph-arrow-up-right"></i> Registrar Gasto</h2>
+            </div>
+            <form id="form-gasto-finanzas">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="gasto-fecha">Fecha <span class="required">*</span></label>
+                  <input type="date" id="gasto-fecha" required>
+                </div>
+                <div class="form-group">
+                  <label for="gasto-proyecto">Proyecto</label>
+                  <select id="gasto-proyecto">
+                    <option value="">Sin proyecto (general)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="gasto-tipo">Categoría <span class="required">*</span></label>
+                  <select id="gasto-tipo" required>
+                    <option value="operativo">Operativo</option>
+                    <option value="software">Software & Herramientas</option>
+                    <option value="hosting">Hosting & Dominios</option>
+                    <option value="marketing">Marketing & Ads</option>
+                    <option value="equipo">Equipo & Hardware</option>
+                    <option value="oficina">Oficina & Suministros</option>
+                    <option value="transporte">Transporte & Logística</option>
+                    <option value="capacitacion">Capacitación</option>
+                    <option value="servicios">Servicios Profesionales</option>
+                    <option value="impuestos">Impuestos</option>
+                    <option value="otros">Otros</option>
+                  </select>
+                </div>
+                <div class="form-group full-width">
+                  <label for="gasto-descripcion">Descripción <span class="required">*</span></label>
+                  <input type="text" id="gasto-descripcion" placeholder="Descripción del gasto" required>
+                </div>
+                <div class="form-group">
+                  <label for="gasto-referencia">Referencia / Factura</label>
+                  <input type="text" id="gasto-referencia" placeholder="Nº de factura o referencia">
+                </div>
+                <div class="form-group">
+                  <label for="gasto-monto">Monto (USD) <span class="required">*</span></label>
+                  <input type="number" id="gasto-monto" placeholder="0.00" required min="0.01" step="0.01">
+                </div>
+                <div class="form-group">
+                  <label for="gasto-metodo">Método de Pago</label>
+                  <select id="gasto-metodo">
+                    <option value="efectivo">Efectivo</option>
+                    <option value="transferencia">Transferencia</option>
+                    <option value="tarjeta">Tarjeta</option>
+                    <option value="cheque">Cheque</option>
+                    <option value="yappy">Yappy</option>
+                    <option value="otro">Otro</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn-primary"><i class="ph ph-floppy-disk"></i> Registrar Gasto</button>
+              </div>
+            </form>
+            <div class="form-feedback" id="feedback-gasto-finanzas"></div>
+          </div>
+
+          <!-- Formulario Pago -->
+          <div class="form-section">
+            <div class="form-header">
+              <h2 class="section-title"><i class="ph ph-arrow-down-left"></i> Registrar Pago (Ingreso)</h2>
+            </div>
+            <form id="form-pago-finanzas">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="pago-fecha">Fecha <span class="required">*</span></label>
+                  <input type="date" id="pago-fecha" required>
+                </div>
+                <div class="form-group">
+                  <label for="pago-proyecto">Proyecto <span class="required">*</span></label>
+                  <select id="pago-proyecto" required>
+                    <option value="">Selecciona un proyecto</option>
+                  </select>
+                </div>
+                <div class="form-group full-width">
+                  <label for="pago-concepto">Concepto <span class="required">*</span></label>
+                  <input type="text" id="pago-concepto" placeholder="Concepto del pago" required>
+                </div>
+                <div class="form-group">
+                  <label for="pago-referencia">Referencia</label>
+                  <input type="text" id="pago-referencia" placeholder="Nº de referencia">
+                </div>
+                <div class="form-group">
+                  <label for="pago-monto">Monto (USD) <span class="required">*</span></label>
+                  <input type="number" id="pago-monto" placeholder="0.00" required min="0.01" step="0.01">
+                </div>
+                <div class="form-group">
+                  <label for="pago-metodo">Método de Pago</label>
+                  <select id="pago-metodo">
+                    <option value="transferencia">Transferencia</option>
+                    <option value="efectivo">Efectivo</option>
+                    <option value="tarjeta">Tarjeta</option>
+                    <option value="cheque">Cheque</option>
+                    <option value="yappy">Yappy</option>
+                    <option value="otro">Otro</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="pago-estado">Estado</label>
+                  <select id="pago-estado">
+                    <option value="registrado">Registrado</option>
+                    <option value="confirmado">Confirmado</option>
+                    <option value="reversado">Reversado</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn-primary"><i class="ph ph-floppy-disk"></i> Registrar Pago</button>
+              </div>
+            </form>
+            <div class="form-feedback" id="feedback-pago-finanzas"></div>
           </div>
         </div>
 
