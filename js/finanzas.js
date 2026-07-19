@@ -253,8 +253,8 @@ function generarEstadoCuenta() {
         + '<td>' + (m.tipo === 'pago' ? 'Ingreso' : 'Gasto') + '</td>'
         + '<td>' + finEscapeHtml(m.proyecto || 'General') + '</td>'
         + '<td>' + finEscapeHtml(m.descripcion || '—') + '</td>'
-        + '<td style="color:#6bbd45;font-weight:600;">' + (m.ingreso > 0 ? finMoney(m.ingreso) : '—') + '</td>'
-        + '<td style="color:#ef4444;font-weight:600;">' + (m.gasto > 0 ? finMoney(m.gasto) : '—') + '</td>'
+        + '<td style="color:#2D8B5E;font-weight:600;">' + (m.ingreso > 0 ? finMoney(m.ingreso) : '—') + '</td>'
+        + '<td style="color:#F87171;font-weight:600;">' + (m.gasto > 0 ? finMoney(m.gasto) : '—') + '</td>'
         + '<td style="font-weight:700;">' + finMoney(saldo) + '</td>'
         + '</tr>';
     }
@@ -387,7 +387,7 @@ function inicializarFormularioGastoFinanzas() {
     var monto = parseFloat(montoStr || '0');
 
     if (!fechaVal || !descripcion || !montoStr || monto <= 0) {
-      setFeedback('❌ Completa fecha, descripción y monto del gasto.', 'error');
+      setFeedback('Completa fecha, descripción y monto del gasto.', 'error');
       return;
     }
 
@@ -404,11 +404,11 @@ function inicializarFormularioGastoFinanzas() {
     var result = await finInsertRow('GASTOS', payload);
 
     if (!result) {
-      setFeedback('❌ No se pudo guardar el gasto.', 'error');
+      setFeedback('No se pudo guardar el gasto.', 'error');
       return;
     }
 
-    setFeedback('✅ Gasto registrado correctamente.', 'success');
+    setFeedback('Gasto registrado correctamente.', 'success');
 
     if (fecha && typeof GNUtils !== 'undefined' && typeof GNUtils.getTodayISO === 'function') {
       fecha.value = GNUtils.getTodayISO();
@@ -455,7 +455,7 @@ function inicializarFormularioPagoFinanzas() {
     var monto = parseFloat(montoStr || '0');
 
     if (!fechaVal || !proyectoId || !concepto || !montoStr || monto <= 0) {
-      setFeedback('❌ Completa fecha, proyecto, concepto y monto del pago.', 'error');
+      setFeedback('Completa fecha, proyecto, concepto y monto del pago.', 'error');
       return;
     }
 
@@ -472,11 +472,11 @@ function inicializarFormularioPagoFinanzas() {
     var result = await finInsertRow('PAGOS', payload);
 
     if (!result) {
-      setFeedback('❌ No se pudo guardar el pago.', 'error');
+      setFeedback('No se pudo guardar el pago.', 'error');
       return;
     }
 
-    setFeedback('✅ Pago registrado correctamente.', 'success');
+    setFeedback('Pago registrado correctamente.', 'success');
 
     if (fecha && typeof GNUtils !== 'undefined' && typeof GNUtils.getTodayISO === 'function') {
       fecha.value = GNUtils.getTodayISO();
