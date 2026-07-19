@@ -134,7 +134,7 @@
       html += '<tr>';
       html += '<td>' + esc(fecha) + '</td>';
       html += '<td>' + esc(idLegible) + '</td>';
-      html += '<td><button type="button" class="link-button" onclick="verProyecto('' + esc(p.id) + '')">' + esc(p.nombre || 'Proyecto') + '</button></td>';
+      html += '<td><button type="button" class="link-button" onclick="verProyecto(&#39;' + esc(p.id) + '&#39;)">' + esc(p.nombre || 'Proyecto') + '</button></td>';
       html += '<td>' + esc(p.clienteNombre || 'Sin cliente') + '</td>';
       html += '<td>' + money(p.presupuesto) + '</td>';
       html += '<td>' + money(p.totalCobrado) + '</td>';
@@ -160,7 +160,7 @@
       html += '<tr>';
       html += '<td>' + esc(fecha) + '</td>';
       html += '<td>' + esc(idLegible) + '</td>';
-      html += '<td><button type="button" class="link-button" onclick="verProyecto('' + esc(p.id) + '')">' + esc(p.nombre || 'Proyecto') + '</button></td>';
+      html += '<td><button type="button" class="link-button" onclick="verProyecto(&#39;' + esc(p.id) + '&#39;)">' + esc(p.nombre || 'Proyecto') + '</button></td>';
       html += '<td>' + esc(p.clienteNombre || 'Sin cliente') + '</td>';
       html += '<td>' + money(p.presupuesto) + '</td>';
       html += '<td>' + money(p.totalCobrado) + '</td>';
@@ -265,7 +265,7 @@
       else {
         for (var i = 0; i < tareasEstado.length; i++) {
           var t = tareasEstado[i];
-          html += '<div class="kanban-card" onclick="editarTareaProyecto('' + esc(t.id) + '')">';
+          html += '<div class="kanban-card" onclick="editarTareaProyecto(&#39;' + esc(t.id) + '&#39;)">';
           html += '<div class="kanban-card-title">' + esc(t.titulo) + '</div>';
           html += '<div class="kanban-card-meta">';
           if (t.asignado) html += '<span><i class="ph ph-user"></i> ' + esc(t.asignado) + '</span>';
@@ -758,7 +758,6 @@
   // Exponer funciones
   window.inicializarProyectos = inicializarProyectos;
   window.actualizarSelectClientesProyecto = actualizarSelectClientesProyecto;
-  window.guardarProyecto = guardarProyecto;
   window.obtenerProyectos = obtenerProyectos;
   window.renderProyectos = renderProyectos;
   window.buscarProyectos = buscarProyectos;
