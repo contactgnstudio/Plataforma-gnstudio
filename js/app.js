@@ -30,7 +30,7 @@
     initialized: false,
     sections: ['dashboard', 'negocio', 'proyectos', 'finanzas'],
     subSections: {
-      negocio: ['crm', 'catalogo', 'cotizaciones'],
+      negocio: ['crm', 'catalogo'],
       finanzas: ['estado-cuenta', 'itbms', 'reportes']
     },
     currentSection: 'dashboard',
@@ -659,7 +659,7 @@
     await safeCallAsync('inicializarClientes');
     await safeCallAsync('inicializarCatalogo');
     safeCall('inicializarGrupos');
-    await safeCallAsync('inicializarCotizaciones');
+    // await safeCallAsync('inicializarCotizaciones'); // Eliminado — cotizaciones integradas en Proyectos
     await safeCallAsync('inicializarProyectos');
     await inicializarFinanzas();
     safeCall('inicializarCharts');
