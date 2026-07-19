@@ -152,7 +152,7 @@
     var grupoNombre = obtenerNombreGrupoPorId(grupoId);
 
         if (!descripcion || !precio || precio <= 0) {
-      showFeedback(feedback, '❌ Completa descripción y precio válido', 'error');
+      showFeedback(feedback, 'Completa descripción y precio válido', 'error');
       return false;
     }
 
@@ -160,7 +160,7 @@
         var codigo = generarCodigoServicioNuevo(servicios);
 
     if (typeof window.addItem !== 'function') {
-      showFeedback(feedback, '❌ No hay conexión de datos disponible', 'error');
+      showFeedback(feedback, 'No hay conexión de datos disponible', 'error');
       return false;
     }
 
@@ -176,12 +176,12 @@
 
     var created = await window.addItem(getStorageKey(), payload);
     if (!created) {
-      showFeedback(feedback, '❌ No se pudo guardar el servicio', 'error');
+      showFeedback(feedback, 'No se pudo guardar el servicio', 'error');
       return false;
     }
 
     sincronizarGrupoServicio(created.id, grupoId);
-    showFeedback(feedback, '✅ Servicio "' + codigo + '" guardado correctamente', 'success');
+    showFeedback(feedback, 'Servicio "' + codigo + '" guardado correctamente', 'success');
 
     var form = byId('formServicio');
     if (form) form.reset();
@@ -324,7 +324,7 @@
       return;
     }
     var html = grupos.map(function(grupo) {
-      var color = grupo.colorHex || grupo.color || '#6bbd45';
+      var color = grupo.colorHex || grupo.color || '#2D8B5E';
       var nombre = escapeHtml(grupo.nombre || 'Grupo');
       var id = escapeHtml(grupo.id || '');
       return (
