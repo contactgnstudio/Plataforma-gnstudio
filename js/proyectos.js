@@ -75,16 +75,16 @@
 
   function estadoColor(estado) {
     var map = {
-      pendiente: '#f59e0b',
-      en_progreso: '#4f8cff',
-      pausado: '#a78bfa',
-      completado: '#6bbd45',
-      cancelado: '#ef4444',
-      registrado: '#4f8cff',
-      confirmado: '#6bbd45',
-      reversado: '#ef4444'
+      pendiente: '#C5A253',
+      en_progreso: '#C5A253',
+      pausado: '#6B7280',
+      completado: '#2D8B5E',
+      cancelado: '#F87171',
+      registrado: '#C5A253',
+      confirmado: '#2D8B5E',
+      reversado: '#F87171'
     };
-    return map[estado] || '#6bbd45';
+    return map[estado] || '#2D8B5E';
   }
 
   function getStorageKey(name, fallback) {
@@ -321,7 +321,7 @@
     if (!nombre || !clienteId) {
       if (feedback) {
         feedback.className = 'form-feedback error';
-        feedback.textContent = '❌ Completa nombre y cliente del proyecto';
+        feedback.textContent = 'Completa nombre y cliente del proyecto';
         feedback.style.display = 'block';
       }
       return false;
@@ -344,7 +344,7 @@
     if (!result) {
       if (feedback) {
         feedback.className = 'form-feedback error';
-        feedback.textContent = '❌ No se pudo guardar el proyecto';
+        feedback.textContent = 'No se pudo guardar el proyecto';
         feedback.style.display = 'block';
       }
       return false;
@@ -352,7 +352,7 @@
 
     if (feedback) {
       feedback.className = 'form-feedback success';
-      feedback.textContent = '✅ Proyecto creado correctamente';
+      feedback.textContent = 'Proyecto creado correctamente';
       feedback.style.display = 'block';
     }
 
@@ -391,7 +391,7 @@
       + '    <div><small>Gastado</small><br><strong>' + money(p.totalGastado) + '</strong></div>'
       + '  </div>'
       + '  <div style="margin-top:12px;height:10px;background:rgba(255,255,255,0.08);border-radius:999px;overflow:hidden;">'
-      + '    <div style="width:' + progreso + '%;height:100%;background:linear-gradient(90deg,#6bbd45,#4f8cff);"></div>'
+      + '    <div style="width:' + progreso + '%;height:100%;background:linear-gradient(90deg,#2D8B5E,#C5A253);"></div>'
       + '  </div>'
       + '  <div style="margin-top:8px;font-size:.92rem;opacity:.85;">Avance estimado: ' + progreso + '%</div>'
       + '  <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">'
@@ -547,7 +547,7 @@ async function buscarProyectos() {
     if (proyecto.fechaInicio) {
       eventos.push({
         fecha: proyecto.fechaInicio,
-        icono: '🚀',
+        icono: '<i class="ph ph-rocket"></i>',
         titulo: 'Inicio del proyecto',
         descripcion: proyecto.nombre
       });
@@ -556,7 +556,7 @@ async function buscarProyectos() {
     if (proyecto.fechaFin) {
       eventos.push({
         fecha: proyecto.fechaFin,
-        icono: '📅',
+        icono: '<i class="ph ph-calendar"></i>',
         titulo: 'Fecha fin estimada',
         descripcion: 'Fecha objetivo del proyecto'
       });
@@ -565,7 +565,7 @@ async function buscarProyectos() {
     if (proyecto.fechaFinReal) {
       eventos.push({
         fecha: proyecto.fechaFinReal,
-        icono: '✅',
+        icono: '<i class="ph ph-check-circle"></i>',
         titulo: 'Fecha fin real',
         descripcion: 'Cierre real del proyecto'
       });
@@ -574,7 +574,7 @@ async function buscarProyectos() {
     tareas.forEach(function(t) {
       eventos.push({
         fecha: t.fechaLimite || t.createdAt || '',
-        icono: '🧩',
+        icono: '<i class="ph ph-puzzle-piece"></i>',
         titulo: t.titulo,
         descripcion: 'Tarea ' + (t.estado || 'pendiente') + (t.asignado ? ' · ' + t.asignado : '')
       });
@@ -583,7 +583,7 @@ async function buscarProyectos() {
     gastos.forEach(function(g) {
       eventos.push({
         fecha: g.fecha || g.createdAt || '',
-        icono: '💸',
+        icono: '<i class="ph ph-currency-dollar"></i>',
         titulo: g.descripcion,
         descripcion: 'Gasto ' + money(g.monto)
       });
@@ -592,7 +592,7 @@ async function buscarProyectos() {
     pagos.forEach(function(p) {
       eventos.push({
         fecha: p.fecha || p.createdAt || '',
-        icono: '💰',
+        icono: '<i class="ph ph-coins"></i>',
         titulo: p.concepto,
         descripcion: 'Pago recibido ' + money(p.monto)
       });
@@ -612,7 +612,7 @@ async function buscarProyectos() {
     var html = '';
     for (var i = 0; i < eventos.length; i++) {
       html += ''
-        + '<div class="timeline-item" style="border-left:3px solid rgba(107,189,69,0.4);padding:10px 14px;margin-bottom:12px;background:rgba(255,255,255,0.02);border-radius:10px;">'
+        + '<div class="timeline-item" style="border-left:3px solid rgba(18,53,36,0.4);padding:10px 14px;margin-bottom:12px;background:rgba(255,255,255,0.02);border-radius:10px;">'
         + '  <div style="font-weight:700;">' + esc(eventos[i].icono + ' ' + eventos[i].titulo) + '</div>'
         + '  <div style="opacity:.8;margin-top:4px;">' + esc(formatDateSafe(eventos[i].fecha)) + '</div>'
         + '  <div style="margin-top:6px;">' + esc(eventos[i].descripcion) + '</div>'
@@ -733,7 +733,7 @@ async function buscarProyectos() {
         labels: ['Pagos', 'Gastos', 'Por Cobrar'],
         datasets: [{
           data: [totalPagos, totalGastos, porCobrar],
-          backgroundColor: ['#6bbd45', '#ef4444', '#f59e0b'],
+          backgroundColor: ['#2D8B5E', '#F87171', '#C5A253'],
           borderWidth: 0
         }]
       },
@@ -742,7 +742,7 @@ async function buscarProyectos() {
         maintainAspectRatio: false,
         plugins: {
           legend: {
-            labels: { color: '#ffffff' }
+            labels: { color: '#F0F0F5' }
           }
         }
       }
@@ -851,7 +851,7 @@ async function buscarProyectos() {
     if (container) {
       var feedback = document.createElement('div');
       feedback.className = 'form-feedback success';
-      feedback.textContent = '✅ Notas guardadas';
+      feedback.textContent = 'Notas guardadas';
       feedback.style.display = 'block';
       feedback.style.marginTop = '12px';
       container.appendChild(feedback);
@@ -1018,7 +1018,7 @@ async function buscarProyectos() {
       if (!nombreProyecto || !clienteSelect || !clienteSelect.value) {
         if (feedback) {
           feedback.className = 'form-feedback error';
-          feedback.textContent = '❌ Completa nombre de proyecto y cliente.';
+          feedback.textContent = 'Completa nombre de proyecto y cliente.';
           feedback.style.display = 'block';
         }
         return false;
@@ -1054,7 +1054,7 @@ async function buscarProyectos() {
       if (!items.length || totalPropuesta <= 0) {
         if (feedback) {
           feedback.className = 'form-feedback error';
-          feedback.textContent = '❌ Añade al menos un servicio a la propuesta económica.';
+          feedback.textContent = 'Añade al menos un servicio a la propuesta económica.';
           feedback.style.display = 'block';
         }
         return false;
@@ -1093,7 +1093,7 @@ async function buscarProyectos() {
       if (!result) {
         if (feedback) {
           feedback.className = 'form-feedback error';
-          feedback.textContent = '❌ No se pudo guardar el proyecto.';
+          feedback.textContent = 'No se pudo guardar el proyecto.';
           feedback.style.display = 'block';
         }
         return false;
@@ -1101,7 +1101,7 @@ async function buscarProyectos() {
 
       if (feedback) {
         feedback.className = 'form-feedback success';
-        feedback.textContent = '✅ Proyecto y cotización creados correctamente.';
+        feedback.textContent = 'Proyecto y cotización creados correctamente.';
         feedback.style.display = 'block';
       }
 
@@ -1119,7 +1119,7 @@ async function buscarProyectos() {
       console.error('Error guardando proforma de proyecto', error);
       if (feedback) {
         feedback.className = 'form-feedback error';
-        feedback.textContent = '❌ Ocurrió un error al guardar la proforma.';
+        feedback.textContent = 'Ocurrió un error al guardar la proforma.';
         feedback.style.display = 'block';
       }
       return false;
@@ -1141,7 +1141,7 @@ async function buscarProyectos() {
       '<td contenteditable="true" style="min-width:60px;">1</td>',
       '<td contenteditable="true" style="min-width:100px;">0.00</td>',
       '<td style="min-width:100px;">0.00</td>',
-      '<td><button type="button" onclick="this.closest(\'tr\').remove()" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:16px;">&#x1F5D1;</button></td>'
+      '<td><button type="button" onclick="this.closest(\'tr\').remove()" style="background:none;border:none;color:#F87171;cursor:pointer;font-size:16px;">&#x1F5D1;</button></td>'
     ].join('');
 
     // Actualizar total cuando se edita cantidad o precio
