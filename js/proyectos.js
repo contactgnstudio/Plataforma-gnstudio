@@ -1046,7 +1046,7 @@ async function buscarProyectos() {
       if (tbody) {
         Array.prototype.slice.call(tbody.querySelectorAll('tr')).forEach(function(tr) {
           var nombreInput = tr.querySelector('.pf-input-nombre');
-          var unidadInput = tr.querySelector('.pf-input-unidad');
+          var unidadSelect = tr.querySelector('.pf-select-unidad');
           var cantInput = tr.querySelector('.pf-input-cantidad');
           var precioInput = tr.querySelector('.pf-input-precio');
           var itbmsCheck = tr.querySelector('.pf-check-itbms');
@@ -1054,7 +1054,7 @@ async function buscarProyectos() {
           if (!nombreInput) return;
 
           var descripcion = (nombreInput.value || '').trim();
-          var unidad = (unidadInput ? unidadInput.value : 'und').trim() || 'und';
+          var unidad = (unidadSelect ? unidadSelect.value : 'und').trim() || 'und';
           var cant = parseFloat(cantInput ? cantInput.value : '0') || 0;
           var precio = parseFloat(precioInput ? precioInput.value : '0') || 0;
           var aplicaItbms = itbmsCheck ? itbmsCheck.checked : false;
@@ -1117,8 +1117,6 @@ async function buscarProyectos() {
         fecha_inicio: fecha || todayISO(),
         estado: 'en_progreso',
         presupuesto: totalPropuesta,
-        subtotal: subtotal,
-        itbms: itbmsTotal,
         total_cobrado: 0,
         total_gastado: 0,
         notas: ''
@@ -1221,6 +1219,16 @@ async function buscarProyectos() {
   // NUEVAS FUNCIONES — Panel de Proforma (v2.2)
   // ============================================================
 
+  var UNIDADES_OPCIONES = [
+    { value: 'und', label: 'und — Unidad' },
+    { value: 'hr', label: 'hr — Hora' },
+    { value: 'dia', label: 'dia — Dia' },
+    { value: 'mes', label: 'mes — Mes' },
+    { value: 'pagina', label: 'pagina — Pagina' },
+    { value: 'proyecto', label: 'proyecto — Proyecto' },
+    { value: 'paquete', label: 'paquete — Paquete' }
+  ];
+
   function togglePanelProforma() {
     var panel = byId('proyecto-proforma-panel');
     if (!panel) return;
@@ -1293,12 +1301,24 @@ async function buscarProyectos() {
     var unidad = option.getAttribute('data-unidad') || 'und';
     var itbms = parseInt(option.getAttribute('data-itbms') || '0', 10);
 
-    agregarFilaProforma(nombre, unidad, '', '', itbms);
+    // Precio prellenado desde catalogo, cantidad vacia
+    agregarFilaProforma(nombre, unidad, '', precio.toFixed(2), itbms);
     select.value = '';
   }
 
   function agregarFilaProformaVacia() {
     agregarFilaProforma('', '', '', '', 0);
+  }
+
+  function buildUnidadSelect(selectedValue) {
+    var html = '<select class="pf-select-unidad" style="width:100px;padding:6px 8px;background:transparent;border:1px solid rgba(18,53,36,0.25);border-radius:6px;color:#F0F0F5;font-size:13px;">';
+    for (var i = 0; i < UNIDADES_OPCIONES.length; i++) {
+      var opt = UNIDADES_OPCIONES[i];
+      var sel = opt.value === selectedValue ? ' selected' : '';
+      html += '<option value="' + opt.value + '"' + sel + '>' + opt.label + '</option>';
+    }
+    html += '</select>';
+    return html;
   }
 
   function agregarFilaProforma(nombre, unidad, cantidad, precio, itbms) {
@@ -1309,7 +1329,7 @@ async function buscarProyectos() {
 
     var html = '';
     html += '<td><input type="text" class="pf-input-nombre" value="' + esc(nombre) + '" placeholder="Descripcion del servicio" style="width:100%;padding:6px 8px;background:transparent;border:1px solid rgba(18,53,36,0.25);border-radius:6px;color:#F0F0F5;font-size:13px;"></td>';
-    html += '<td><input type="text" class="pf-input-unidad" value="' + esc(unidad) + '" placeholder="und" style="width:80px;padding:6px 8px;background:transparent;border:1px solid rgba(18,53,36,0.25);border-radius:6px;color:#F0F0F5;font-size:13px;text-align:center;"></td>';
+    html += '<td>' + buildUnidadSelect(unidad) + '</td>';
     html += '<td><input type="number" class="pf-input-cantidad" value="' + esc(cantidad) + '" placeholder="0" min="0" step="0.01" style="width:80px;padding:6px 8px;background:transparent;border:1px solid rgba(18,53,36,0.25);border-radius:6px;color:#F0F0F5;font-size:13px;text-align:center;"></td>';
     html += '<td><input type="number" class="pf-input-precio" value="' + esc(precio) + '" placeholder="0.00" min="0" step="0.01" style="width:100px;padding:6px 8px;background:transparent;border:1px solid rgba(18,53,36,0.25);border-radius:6px;color:#F0F0F5;font-size:13px;text-align:right;"></td>';
     html += '<td style="text-align:center;"><input type="checkbox" class="pf-check-itbms" ' + (itbms ? 'checked' : '') + ' style="width:18px;height:18px;accent-color:#C5A253;cursor:pointer;"></td>';
@@ -1326,7 +1346,7 @@ async function buscarProyectos() {
       });
     }
 
-    var inputs = tr.querySelectorAll('input');
+    var inputs = tr.querySelectorAll('input, select');
     for (var k = 0; k < inputs.length; k++) {
       inputs[k].addEventListener('input', function() { actualizarTotalesProforma(); });
       inputs[k].addEventListener('change', function() { actualizarTotalesProforma(); });
