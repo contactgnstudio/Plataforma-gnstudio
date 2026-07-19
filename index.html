@@ -632,7 +632,7 @@
         </div>
       </div>
 
-     <!-- VISTA DETALLE (se muestra al hacer click en un proyecto) -->
+   <!-- VISTA DETALLE (se muestra al hacer click en un proyecto) -->
       <div id="proyecto-detalle" style="display:none;">
 
         <!-- Header del Proyecto -->
@@ -744,6 +744,127 @@
             </div>
           </div>
         </div>
+
+        <!-- TAB: FINANCIERO -->
+        <div id="proyecto-tab-financiero" class="proyecto-tab-content">
+          <div class="section">
+            <div class="section-header">
+              <h2 class="section-title"><i class="ph ph-money"></i> Gastos del Proyecto</h2>
+              <button class="btn-secondary" onclick="abrirModalGastoProyecto()"><i class="ph ph-plus"></i> Registrar Gasto</button>
+            </div>
+            <div class="table-wrap">
+              <table id="tablaGastosProyecto">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Categoría</th>
+                    <th>Descripción</th>
+                    <th>Monto</th>
+                    <th>Método</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyGastosProyecto"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-header">
+              <h2 class="section-title"><i class="ph ph-currency-dollar"></i> Pagos Recibidos</h2>
+              <button class="btn-secondary" onclick="abrirModalPagoProyecto()"><i class="ph ph-plus"></i> Registrar Pago</button>
+            </div>
+            <div class="table-wrap">
+              <table id="tablaPagosProyecto">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Concepto</th>
+                    <th>Monto</th>
+                    <th>Método</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyPagosProyecto"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: TAREAS -->
+        <div id="proyecto-tab-tareas" class="proyecto-tab-content">
+          <div class="form-section">
+            <div class="form-header">
+              <h2 class="section-title"><i class="ph ph-plus"></i> Nueva Tarea</h2>
+            </div>
+            <form id="formTareaProyecto" onsubmit="return guardarTareaProyecto(event)">
+              <div class="form-grid">
+                <div class="form-group full-width">
+                  <label for="tarea-titulo">Título <span class="required">*</span></label>
+                  <input type="text" id="tarea-titulo" required>
+                </div>
+                <div class="form-group">
+                  <label for="tarea-asignado">Asignado a</label>
+                  <input type="text" id="tarea-asignado" placeholder="Ej: Diseñador UX">
+                </div>
+                <div class="form-group">
+                  <label for="tarea-fecha-limite">Fecha Límite</label>
+                  <input type="date" id="tarea-fecha-limite">
+                </div>
+                <div class="form-group">
+                  <label for="tarea-estado">Estado</label>
+                  <select id="tarea-estado">
+                    <option value="pendiente">Pendiente</option>
+                    <option value="en_progreso">En Progreso</option>
+                    <option value="revision">En Revisión</option>
+                    <option value="completada">Completada</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn-primary"><i class="ph ph-floppy-disk"></i> Guardar Tarea</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="section">
+            <div class="section-header">
+              <h2 class="section-title"><i class="ph ph-list-checks"></i> Tareas del Proyecto</h2>
+            </div>
+            <div class="tareas-kanban" id="tareas-kanban">
+              <!-- Kanban board de tareas -->
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: DOCUMENTOS -->
+        <div id="proyecto-tab-documentos" class="proyecto-tab-content">
+          <div class="section">
+            <div class="section-header">
+              <h2 class="section-title"><i class="ph ph-file-text"></i> Cotización del Proyecto</h2>
+              <div class="section-actions">
+                <button class="btn-secondary" onclick="imprimirCotizacionProyecto()"><i class="ph ph-printer"></i> Imprimir</button>
+                <button class="btn-secondary" onclick="descargarCotizacionPDF()"><i class="ph ph-download-simple"></i> Descargar PDF</button>
+              </div>
+            </div>
+            <div id="cotizacion-documento-container">
+              <div class="empty-state">Cargando cotización...</div>
+            </div>
+          </div>
+
+          <div class="form-section" style="margin-top:24px;">
+            <div class="form-header">
+              <h2 class="section-title"><i class="ph ph-pencil-simple"></i> Notas del Proyecto</h2>
+            </div>
+            <div class="form-group full-width">
+              <label for="proyecto-notas">Notas adicionales</label>
+              <textarea id="proyecto-notas" rows="6" placeholder="Reuniones, decisiones, feedback del cliente..."></textarea>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn-primary" onclick="guardarNotasProyecto()"><i class="ph ph-floppy-disk"></i> Guardar Notas</button>
+            </div>
+          </div>
+        </div>
+      </div>
 
         <!-- TAB: FINANCIERO -->
         <div id="proyecto-tab-financiero" class="proyecto-tab-content">
