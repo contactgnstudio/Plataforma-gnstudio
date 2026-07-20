@@ -18,15 +18,31 @@
      Helpers de fecha
   ────────────────────────────────────────────── */
   function fechaStr(d) {
-    // Devuelve 'YYYY-MM-DD' de un objeto Date
-    return d.toISOString().slice(0, 10);
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
   }
 
+  /**
+   * Parsea una cadena de fecha a objeto Date.
+   * - Si es solo 'YYYY-MM-DD' la trata como fecha LOCAL (no UTC).
+   * - Si trae hora (ISO completo) la parsea normalmente y extrae
+   *   año/mes/día en hora LOCAL para evitar el desplazamiento UTC.
+   */
   function parseISO(str) {
     if (!str) return null;
-    // Soporta 'YYYY-MM-DD' y timestamps
-    const d = new Date(str);
-    return isNaN(d) ? null : d;
+    const s = String(str).trim();
+    // Formato solo fecha: YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+      const [y, m, d] = s.split('-').map(Number);
+      return new Date(y, m - 1, d);
+    }
+    // Timestamp ISO con hora — construimos fecha local desde componentes UTC
+    const raw = new Date(s);
+    if (isNaN(raw.getTime())) return null;
+    // Usamos UTC para extraer la fecha "intención" del timestamp
+    // (Supabase guarda en UTC pero la fecha del día es la que importa)
+    return new Date(raw.getUTCFullYear(), raw.getUTCMonth(), raw.getUTCDate());
   }
 
   function mismo_dia(d, anio, mes, dia) {
@@ -34,21 +50,43 @@
     return d.getFullYear() === anio && d.getMonth() === mes && d.getDate() === dia;
   }
 
+  /**
+   * Extrae la fecha de INICIO de un proyecto.
+   * Prioridad: fecha_inicio → fecha → start_date → created_at
+   */
+  function getFechaInicio(p) {
+    return p.fecha_inicio || p.fecha || p.start_date || p.created_at || null;
+  }
+
+  /**
+   * Extrae la fecha de FIN de un proyecto.
+   * Prioridad: fecha_fin → fecha_entrega → end_date → fecha_limite → fecha_fin_real
+   */
+  function getFechaFin(p) {
+    return p.fecha_fin || p.fecha_entrega || p.end_date ||
+           p.fecha_limite || p.fecha_fin_real || null;
+  }
+
   /* ──────────────────────────────────────────────
-     Obtener proyectos desde Supabase / storage
+     Obtener proyectos desde getData (sistema GN)
   ────────────────────────────────────────────── */
   async function obtenerProyectos() {
     try {
-      // Intentar via función global que ya usa el sistema
+      // 1. Usar getData del sistema (Supabase + localStorage unificado)
+      if (typeof window.getData === 'function' && window.STORAGE_KEYS && window.STORAGE_KEYS.PROYECTOS) {
+        const data = await window.getData(window.STORAGE_KEYS.PROYECTOS);
+        if (Array.isArray(data) && data.length > 0) return data;
+      }
+      // 2. Fallback: función específica del módulo proyectos
       if (typeof window.cargarProyectosData === 'function') {
         return await window.cargarProyectosData();
       }
-      // Fallback: leer desde supabase directo si está disponible
+      // 3. Fallback: supabase directo
       if (window._supabase) {
         const { data } = await window._supabase.from('proyectos').select('*');
         return data || [];
       }
-      // Fallback local storage
+      // 4. Fallback: getProyectos legacy
       if (typeof window.getProyectos === 'function') {
         return window.getProyectos();
       }
@@ -60,38 +98,40 @@
   }
 
   /* ──────────────────────────────────────────────
-     Mapear proyectos a días del mes actual
+     Mapear proyectos a días del mes visible
   ────────────────────────────────────────────── */
   function mapearProyectosPorDia(proyectos, anio, mes) {
-    const mapa = {}; // { 'YYYY-MM-DD': [{ id, nombre, estado, tipo:'inicio'|'fin' }] }
+    const mapa = {};
+    const diasMes = new Date(anio, mes + 1, 0).getDate();
 
     proyectos.forEach(p => {
       const nombre = p.nombre || p.name || 'Sin nombre';
       const estado = p.estado || p.status || '';
 
-      const campoInicio = p.fecha_inicio || p.fecha || p.start_date || p.created_at;
-      const campoFin    = p.fecha_fin    || p.fecha_entrega || p.end_date || p.fecha_limite;
+      const rawInicio = getFechaInicio(p);
+      const rawFin    = getFechaFin(p);
 
-      const dInicio = parseISO(campoInicio);
-      const dFin    = parseISO(campoFin);
+      const dInicio = parseISO(rawInicio);
+      const dFin    = parseISO(rawFin);
 
-      // Solo días dentro del mes visible
-      const diasMes = new Date(anio, mes + 1, 0).getDate();
       for (let d = 1; d <= diasMes; d++) {
+        const key = anio + '-' +
+          String(mes + 1).padStart(2, '0') + '-' +
+          String(d).padStart(2, '0');
+
         if (mismo_dia(dInicio, anio, mes, d)) {
-          const key = `${anio}-${String(mes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
           if (!mapa[key]) mapa[key] = [];
           mapa[key].push({ id: p.id, nombre, estado, tipo: 'inicio' });
         }
-        if (mismo_dia(dFin, anio, mes, d)) {
-          const key = `${anio}-${String(mes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+
+        if (dFin && mismo_dia(dFin, anio, mes, d)) {
           if (!mapa[key]) mapa[key] = [];
-          // Evitar duplicado si inicio == fin
           const yaExiste = mapa[key].some(x => x.id === p.id && x.tipo === 'fin');
           if (!yaExiste) mapa[key].push({ id: p.id, nombre, estado, tipo: 'fin' });
         }
       }
     });
+
     return mapa;
   }
 
@@ -120,47 +160,42 @@
 
     const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
                    'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-    if (tituloEl) tituloEl.textContent = `${meses[_mes]} ${_anio}`;
+    if (tituloEl) tituloEl.textContent = meses[_mes] + ' ' + _anio;
 
-    const primerDia  = new Date(_anio, _mes, 1).getDay(); // 0=Dom
-    const diasMes    = new Date(_anio, _mes + 1, 0).getDate();
-    const hoyStr     = fechaStr(_hoy);
+    const primerDia = new Date(_anio, _mes, 1).getDay();
+    const diasMes   = new Date(_anio, _mes + 1, 0).getDate();
+    const hoyStrVal = fechaStr(_hoy);
 
     let html = '';
     // Cabeceras
-    ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'].forEach(d => {
-      html += `<div class="cal-header-day">${d}</div>`;
+    ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'].forEach(function(d) {
+      html += '<div class="cal-header-day">' + d + '</div>';
     });
 
     // Celdas vacías al inicio
     for (let i = 0; i < primerDia; i++) {
-      html += `<div class="cal-cell cal-cell-empty"></div>`;
+      html += '<div class="cal-cell cal-cell-empty"></div>';
     }
 
     // Días del mes
     for (let d = 1; d <= diasMes; d++) {
-      const key    = `${_anio}-${String(_mes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      const items  = mapa[key] || [];
-      const count  = items.length;
-      const esHoy  = key === hoyStr;
+      const key   = _anio + '-' + String(_mes + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+      const items = mapa[key] || [];
+      const count = items.length;
+      const esHoy = key === hoyStrVal;
 
       let badgesHTML = '';
       if (count > 0) {
-        badgesHTML = `<button
-          class="cal-badge"
-          onclick="calAbrirPopover(event, '${key}')"
-          title="${count} proyecto(s)"
-        >${count}</button>`;
+        badgesHTML = '<button class="cal-badge" onclick="calAbrirPopover(event,\'' + key + '\')" title="' + count + ' proyecto(s)">' + count + '</button>';
       }
 
-      html += `<div class="cal-cell${esHoy ? ' cal-hoy' : ''}" data-fecha="${key}">
-        <span class="cal-dia-num">${d}</span>
-        ${badgesHTML}
-      </div>`;
+      html += '<div class="cal-cell' + (esHoy ? ' cal-hoy' : '') + '" data-fecha="' + key + '">' +
+        '<span class="cal-dia-num">' + d + '</span>' +
+        badgesHTML +
+        '</div>';
     }
 
     contenedor.innerHTML = html;
-    // Guardar mapa para uso del popover
     window._calMapa = mapa;
   }
 
@@ -174,32 +209,30 @@
     const items = (window._calMapa || {})[fecha] || [];
     if (!items.length) return;
 
-    const [anio, mes, dia] = fecha.split('-');
+    const partes = fecha.split('-');
     const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-    const titulo = `${parseInt(dia)} ${meses[parseInt(mes)-1]} ${anio}`;
+    const titulo = parseInt(partes[2]) + ' ' + meses[parseInt(partes[1]) - 1] + ' ' + partes[0];
 
-    let listHTML = items.map(item => {
-      const color  = colorEstado(item.estado);
+    let listHTML = items.map(function(item) {
+      const color     = colorEstado(item.estado);
       const tipoLabel = item.tipo === 'inicio' ? '🚀 Inicio' : '🏁 Fin';
-      return `<li class="cal-pop-item" onclick="calIrAProyecto('${item.id}')">
-        <span class="cal-pop-dot" style="background:${color}"></span>
-        <span class="cal-pop-nombre">${item.nombre}</span>
-        <span class="cal-pop-tipo">${tipoLabel}</span>
-      </li>`;
+      return '<li class="cal-pop-item" onclick="calIrAProyecto(\'' + item.id + '\')">' +
+        '<span class="cal-pop-dot" style="background:' + color + '"></span>' +
+        '<span class="cal-pop-nombre">' + item.nombre + '</span>' +
+        '<span class="cal-pop-tipo">' + tipoLabel + '</span>' +
+        '</li>';
     }).join('');
 
     const pop = document.createElement('div');
     pop.className = 'cal-popover';
     pop.id = 'cal-popover';
-    pop.innerHTML = `
-      <div class="cal-pop-header">
-        <strong><i class="ph ph-calendar"></i> ${titulo}</strong>
-        <button class="cal-pop-close" onclick="calCerrarPopover()"><i class="ph ph-x"></i></button>
-      </div>
-      <ul class="cal-pop-list">${listHTML}</ul>
-    `;
+    pop.innerHTML =
+      '<div class="cal-pop-header">' +
+        '<strong><i class="ph ph-calendar"></i> ' + titulo + '</strong>' +
+        '<button class="cal-pop-close" onclick="calCerrarPopover()"><i class="ph ph-x"></i></button>' +
+      '</div>' +
+      '<ul class="cal-pop-list">' + listHTML + '</ul>';
 
-    // Posicionar relativo al botón que hizo click
     const btn  = event.currentTarget;
     const rect = btn.getBoundingClientRect();
     pop.style.position = 'fixed';
@@ -209,8 +242,7 @@
     document.body.appendChild(pop);
     _popoverAbierto = pop;
 
-    // Cerrar al hacer click fuera
-    setTimeout(() => {
+    setTimeout(function() {
       document.addEventListener('click', cerrarPopoverFuera, { once: true });
     }, 10);
   };
@@ -227,17 +259,14 @@
     _popoverAbierto = null;
   }
 
-  /* Navegar al proyecto desde el popover */
   window.calIrAProyecto = function (proyectoId) {
     cerrarPopover();
-    // Usar la función existente del sistema
     if (typeof window.verDetalleProyecto === 'function') {
       window.verDetalleProyecto(proyectoId);
     } else if (typeof window.abrirDetalleProyecto === 'function') {
       window.abrirDetalleProyecto(proyectoId);
     } else {
-      // Intentar click en la tabla de proyectos
-      const fila = document.querySelector(`[data-proyecto-id="${proyectoId}"]`);
+      const fila = document.querySelector('[data-proyecto-id="' + proyectoId + '"]');
       if (fila) fila.click();
     }
   };
@@ -268,7 +297,7 @@
      Init público
   ────────────────────────────────────────────── */
   window.initCalendario = function () {
-    _hoy = new Date();
+    _hoy  = new Date();
     _anio = _hoy.getFullYear();
     _mes  = _hoy.getMonth();
     renderCalendario();
