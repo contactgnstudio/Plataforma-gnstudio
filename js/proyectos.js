@@ -1,7 +1,7 @@
 // ============================================================
-// js/proyectos.js — ProjectOS v2.3 con Cotizaciones Supabase
-// Tabs: Resumen (KPIs reales), Financiero, Tareas (auto), Documentos (cotización)
-// Usa columnas Supabase: numero, fecha_emision, items (JSONB), proyecto_id
+// js/proyectos.js — ProjectOS v3.0 (ClickUp/Monday style)
+// Vista reestructurada: header hero + tabs mejorados + kanban pro
+// Tareas auto desde servicios de cotización con categoría/prioridad
 // ============================================================
 
 (function(window, document) {
@@ -64,7 +64,7 @@
   }
   function normalizeGasto(row) { return { id: row.id, proyectoId: row.proyecto_id || '', fecha: row.fecha || row.created_at || '', categoria: row.tipo || 'General', descripcion: row.descripcion || row.referencia || 'Gasto registrado', monto: num(row.monto), metodo: row.metodo_pago || row.metodo || '—', referencia: row.referencia || '', createdAt: row.created_at || '' }; }
   function normalizePago(row) { return { id: row.id, proyectoId: row.proyecto_id || '', fecha: row.fecha || row.created_at || '', concepto: row.concepto || row.descripcion || row.referencia || 'Pago recibido', monto: num(row.monto), metodo: row.metodo_pago || row.metodo || row.forma_pago || '—', estado: row.estado || 'registrado', referencia: row.referencia || '', createdAt: row.created_at || '' }; }
-  function normalizeTarea(row) { return { id: row.id, proyectoId: row.proyecto_id || '', titulo: row.titulo || row.nombre || 'Tarea', asignado: row.responsable || '', fechaLimite: row.fecha_limite || '', estado: row.estado || 'pendiente', descripcion: row.descripcion || '', createdAt: row.created_at || '' }; }
+  function normalizeTarea(row) { return { id: row.id, proyectoId: row.proyecto_id || '', titulo: row.titulo || row.nombre || 'Tarea', asignado: row.responsable || '', fechaLimite: row.fecha_limite || '', estado: row.estado || 'pendiente', descripcion: row.descripcion || '', prioridad: row.prioridad || 'media', categoria: row.categoria || '', createdAt: row.created_at || '' }; }
 
   async function obtenerClientes() { var rows = await getAll(getStorageKey('CLIENTES', 'clientes'), { orderBy: 'created_at', ascending: false }); CLIENTES_CACHE = rows.map(normalizeCliente); return CLIENTES_CACHE; }
   async function ensureClientesCache() { if (!CLIENTES_CACHE.length) await obtenerClientes(); return CLIENTES_CACHE; }
@@ -131,14 +131,15 @@
     proyectos.forEach(function(p) {
       var fecha = formatDateSafe(p.fechaInicio || p.createdAt || '');
       var idLegible = generarIdProyectoLegible(p);
+      var color = estadoColor(p.estado);
       html += '<tr>';
       html += '<td>' + esc(fecha) + '</td>';
-      html += '<td>' + esc(idLegible) + '</td>';
+      html += '<td><span style="font-size:11px;font-family:monospace;opacity:.7;">' + esc(idLegible) + '</span></td>';
       html += '<td><button type="button" class="link-button" onclick="verProyecto(&#39;' + esc(p.id) + '&#39;)">' + esc(p.nombre || 'Proyecto') + '</button></td>';
       html += '<td>' + esc(p.clienteNombre || 'Sin cliente') + '</td>';
+      html += '<td><span class="estado-badge" style="background:' + color + '22;color:' + color + ';border:1px solid ' + color + '44;font-size:11px;">' + estadoLabel(p.estado) + '</span></td>';
       html += '<td>' + money(p.presupuesto) + '</td>';
       html += '<td>' + money(p.totalCobrado) + '</td>';
-      html += '<td>' + money(p.totalGastado) + '</td>';
       html += '</tr>';
     });
     tbody.innerHTML = html;
@@ -157,14 +158,15 @@
     proyectos.forEach(function(p) {
       var fecha = formatDateSafe(p.fechaInicio || p.createdAt || '');
       var idLegible = generarIdProyectoLegible(p);
+      var color = estadoColor(p.estado);
       html += '<tr>';
       html += '<td>' + esc(fecha) + '</td>';
-      html += '<td>' + esc(idLegible) + '</td>';
+      html += '<td><span style="font-size:11px;font-family:monospace;opacity:.7;">' + esc(idLegible) + '</span></td>';
       html += '<td><button type="button" class="link-button" onclick="verProyecto(&#39;' + esc(p.id) + '&#39;)">' + esc(p.nombre || 'Proyecto') + '</button></td>';
       html += '<td>' + esc(p.clienteNombre || 'Sin cliente') + '</td>';
+      html += '<td><span class="estado-badge" style="background:' + color + '22;color:' + color + ';border:1px solid ' + color + '44;font-size:11px;">' + estadoLabel(p.estado) + '</span></td>';
       html += '<td>' + money(p.presupuesto) + '</td>';
       html += '<td>' + money(p.totalCobrado) + '</td>';
-      html += '<td>' + money(p.totalGastado) + '</td>';
       html += '</tr>';
     });
     tbody.innerHTML = html;
@@ -184,6 +186,7 @@
   function setText(id, value) { var el = byId(id); if (el) el.textContent = value; }
   function setValue(id, value) { var el = byId(id); if (el) el.value = value; }
   function setDisplay(id, show) { var el = byId(id); if (el) el.style.display = show ? 'block' : 'none'; }
+  function setHTML(id, value) { var el = byId(id); if (el) el.innerHTML = value; }
 
   function actualizarProgresoVisual(avance) {
     var pct = Math.max(0, Math.min(100, intVal(avance)));
@@ -196,6 +199,59 @@
     }
     var kpiAvance = byId('resumen-kpi-avance');
     if (kpiAvance) kpiAvance.textContent = pct + '%';
+    // Hero progress bar
+    var heroBar = byId('proyecto-hero-progress-bar');
+    if (heroBar) heroBar.style.width = pct + '%';
+    var heroPct = byId('proyecto-hero-progress-pct');
+    if (heroPct) heroPct.textContent = pct + '%';
+  }
+
+  // ============================================================
+  // HERO HEADER (estilo ClickUp/Monday)
+  // ============================================================
+  function renderHeroHeader(proyecto, tareas, totalPagos, presupuesto) {
+    var container = byId('proyecto-hero');
+    if (!container) return;
+
+    var avance = proyecto.avance || 0;
+    var porCobrar = Math.max(0, presupuesto - totalPagos);
+    var colorEstado = estadoColor(proyecto.estado);
+    var completadas = tareas.filter(function(t) { return t.estado === 'completada'; }).length;
+    var totalTareas = tareas.length;
+
+    // Determinar color barra de progreso
+    var barColor = avance >= 100 ? '#2D8B5E' : avance >= 50 ? '#C5A253' : '#6B7280';
+
+    var fechaInicioFmt = formatDateSafe(proyecto.fechaInicio || proyecto.createdAt);
+    var fechaFinFmt = proyecto.fechaFin ? formatDateSafe(proyecto.fechaFin) : 'Sin fecha límite';
+
+    var html = '';
+    html += '<div class="proyecto-hero-inner">';
+    // Left: title + meta
+    html += '<div class="proyecto-hero-left">';
+    html += '<div class="proyecto-hero-id"><i class="ph ph-hash"></i> ' + esc(generarIdProyectoLegible(proyecto)) + '</div>';
+    html += '<h2 class="proyecto-hero-nombre">' + esc(proyecto.nombre) + '</h2>';
+    html += '<div class="proyecto-hero-meta">';
+    html += '<span class="proyecto-hero-badge" style="background:' + colorEstado + '22;color:' + colorEstado + ';border:1px solid ' + colorEstado + '44;"><i class="ph ph-circle-half-tilt"></i> ' + estadoLabel(proyecto.estado) + '</span>';
+    html += '<span><i class="ph ph-user"></i> ' + esc(proyecto.clienteNombre || 'Sin cliente') + '</span>';
+    html += '<span><i class="ph ph-calendar-blank"></i> Inicio: ' + esc(fechaInicioFmt) + '</span>';
+    html += '<span><i class="ph ph-flag"></i> ' + esc(fechaFinFmt) + '</span>';
+    html += '</div>';
+    // Progress bar
+    html += '<div class="proyecto-hero-progress">';
+    html += '<div class="proyecto-hero-progress-track"><div id="proyecto-hero-progress-bar" class="proyecto-hero-progress-fill" style="width:' + avance + '%;background:' + barColor + ';"></div></div>';
+    html += '<span id="proyecto-hero-progress-pct" style="font-size:12px;font-weight:700;color:' + barColor + ';min-width:36px;">' + avance + '%</span>';
+    html += '</div>';
+    html += '</div>';
+    // Right: KPI chips
+    html += '<div class="proyecto-hero-kpis">';
+    html += '<div class="hero-kpi"><div class="hero-kpi-val">' + money(presupuesto) + '</div><div class="hero-kpi-lbl">Presupuesto</div></div>';
+    html += '<div class="hero-kpi"><div class="hero-kpi-val" style="color:#2D8B5E;">' + money(totalPagos) + '</div><div class="hero-kpi-lbl">Cobrado</div></div>';
+    html += '<div class="hero-kpi"><div class="hero-kpi-val" style="color:#C5A253;">' + money(porCobrar) + '</div><div class="hero-kpi-lbl">Por Cobrar</div></div>';
+    html += '<div class="hero-kpi"><div class="hero-kpi-val">' + completadas + '/' + totalTareas + '</div><div class="hero-kpi-lbl">Tareas</div></div>';
+    html += '</div>';
+    html += '</div>';
+    container.innerHTML = html;
   }
 
   function renderTimeline(proyecto, tareas, gastos, pagos) {
@@ -245,37 +301,75 @@
     tbody.innerHTML = html;
   }
 
+  // ============================================================
+  // KANBAN PRO (ClickUp style: prioridad + categoría + descripción)
+  // ============================================================
+  function prioridadConfig(prioridad) {
+    var map = {
+      urgente: { color: '#F87171', icon: 'ph-warning-circle', label: 'Urgente' },
+      alta: { color: '#F59E0B', icon: 'ph-arrow-up', label: 'Alta' },
+      media: { color: '#C5A253', icon: 'ph-minus', label: 'Media' },
+      baja: { color: '#6B7280', icon: 'ph-arrow-down', label: 'Baja' }
+    };
+    return map[prioridad] || map['media'];
+  }
+
   function renderKanbanTareas(tareas) {
     var container = byId('tareas-kanban');
     if (!container) return;
-    var estados = ['pendiente', 'en_progreso', 'revision', 'completada'];
-    var titulos = { pendiente: 'Pendiente', en_progreso: 'En Progreso', revision: 'En Revisión', completada: 'Completada' };
-    var coloresHeader = { pendiente: '#6B7280', en_progreso: '#C5A253', revision: '#C5A253', completada: '#123524' };
-    var html = '';
-    for (var e = 0; e < estados.length; e++) {
-      var estado = estados[e];
-      var tareasEstado = tareas.filter(function(t) { return t.estado === estado; });
+
+    // Contador global de tareas por estado para el header
+    var estadosConfig = [
+      { key: 'pendiente', label: 'Pendiente', color: '#6B7280', icon: 'ph-circle' },
+      { key: 'en_progreso', label: 'En Progreso', color: '#C5A253', icon: 'ph-spinner' },
+      { key: 'revision', label: 'En Revisión', color: '#A78BFA', icon: 'ph-magnifying-glass' },
+      { key: 'completada', label: 'Completada', color: '#2D8B5E', icon: 'ph-check-circle' }
+    ];
+
+    var html = '<div class="kanban-board">';
+    for (var e = 0; e < estadosConfig.length; e++) {
+      var cfg = estadosConfig[e];
+      var tareasEstado = tareas.filter(function(t) { return t.estado === cfg.key; });
       html += '<div class="kanban-column">';
-      html += '<div class="kanban-col-header ' + estado + '" style="border-top:3px solid ' + coloresHeader[estado] + ';">';
-      html += '<span>' + titulos[estado] + '</span>';
-      html += '<span style="background:rgba(255,255,255,0.06);padding:2px 10px;border-radius:12px;font-size:12px;">' + tareasEstado.length + '</span>';
+      html += '<div class="kanban-col-header" style="border-top:3px solid ' + cfg.color + ';">';
+      html += '<span style="display:flex;align-items:center;gap:6px;"><i class="ph ' + cfg.icon + '" style="color:' + cfg.color + ';"></i>' + cfg.label + '</span>';
+      html += '<span class="kanban-count" style="background:' + cfg.color + '22;color:' + cfg.color + ';">' + tareasEstado.length + '</span>';
       html += '</div>';
       html += '<div class="kanban-col-body">';
-      if (!tareasEstado.length) { html += '<div style="text-align:center;padding:20px;color:var(--gn-text-muted);font-size:12px;">Sin tareas</div>'; }
-      else {
+      if (!tareasEstado.length) {
+        html += '<div class="kanban-empty"><i class="ph ph-tray" style="font-size:20px;opacity:.3;"></i><span>Sin tareas</span></div>';
+      } else {
         for (var i = 0; i < tareasEstado.length; i++) {
           var t = tareasEstado[i];
+          var prio = prioridadConfig(t.prioridad);
           html += '<div class="kanban-card" onclick="editarTareaProyecto(&#39;' + esc(t.id) + '&#39;)">';
+          // Top: prioridad + categoria
+          html += '<div class="kanban-card-top">';
+          html += '<span class="kanban-prio" style="color:' + prio.color + ';background:' + prio.color + '15;"><i class="ph ' + prio.icon + '"></i> ' + prio.label + '</span>';
+          if (t.categoria) html += '<span class="kanban-cat">' + esc(t.categoria) + '</span>';
+          html += '</div>';
+          // Título
           html += '<div class="kanban-card-title">' + esc(t.titulo) + '</div>';
+          // Descripción
+          if (t.descripcion && t.descripcion !== 'Generada desde cotización') {
+            html += '<div class="kanban-card-desc">' + esc(t.descripcion.substring(0, 80)) + (t.descripcion.length > 80 ? '...' : '') + '</div>';
+          }
+          // Meta: asignado + fecha
           html += '<div class="kanban-card-meta">';
           if (t.asignado) html += '<span><i class="ph ph-user"></i> ' + esc(t.asignado) + '</span>';
-          if (t.fechaLimite) html += '<span><i class="ph ph-calendar"></i> ' + esc(formatDateSafe(t.fechaLimite)) + '</span>';
+          if (t.fechaLimite) {
+            var hoy = new Date(); var fl = new Date(t.fechaLimite);
+            var vencida = fl < hoy && cfg.key !== 'completada';
+            html += '<span style="color:' + (vencida ? '#F87171' : 'inherit') + ';"><i class="ph ph-calendar"></i> ' + esc(formatDateSafe(t.fechaLimite)) + (vencida ? ' ⚠' : '') + '</span>';
+          }
+          if (!t.asignado && !t.fechaLimite) html += '<span style="opacity:.4;font-size:11px;">Sin asignación</span>';
           html += '</div>';
           html += '</div>';
         }
       }
       html += '</div></div>';
     }
+    html += '</div>';
     container.innerHTML = html;
   }
 
@@ -309,14 +403,10 @@
     var utilidad = totalPagos - totalGastos;
     var avance = proyecto.avance || deriveAvance(proyecto.raw);
 
-    // Header
-    setText('detalle-proyecto-nombre', text(proyecto.nombre, 'Proyecto'));
-    setText('detalle-proyecto-estado', estadoLabel(proyecto.estado));
-    setText('detalle-proyecto-cliente', text(proyecto.clienteNombre, 'Sin cliente'));
-    setText('detalle-proyecto-fecha', formatDateSafe(proyecto.fechaInicio));
-    setText('detalle-proyecto-presupuesto', money(proyecto.presupuesto));
+    // Hero header
+    renderHeroHeader(proyecto, tareas, totalPagos, presupuesto);
 
-    // KPIs
+    // KPIs (tab resumen)
     setText('resumen-kpi-presupuesto', money(presupuesto));
     setText('resumen-kpi-gastos', money(totalGastos));
     setText('resumen-kpi-pagos', money(totalPagos));
@@ -396,18 +486,18 @@
     var responsable = byId('tarea-asignado') ? byId('tarea-asignado').value.trim() : '';
     var fechaLimite = byId('tarea-fecha-limite') ? byId('tarea-fecha-limite').value : '';
     var estado = byId('tarea-estado') ? byId('tarea-estado').value : 'pendiente';
+    var prioridad = byId('tarea-prioridad') ? byId('tarea-prioridad').value : 'media';
+    var descripcion = byId('tarea-descripcion') ? byId('tarea-descripcion').value.trim() : '';
     var form = byId('formTareaProyecto');
     if (!titulo) { alert('Completa el título de la tarea.'); return false; }
 
-    var payload = { proyecto_id: PROYECTO_ACTUAL.id, titulo: titulo, estado: estado };
+    var payload = { proyecto_id: PROYECTO_ACTUAL.id, titulo: titulo, estado: estado, prioridad: prioridad };
     if (responsable) payload.responsable = responsable;
     if (fechaLimite) payload.fecha_limite = fechaLimite;
+    if (descripcion) payload.descripcion = descripcion;
 
     var result = await insertRow(getStorageKey('TAREAS', 'tareas'), payload);
-    if (!result) { 
-      alert('No se pudo guardar la tarea. Error de conexión con Supabase.'); 
-      return false; 
-    }
+    if (!result) { alert('No se pudo guardar la tarea. Error de conexión con Supabase.'); return false; }
     if (form) form.reset();
     await verProyecto(PROYECTO_ACTUAL.id);
     if (typeof window.actualizarKPIs === 'function') await window.actualizarKPIs();
@@ -446,7 +536,88 @@
   function abrirModalPagoProyecto() { return navegarAFinanzasConProyecto('pago'); }
 
   // ============================================================
-  // Generar tareas automáticas desde items de cotización (JSONB)
+  // MAPA DE CATEGORÍAS → TAREAS AUTOMÁTICAS
+  // Cada categoría genera subtareas predefinidas con prioridad
+  // ============================================================
+  var TAREAS_POR_CATEGORIA = {
+    diseno: [
+      { titulo: 'Brief y levantamiento de requerimientos de diseño', prioridad: 'alta' },
+      { titulo: 'Investigación de referentes y moodboard', prioridad: 'media' },
+      { titulo: 'Wireframes / bocetos iniciales', prioridad: 'alta' },
+      { titulo: 'Diseño de propuesta visual', prioridad: 'alta' },
+      { titulo: 'Revisión y ajustes del cliente', prioridad: 'media' },
+      { titulo: 'Entrega de archivos finales', prioridad: 'alta' }
+    ],
+    web: [
+      { titulo: 'Definición de arquitectura y estructura del sitio', prioridad: 'alta' },
+      { titulo: 'Diseño UI/UX de páginas principales', prioridad: 'alta' },
+      { titulo: 'Desarrollo frontend', prioridad: 'alta' },
+      { titulo: 'Integración CMS / backend', prioridad: 'media' },
+      { titulo: 'Pruebas y control de calidad (QA)', prioridad: 'alta' },
+      { titulo: 'Publicación y configuración de dominio/hosting', prioridad: 'alta' },
+      { titulo: 'Capacitación al cliente', prioridad: 'baja' }
+    ],
+    marketing: [
+      { titulo: 'Definición de estrategia y objetivos', prioridad: 'alta' },
+      { titulo: 'Investigación de audiencia y competencia', prioridad: 'media' },
+      { titulo: 'Creación de contenido y creatividades', prioridad: 'alta' },
+      { titulo: 'Configuración de campañas', prioridad: 'alta' },
+      { titulo: 'Monitoreo y optimización', prioridad: 'media' },
+      { titulo: 'Reporte de resultados', prioridad: 'media' }
+    ],
+    foto: [
+      { titulo: 'Coordinación de sesión fotográfica', prioridad: 'alta' },
+      { titulo: 'Preparación de locación y equipos', prioridad: 'media' },
+      { titulo: 'Sesión fotográfica', prioridad: 'urgente' },
+      { titulo: 'Selección y edición de fotos', prioridad: 'alta' },
+      { titulo: 'Entrega de galería al cliente', prioridad: 'alta' }
+    ],
+    video: [
+      { titulo: 'Guión y storyboard', prioridad: 'alta' },
+      { titulo: 'Producción / grabación', prioridad: 'urgente' },
+      { titulo: 'Edición y postproducción', prioridad: 'alta' },
+      { titulo: 'Revisión del cliente', prioridad: 'media' },
+      { titulo: 'Entrega de archivos finales', prioridad: 'alta' }
+    ],
+    branding: [
+      { titulo: 'Brief de marca y diagnóstico', prioridad: 'alta' },
+      { titulo: 'Investigación de mercado y competencia', prioridad: 'media' },
+      { titulo: 'Propuesta de naming y concepto visual', prioridad: 'alta' },
+      { titulo: 'Diseño de identidad visual (logo, paleta, tipografía)', prioridad: 'urgente' },
+      { titulo: 'Manual de marca', prioridad: 'alta' },
+      { titulo: 'Aplicaciones y piezas de marca', prioridad: 'media' },
+      { titulo: 'Entrega de archivos', prioridad: 'alta' }
+    ],
+    social: [
+      { titulo: 'Auditoría de redes sociales actuales', prioridad: 'media' },
+      { titulo: 'Estrategia de contenido y calendario editorial', prioridad: 'alta' },
+      { titulo: 'Creación de plantillas y piezas gráficas', prioridad: 'alta' },
+      { titulo: 'Publicación y gestión de contenidos', prioridad: 'media' },
+      { titulo: 'Análisis de métricas y reporte', prioridad: 'media' }
+    ],
+    otros: [
+      { titulo: 'Revisión y aprobación de propuesta', prioridad: 'alta' },
+      { titulo: 'Ejecución del servicio', prioridad: 'alta' },
+      { titulo: 'Revisión y ajustes finales', prioridad: 'media' },
+      { titulo: 'Entrega y cierre', prioridad: 'alta' }
+    ]
+  };
+
+  // Detectar categoría desde nombre/descripción de servicio
+  function detectarCategoria(texto) {
+    var t = (texto || '').toLowerCase();
+    if (/\bweb\b|landing|sitio|página|wordpress|e-?commerce|tienda/i.test(t)) return 'web';
+    if (/\bbranding\b|marca|identidad|logo|logotipo/i.test(t)) return 'branding';
+    if (/\bdise[ñn]o\b|ui|ux|ilustr|banner|flyer|cartel|portada/i.test(t)) return 'diseno';
+    if (/\bmarketing\b|publicidad|ads|campañ|sem|seo|ppc/i.test(t)) return 'marketing';
+    if (/\bsocial|redes|instagram|facebook|tiktok|contenido/i.test(t)) return 'social';
+    if (/\bfoto|photograph|sesión|shooting/i.test(t)) return 'foto';
+    if (/\bvideo|film|animaci|motion|reel|reels/i.test(t)) return 'video';
+    return 'otros';
+  }
+
+  // ============================================================
+  // GENERAR TAREAS AUTOMÁTICAS DESDE COTIZACIÓN
   // ============================================================
   async function generarTareasDesdeCotizacion(proyectoId, cotizacionId) {
     if (!proyectoId || !cotizacionId) return;
@@ -456,12 +627,39 @@
       var items = [];
       try { items = typeof cot.items === 'string' ? JSON.parse(cot.items) : cot.items; } catch (e) { items = []; }
       if (!items || !items.length) return;
+
+      var tareasCreadas = 0;
+      var categoriasUsadas = {};
+
       for (var i = 0; i < items.length; i++) {
         var item = items[i];
-        var payload = { proyecto_id: proyectoId, titulo: (item.descripcion || 'Servicio').substring(0, 100), estado: 'pendiente', descripcion: 'Generada desde cotización' };
-        await insertRow(getStorageKey('TAREAS', 'tareas'), payload);
+        var descripcionServicio = item.descripcion || item.nombre || item.titulo || 'Servicio';
+        var categoriaItem = item.categoria || detectarCategoria(descripcionServicio);
+
+        // Si ya usamos esta categoría, no duplicar subtareas
+        if (categoriasUsadas[categoriaItem]) continue;
+        categoriasUsadas[categoriaItem] = true;
+
+        var plantilla = TAREAS_POR_CATEGORIA[categoriaItem] || TAREAS_POR_CATEGORIA['otros'];
+
+        for (var j = 0; j < plantilla.length; j++) {
+          var tpl = plantilla[j];
+          var payload = {
+            proyecto_id: proyectoId,
+            titulo: tpl.titulo,
+            estado: 'pendiente',
+            prioridad: tpl.prioridad || 'media',
+            categoria: categoriaItem,
+            descripcion: 'Auto-generada desde: ' + descripcionServicio.substring(0, 80)
+          };
+          await insertRow(getStorageKey('TAREAS', 'tareas'), payload);
+          tareasCreadas++;
+        }
       }
-      if (window.showToast) { window.showToast({ type: 'success', title: 'Tareas generadas', message: 'Se crearon ' + items.length + ' tareas desde la cotización.' }); }
+
+      if (window.showToast && tareasCreadas > 0) {
+        window.showToast({ type: 'success', title: 'Tareas generadas ✓', message: tareasCreadas + ' tareas creadas automáticamente desde los servicios de la cotización.' });
+      }
     } catch (error) { console.error('Error generando tareas desde cotización', error); }
   }
 
@@ -510,7 +708,7 @@
           var cant = parseFloat(cantInput ? cantInput.value : '0') || 0;
           var precio = parseFloat(precioInput ? precioInput.value : '0') || 0;
           var aplicaItbms = itbmsCheck ? itbmsCheck.checked : false;
-          var categoria = tr.dataset.categoria || 'otros';
+          var categoria = tr.dataset.categoria || detectarCategoria(descripcion);
           var totalFila = cant * precio;
           if (!descripcion) return;
           subtotal += totalFila;
@@ -547,10 +745,34 @@
         });
       }
 
-      // 3. Generar tareas automáticas desde cotización
-      if (cotizacion && cotizacion.id) { await generarTareasDesdeCotizacion(proyecto.id, cotizacion.id); }
+      // 3. Generar tareas automáticas desde cotización (con plantillas por categoría)
+      if (cotizacion && cotizacion.id) {
+        await generarTareasDesdeCotizacion(proyecto.id, cotizacion.id);
+      } else if (items.length) {
+        // Fallback: generar desde items directamente si no hay cotizacion.id
+        var categoriasUsadas = {};
+        var tareasCreadas = 0;
+        for (var i = 0; i < items.length; i++) {
+          var cat = items[i].categoria || detectarCategoria(items[i].descripcion || '');
+          if (categoriasUsadas[cat]) continue;
+          categoriasUsadas[cat] = true;
+          var plantilla = TAREAS_POR_CATEGORIA[cat] || TAREAS_POR_CATEGORIA['otros'];
+          for (var j = 0; j < plantilla.length; j++) {
+            var tpl = plantilla[j];
+            await insertRow(getStorageKey('TAREAS', 'tareas'), {
+              proyecto_id: proyecto.id, titulo: tpl.titulo, estado: 'pendiente',
+              prioridad: tpl.prioridad || 'media', categoria: cat,
+              descripcion: 'Auto-generada desde: ' + (items[i].descripcion || '').substring(0, 80)
+            });
+            tareasCreadas++;
+          }
+        }
+        if (window.showToast && tareasCreadas > 0) {
+          window.showToast({ type: 'success', title: 'Tareas generadas ✓', message: tareasCreadas + ' tareas creadas automáticamente.' });
+        }
+      }
 
-      if (feedback) { feedback.className = 'form-feedback success'; feedback.textContent = 'Proyecto, cotización y tareas creados correctamente.'; feedback.style.display = 'block'; }
+      if (feedback) { feedback.className = 'form-feedback success'; feedback.textContent = '¡Proyecto, cotización y tareas creados correctamente!'; feedback.style.display = 'block'; }
 
       form.reset();
       if (byId('pf-fecha')) byId('pf-fecha').value = todayISO();
@@ -561,6 +783,9 @@
       await renderProyectos('todos');
       if (typeof window.actualizarKPIs === 'function') window.actualizarKPIs();
       if (typeof window.actualizarSelectProyectosFinanzas === 'function') window.actualizarSelectProyectosFinanzas();
+
+      // Abrir el proyecto recién creado
+      setTimeout(function() { verProyecto(proyecto.id); }, 400);
 
       return false;
     } catch (error) {
@@ -593,12 +818,12 @@
 
   function descargarCotizacionPDF() {
     if (!PROYECTO_ACTUAL) return false;
-    if (window.showToast) { window.showToast({ type: 'info', title: 'Descargar PDF', message: 'Función de descarga PDF en desarrollo. Usa Imprimir > Guardar como PDF.' }); }
+    if (window.showToast) { window.showToast({ type: 'info', title: 'Descargar PDF', message: 'Usa Imprimir → Guardar como PDF.' }); }
     return false;
   }
 
   // ============================================================
-  // Funciones de proforma (sin cambios)
+  // Proforma (sin cambios estructurales)
   // ============================================================
   function togglePanelProforma() {
     var panel = byId('proyecto-proforma-panel');
@@ -632,7 +857,7 @@
       var precio = parseFloat(s.precio || 0) || 0;
       var unidad = s.unidad || 'und';
       var itbms = parseInt(s.itbms, 10) === 1 ? 1 : 0;
-      var categoria = s.categoria || 'otros';
+      var categoria = s.categoria || detectarCategoria(nombre);
       html += '<option value="' + esc(s.id || '') + '" data-nombre="' + esc(nombre) + '" data-precio="' + precio + '" data-unidad="' + esc(unidad) + '" data-itbms="' + itbms + '" data-categoria="' + esc(categoria) + '">' + esc(nombre) + ' — ' + money(precio) + ' / ' + esc(unidad) + '</option>';
     }
     select.innerHTML = html;
@@ -646,7 +871,7 @@
     var precio = parseFloat(option.getAttribute('data-precio') || 0) || 0;
     var unidad = option.getAttribute('data-unidad') || 'und';
     var itbms = parseInt(option.getAttribute('data-itbms') || '0', 10);
-    var categoria = option.getAttribute('data-categoria') || 'otros';
+    var categoria = option.getAttribute('data-categoria') || detectarCategoria(nombre);
     agregarFilaProforma(nombre, unidad, '', precio.toFixed(2), itbms, categoria);
     select.value = '';
   }
@@ -671,7 +896,7 @@
     var tbody = byId('tbodyProformaServicios');
     if (!tbody) return;
     var tr = document.createElement('tr');
-    tr.dataset.categoria = categoria || 'otros';
+    tr.dataset.categoria = categoria || detectarCategoria(nombre || '');
     var stepInicial = '0.01';
     for (var u = 0; u < UNIDADES_OPCIONES.length; u++) { if (UNIDADES_OPCIONES[u].value === unidad) { stepInicial = UNIDADES_OPCIONES[u].step; break; } }
     var html = '';
@@ -687,6 +912,15 @@
     var btnEliminar = tr.querySelector('.btn-eliminar-fila');
     if (btnEliminar) btnEliminar.addEventListener('click', function() { tr.remove(); actualizarTotalesProforma(); });
 
+    // Auto-detectar categoría cuando se escribe el nombre
+    var inputNombre = tr.querySelector('.pf-input-nombre');
+    if (inputNombre) {
+      inputNombre.addEventListener('input', function() {
+        tr.dataset.categoria = detectarCategoria(inputNombre.value);
+        actualizarTotalesProforma();
+      });
+    }
+
     var selectUnidad = tr.querySelector('.pf-select-unidad');
     var inputCantidad = tr.querySelector('.pf-input-cantidad');
     if (selectUnidad && inputCantidad) {
@@ -697,7 +931,7 @@
     }
 
     var inputs = tr.querySelectorAll('input, select');
-    for (var k = 0; k < inputs.length; k++) { if (inputs[k] === selectUnidad) continue; inputs[k].addEventListener('input', function() { actualizarTotalesProforma(); }); inputs[k].addEventListener('change', function() { actualizarTotalesProforma(); }); }
+    for (var k = 0; k < inputs.length; k++) { if (inputs[k] === selectUnidad || inputs[k] === inputNombre) continue; inputs[k].addEventListener('input', function() { actualizarTotalesProforma(); }); inputs[k].addEventListener('change', function() { actualizarTotalesProforma(); }); }
     tbody.appendChild(tr);
     actualizarTotalesProforma();
   }
