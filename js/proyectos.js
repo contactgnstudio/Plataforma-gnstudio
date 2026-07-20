@@ -510,11 +510,12 @@
           var cant = parseFloat(cantInput ? cantInput.value : '0') || 0;
           var precio = parseFloat(precioInput ? precioInput.value : '0') || 0;
           var aplicaItbms = itbmsCheck ? itbmsCheck.checked : false;
+          var categoria = tr.dataset.categoria || 'otros';
           var totalFila = cant * precio;
           if (!descripcion) return;
           subtotal += totalFila;
           if (aplicaItbms) itbmsTotal += totalFila * 0.07;
-          items.push({ descripcion: descripcion, unidad: unidad, cantidad: cant, precio: precio, total: totalFila, itbms: aplicaItbms });
+          items.push({ descripcion: descripcion, unidad: unidad, cantidad: cant, precio: precio, total: totalFila, itbms: aplicaItbms, categoria: categoria });
         });
       }
 
@@ -631,7 +632,8 @@
       var precio = parseFloat(s.precio || 0) || 0;
       var unidad = s.unidad || 'und';
       var itbms = parseInt(s.itbms, 10) === 1 ? 1 : 0;
-      html += '<option value="' + esc(s.id || '') + '" data-nombre="' + esc(nombre) + '" data-precio="' + precio + '" data-unidad="' + esc(unidad) + '" data-itbms="' + itbms + '">' + esc(nombre) + ' — ' + money(precio) + ' / ' + esc(unidad) + '</option>';
+      var categoria = s.categoria || 'otros';
+      html += '<option value="' + esc(s.id || '') + '" data-nombre="' + esc(nombre) + '" data-precio="' + precio + '" data-unidad="' + esc(unidad) + '" data-itbms="' + itbms + '" data-categoria="' + esc(categoria) + '">' + esc(nombre) + ' — ' + money(precio) + ' / ' + esc(unidad) + '</option>';
     }
     select.innerHTML = html;
   }
@@ -644,11 +646,12 @@
     var precio = parseFloat(option.getAttribute('data-precio') || 0) || 0;
     var unidad = option.getAttribute('data-unidad') || 'und';
     var itbms = parseInt(option.getAttribute('data-itbms') || '0', 10);
-    agregarFilaProforma(nombre, unidad, '', precio.toFixed(2), itbms);
+    var categoria = option.getAttribute('data-categoria') || 'otros';
+    agregarFilaProforma(nombre, unidad, '', precio.toFixed(2), itbms, categoria);
     select.value = '';
   }
 
-  function agregarFilaProformaVacia() { agregarFilaProforma('', '', '', '', 0); }
+  function agregarFilaProformaVacia() { agregarFilaProforma('', '', '', '', 0, 'otros'); }
 
   var UNIDADES_OPCIONES = [
     { value: 'und', label: 'und', step: '1' }, { value: 'hr', label: 'hr', step: '1' },
@@ -664,10 +667,11 @@
     return html;
   }
 
-  function agregarFilaProforma(nombre, unidad, cantidad, precio, itbms) {
+  function agregarFilaProforma(nombre, unidad, cantidad, precio, itbms, categoria) {
     var tbody = byId('tbodyProformaServicios');
     if (!tbody) return;
     var tr = document.createElement('tr');
+    tr.dataset.categoria = categoria || 'otros';
     var stepInicial = '0.01';
     for (var u = 0; u < UNIDADES_OPCIONES.length; u++) { if (UNIDADES_OPCIONES[u].value === unidad) { stepInicial = UNIDADES_OPCIONES[u].step; break; } }
     var html = '';
