@@ -1,10 +1,10 @@
 /* ============================================================
-   GN Studio OS — Time Tracking Module
-   Autor: GN Studio | Integra con proyectos.js y storage.js
+   GN Studio OS — Time Tracking Module v1.0
+   Gerald Flores | GN Studio
    ============================================================ */
 
-// ---------- Estado global del timer ----------
-let gnTimer = {
+// Estado global del timer
+var gnTimer = {
   activo: false,
   tareaId: null,
   proyectoId: null,
@@ -13,52 +13,51 @@ let gnTimer = {
   segundosAcumulados: 0
 };
 
-// ---------- Utilidades de tiempo ----------
+// ---------- Utilidades ----------
 function ttFormatoHMS(segundos) {
-  const h = Math.floor(segundos / 3600);
-  const m = Math.floor((segundos % 3600) / 60);
-  const s = segundos % 60;
-  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-}
-
-function ttSegundosDesde(isoString) {
-  return Math.floor((Date.now() - new Date(isoString).getTime()) / 1000);
+  segundos = Math.max(0, Math.floor(segundos));
+  var h = Math.floor(segundos / 3600);
+  var m = Math.floor((segundos % 3600) / 60);
+  var s = segundos % 60;
+  return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
 }
 
 function ttHorasDecimal(segundos) {
   return parseFloat((segundos / 3600).toFixed(2));
 }
 
-// ---------- Persistencia (localStorage) ----------
+// ---------- Persistencia localStorage ----------
 function ttGetSesiones(proyectoId) {
-  const raw = localStorage.getItem(`gn_tt_sesiones_${proyectoId}`);
-  return raw ? JSON.parse(raw) : [];
+  try {
+    var raw = localStorage.getItem('gn_tt_sesiones_' + proyectoId);
+    return raw ? JSON.parse(raw) : [];
+  } catch(e) { return []; }
 }
 
 function ttSaveSesiones(proyectoId, sesiones) {
-  localStorage.setItem(`gn_tt_sesiones_${proyectoId}`, JSON.stringify(sesiones));
+  localStorage.setItem('gn_tt_sesiones_' + proyectoId, JSON.stringify(sesiones));
 }
 
 function ttGetTareaHoras(proyectoId, tareaId) {
-  const sesiones = ttGetSesiones(proyectoId);
-  return sesiones.filter(s => s.tareaId === tareaId).reduce((acc, s) => acc + s.segundos, 0);
+  return ttGetSesiones(proyectoId)
+    .filter(function(s){ return s.tareaId === tareaId; })
+    .reduce(function(acc, s){ return acc + s.segundos; }, 0);
 }
 
 function ttGetProyectoTotalSeg(proyectoId) {
-  return ttGetSesiones(proyectoId).reduce((acc, s) => acc + s.segundos, 0);
+  return ttGetSesiones(proyectoId).reduce(function(acc, s){ return acc + s.segundos; }, 0);
 }
 
 // ---------- Control del Timer ----------
 function ttIniciar(tareaId, proyectoId, btnEl) {
-  if (gnTimer.activo) {
-    // Si hay un timer activo en otra tarea, detenerlo primero
-    if (gnTimer.tareaId !== tareaId) {
-      ttDetener(gnTimer.tareaId, gnTimer.proyectoId, false);
-    } else {
-      // Pausar el mismo timer
-      ttPausar();
-      return;
-    }
+  // Si hay timer activo en otra tarea, pausar primero
+  if (gnTimer.activo && gnTimer.tareaId !== tareaId) {
+    ttPausar();
+  }
+  // Si el mismo timer está activo, pausar
+  if (gnTimer.activo && gnTimer.tareaId === tareaId) {
+    ttPausar();
+    return;
   }
 
   gnTimer.activo = true;
@@ -67,8 +66,8 @@ function ttIniciar(tareaId, proyectoId, btnEl) {
   gnTimer.inicio = new Date().toISOString();
   gnTimer.segundosAcumulados = 0;
 
-  // Actualizar botón activo
-  document.querySelectorAll('.tt-btn-iniciar').forEach(b => {
+  // Resetear todos los botones
+  document.querySelectorAll('.tt-btn-iniciar').forEach(function(b){
     b.classList.remove('tt-running');
     b.innerHTML = '<i class="ph ph-play"></i>';
     b.title = 'Iniciar timer';
@@ -79,15 +78,15 @@ function ttIniciar(tareaId, proyectoId, btnEl) {
     btnEl.title = 'Pausar timer';
   }
 
-  // Iniciar intervalo
-  gnTimer.intervalo = setInterval(() => {
+  gnTimer.intervalo = setInterval(function(){
     gnTimer.segundosAcumulados++;
     ttActualizarDisplayTarea(tareaId);
     ttActualizarBarraGlobal();
   }, 1000);
 
   ttActualizarBarraGlobal();
-  gnMostrarToast('Timer iniciado', 'success');
+  if (typeof gnMostrarToast === 'function') gnMostrarToast('Timer iniciado', 'success');
+  else if (typeof window.showToast === 'function') window.showToast({ type:'success', title:'Timer iniciado', message:'Registrando tiempo para la tarea.' });
 }
 
 function ttPausar() {
@@ -95,9 +94,8 @@ function ttPausar() {
   clearInterval(gnTimer.intervalo);
   gnTimer.activo = false;
 
-  // Guardar sesión parcial
   if (gnTimer.segundosAcumulados > 5) {
-    const sesiones = ttGetSesiones(gnTimer.proyectoId);
+    var sesiones = ttGetSesiones(gnTimer.proyectoId);
     sesiones.push({
       id: 'ses_' + Date.now(),
       tareaId: gnTimer.tareaId,
@@ -109,85 +107,96 @@ function ttPausar() {
     ttSaveSesiones(gnTimer.proyectoId, sesiones);
   }
 
-  document.querySelectorAll('.tt-btn-iniciar').forEach(b => {
+  var tid = gnTimer.tareaId;
+  document.querySelectorAll('.tt-btn-iniciar').forEach(function(b){
     b.classList.remove('tt-running');
     b.innerHTML = '<i class="ph ph-play"></i>';
     b.title = 'Iniciar timer';
   });
 
   ttActualizarBarraGlobal();
-  ttActualizarDisplayTarea(gnTimer.tareaId);
-  gnMostrarToast('Timer pausado', 'info');
+  ttActualizarDisplayTarea(tid);
+  ttActualizarKPIsProyecto(gnTimer.proyectoId);
+  if (typeof gnMostrarToast === 'function') gnMostrarToast('Timer pausado', 'info');
+  else if (typeof window.showToast === 'function') window.showToast({ type:'info', title:'Timer pausado' });
 }
 
-function ttDetener(tareaId, proyectoId, mostrarToast = true) {
-  if (gnTimer.activo && gnTimer.tareaId === tareaId) {
-    clearInterval(gnTimer.intervalo);
-    gnTimer.activo = false;
+function ttDetener(tareaId, proyectoId, mostrarToast) {
+  if (mostrarToast === undefined) mostrarToast = true;
+  if (!gnTimer.activo || gnTimer.tareaId !== tareaId) return;
 
-    if (gnTimer.segundosAcumulados > 5) {
-      const sesiones = ttGetSesiones(proyectoId);
-      sesiones.push({
-        id: 'ses_' + Date.now(),
-        tareaId: tareaId,
-        inicio: gnTimer.inicio,
-        fin: new Date().toISOString(),
-        segundos: gnTimer.segundosAcumulados,
-        descripcion: ''
-      });
-      ttSaveSesiones(proyectoId, sesiones);
-    }
+  clearInterval(gnTimer.intervalo);
+  gnTimer.activo = false;
 
-    gnTimer = { activo: false, tareaId: null, proyectoId: null, inicio: null, intervalo: null, segundosAcumulados: 0 };
-
-    document.querySelectorAll('.tt-btn-iniciar').forEach(b => {
-      b.classList.remove('tt-running');
-      b.innerHTML = '<i class="ph ph-play"></i>';
-      b.title = 'Iniciar timer';
+  if (gnTimer.segundosAcumulados > 5) {
+    var sesiones = ttGetSesiones(proyectoId);
+    sesiones.push({
+      id: 'ses_' + Date.now(),
+      tareaId: tareaId,
+      inicio: gnTimer.inicio,
+      fin: new Date().toISOString(),
+      segundos: gnTimer.segundosAcumulados,
+      descripcion: ''
     });
-
-    ttActualizarBarraGlobal();
-    ttActualizarDisplayTarea(tareaId);
-    if (mostrarToast) gnMostrarToast('Sesión guardada', 'success');
+    ttSaveSesiones(proyectoId, sesiones);
   }
 
+  gnTimer = { activo: false, tareaId: null, proyectoId: null, inicio: null, intervalo: null, segundosAcumulados: 0 };
+
+  document.querySelectorAll('.tt-btn-iniciar').forEach(function(b){
+    b.classList.remove('tt-running');
+    b.innerHTML = '<i class="ph ph-play"></i>';
+    b.title = 'Iniciar timer';
+  });
+
+  ttActualizarBarraGlobal();
+  ttActualizarDisplayTarea(tareaId);
+  ttActualizarKPIsProyecto(proyectoId);
   ttRenderSesiones(proyectoId, tareaId);
+
+  if (mostrarToast) {
+    if (typeof gnMostrarToast === 'function') gnMostrarToast('Sesión guardada', 'success');
+    else if (typeof window.showToast === 'function') window.showToast({ type:'success', title:'Sesión guardada' });
+  }
 }
 
-// ---------- Registrar tiempo manual ----------
+// ---------- Tiempo Manual ----------
 function ttRegistrarManual(tareaId, proyectoId) {
-  const modal = document.getElementById('tt-modal-manual');
-  if (modal) {
-    modal.dataset.tareaId = tareaId;
-    modal.dataset.proyectoId = proyectoId;
-    modal.style.display = 'flex';
-    document.getElementById('tt-manual-horas').value = '';
-    document.getElementById('tt-manual-min').value = '';
-    document.getElementById('tt-manual-desc').value = '';
-    const fechaEl = document.getElementById('tt-manual-fecha');
-    if (fechaEl) fechaEl.value = new Date().toISOString().split('T')[0];
-  }
+  var modal = document.getElementById('tt-modal-manual');
+  if (!modal) return;
+  modal.dataset.tareaId = tareaId;
+  modal.dataset.proyectoId = proyectoId;
+  modal.style.display = 'flex';
+  var fechaEl = document.getElementById('tt-manual-fecha');
+  if (fechaEl) fechaEl.value = new Date().toISOString().split('T')[0];
+  var hEl = document.getElementById('tt-manual-horas');
+  var mEl = document.getElementById('tt-manual-min');
+  var dEl = document.getElementById('tt-manual-desc');
+  if (hEl) hEl.value = '';
+  if (mEl) mEl.value = '';
+  if (dEl) dEl.value = '';
 }
 
 function ttGuardarManual() {
-  const modal = document.getElementById('tt-modal-manual');
-  const tareaId = modal.dataset.tareaId;
-  const proyectoId = modal.dataset.proyectoId;
-  const horas = parseInt(document.getElementById('tt-manual-horas').value) || 0;
-  const mins = parseInt(document.getElementById('tt-manual-min').value) || 0;
-  const desc = document.getElementById('tt-manual-desc').value.trim();
-  const fecha = document.getElementById('tt-manual-fecha').value || new Date().toISOString().split('T')[0];
+  var modal = document.getElementById('tt-modal-manual');
+  if (!modal) return;
+  var tareaId = modal.dataset.tareaId;
+  var proyectoId = modal.dataset.proyectoId;
+  var horas = parseInt(document.getElementById('tt-manual-horas').value) || 0;
+  var mins = parseInt(document.getElementById('tt-manual-min').value) || 0;
+  var desc = document.getElementById('tt-manual-desc').value.trim();
+  var fecha = document.getElementById('tt-manual-fecha').value || new Date().toISOString().split('T')[0];
 
-  const segundos = (horas * 3600) + (mins * 60);
+  var segundos = (horas * 3600) + (mins * 60);
   if (segundos < 60) {
-    gnMostrarToast('Ingresa al menos 1 minuto', 'error');
+    if (typeof gnMostrarToast === 'function') gnMostrarToast('Ingresa al menos 1 minuto', 'error');
     return;
   }
 
-  const inicio = new Date(fecha + 'T09:00:00').toISOString();
-  const fin = new Date(new Date(inicio).getTime() + segundos * 1000).toISOString();
+  var inicio = new Date(fecha + 'T09:00:00').toISOString();
+  var fin = new Date(new Date(inicio).getTime() + segundos * 1000).toISOString();
 
-  const sesiones = ttGetSesiones(proyectoId);
+  var sesiones = ttGetSesiones(proyectoId);
   sesiones.push({
     id: 'ses_' + Date.now(),
     tareaId: tareaId,
@@ -202,209 +211,169 @@ function ttGuardarManual() {
   ttActualizarDisplayTarea(tareaId);
   ttRenderSesiones(proyectoId, tareaId);
   ttActualizarKPIsProyecto(proyectoId);
-  gnMostrarToast('Tiempo registrado manualmente', 'success');
+  if (typeof gnMostrarToast === 'function') gnMostrarToast('Tiempo registrado manualmente', 'success');
+  else if (typeof window.showToast === 'function') window.showToast({ type:'success', title:'Tiempo registrado' });
 }
 
 function ttCerrarModalManual() {
-  const modal = document.getElementById('tt-modal-manual');
+  var modal = document.getElementById('tt-modal-manual');
   if (modal) modal.style.display = 'none';
 }
 
 // ---------- Eliminar sesión ----------
 function ttEliminarSesion(proyectoId, sesionId, tareaId) {
   if (!confirm('¿Eliminar esta sesión de tiempo?')) return;
-  let sesiones = ttGetSesiones(proyectoId);
-  sesiones = sesiones.filter(s => s.id !== sesionId);
+  var sesiones = ttGetSesiones(proyectoId).filter(function(s){ return s.id !== sesionId; });
   ttSaveSesiones(proyectoId, sesiones);
   ttActualizarDisplayTarea(tareaId);
   ttRenderSesiones(proyectoId, tareaId);
   ttActualizarKPIsProyecto(proyectoId);
-  gnMostrarToast('Sesión eliminada', 'info');
+  if (typeof gnMostrarToast === 'function') gnMostrarToast('Sesión eliminada', 'info');
 }
 
-// ---------- UI: actualizar display de tiempo en tarjeta de tarea ----------
+// ---------- UI: display en tarjeta ----------
 function ttActualizarDisplayTarea(tareaId) {
-  const el = document.querySelector(`.tt-display[data-tarea-id="${tareaId}"]`);
+  var el = document.querySelector('.tt-display[data-tarea-id="' + tareaId + '"]');
   if (!el) return;
-  const proyectoId = el.dataset.proyectoId;
-  let total = ttGetTareaHoras(proyectoId, tareaId);
+  var proyectoId = el.dataset.proyectoId;
+  var total = ttGetTareaHoras(proyectoId, tareaId);
   if (gnTimer.activo && gnTimer.tareaId === tareaId) total += gnTimer.segundosAcumulados;
   el.textContent = ttFormatoHMS(total);
 
-  // Barra de progreso vs estimado
-  const barEl = document.querySelector(`.tt-progress-bar[data-tarea-id="${tareaId}"]`);
-  const estimadoEl = document.querySelector(`.tt-estimado[data-tarea-id="${tareaId}"]`);
-  if (barEl && estimadoEl) {
-    const estimadoSeg = parseInt(estimadoEl.dataset.estimado || 0) * 3600;
+  var barEl = document.querySelector('.tt-progress-bar[data-tarea-id="' + tareaId + '"]');
+  var estEl = document.querySelector('.tt-estimado[data-tarea-id="' + tareaId + '"]');
+  if (barEl && estEl) {
+    var estimadoSeg = parseFloat(estEl.dataset.estimado || 0) * 3600;
     if (estimadoSeg > 0) {
-      const pct = Math.min(100, Math.round((total / estimadoSeg) * 100));
+      var pct = Math.min(100, Math.round((total / estimadoSeg) * 100));
       barEl.style.width = pct + '%';
       barEl.style.background = pct >= 100 ? '#F87171' : pct >= 80 ? '#C5A253' : '#2D8B5E';
     }
   }
 }
 
-// ---------- UI: barra flotante global ----------
+// ---------- UI: barra flotante ----------
 function ttActualizarBarraGlobal() {
-  let barra = document.getElementById('tt-barra-global');
+  var barra = document.getElementById('tt-barra-global');
   if (!barra) return;
-  if (!gnTimer.activo) {
-    barra.style.display = 'none';
-    return;
-  }
+  if (!gnTimer.activo) { barra.style.display = 'none'; return; }
   barra.style.display = 'flex';
-  const total = ttGetTareaHoras(gnTimer.proyectoId, gnTimer.tareaId) + gnTimer.segundosAcumulados;
-  barra.querySelector('#tt-global-tiempo').textContent = ttFormatoHMS(total);
-  const nombreEl = document.querySelector(`.tt-tarea-nombre[data-tarea-id="${gnTimer.tareaId}"]`);
-  barra.querySelector('#tt-global-nombre').textContent = nombreEl ? nombreEl.textContent : 'Tarea activa';
+  var total = ttGetTareaHoras(gnTimer.proyectoId, gnTimer.tareaId) + gnTimer.segundosAcumulados;
+  var tiempoEl = document.getElementById('tt-global-tiempo');
+  if (tiempoEl) tiempoEl.textContent = ttFormatoHMS(total);
+  var nombreEl = document.querySelector('.tt-tarea-nombre[data-tarea-id="' + gnTimer.tareaId + '"]');
+  var globalNombre = document.getElementById('tt-global-nombre');
+  if (globalNombre) globalNombre.textContent = nombreEl ? nombreEl.textContent : 'Tarea activa';
 }
 
-// ---------- Render panel de sesiones de una tarea ----------
+// ---------- Render sesiones de tarea ----------
 function ttRenderSesiones(proyectoId, tareaId) {
-  const contenedor = document.getElementById(`tt-sesiones-${tareaId}`);
+  var contenedor = document.getElementById('tt-sesiones-' + tareaId);
   if (!contenedor) return;
-  const sesiones = ttGetSesiones(proyectoId).filter(s => s.tareaId === tareaId);
-  if (sesiones.length === 0) {
+  var sesiones = ttGetSesiones(proyectoId).filter(function(s){ return s.tareaId === tareaId; });
+  if (!sesiones.length) {
     contenedor.innerHTML = '<p class="tt-empty">Sin sesiones registradas aún.</p>';
     return;
   }
-  contenedor.innerHTML = sesiones.map(s => {
-    const fechaStr = new Date(s.inicio).toLocaleDateString('es-PA', { day:'2-digit', month:'short', year:'numeric' });
-    return `
-      <div class="tt-sesion-item">
-        <span class="tt-sesion-fecha">${fechaStr}</span>
-        <span class="tt-sesion-dur">${ttFormatoHMS(s.segundos)}</span>
-        <span class="tt-sesion-desc">${s.descripcion || (s.manual ? 'Manual' : 'Automático')}</span>
-        <button class="tt-sesion-del" onclick="ttEliminarSesion('${proyectoId}','${s.id}','${tareaId}')" title="Eliminar"><i class="ph ph-trash"></i></button>
-      </div>`;
-  }).join('');
+  var html = '';
+  sesiones.forEach(function(s){
+    var fechaStr = new Date(s.inicio).toLocaleDateString('es-PA', { day:'2-digit', month:'short', year:'numeric' });
+    html += '<div class="tt-sesion-item">';
+    html += '<span class="tt-sesion-fecha">' + fechaStr + '</span>';
+    html += '<span class="tt-sesion-dur">' + ttFormatoHMS(s.segundos) + '</span>';
+    html += '<span class="tt-sesion-desc">' + (s.descripcion || (s.manual ? 'Manual' : 'Automático')) + '</span>';
+    html += '<button class="tt-sesion-del" onclick="ttEliminarSesion(&#39;' + proyectoId + '&#39;,&#39;' + s.id + '&#39;,&#39;' + tareaId + '&#39;)" title="Eliminar"><i class="ph ph-trash"></i></button>';
+    html += '</div>';
+  });
+  contenedor.innerHTML = html;
 }
 
-// ---------- KPIs del proyecto (panel superior del tab Tareas) ----------
+// ---------- KPIs del proyecto ----------
 function ttActualizarKPIsProyecto(proyectoId) {
-  const kpiEl = document.getElementById('tt-kpi-total');
-  const kpiHrsEl = document.getElementById('tt-kpi-horas');
-  const kpiValorEl = document.getElementById('tt-kpi-valor');
+  var kpiEl = document.getElementById('tt-kpi-total');
+  var kpiHrsEl = document.getElementById('tt-kpi-horas');
+  var kpiValorEl = document.getElementById('tt-kpi-valor');
   if (!kpiEl) return;
-
-  const totalSeg = ttGetProyectoTotalSeg(proyectoId);
+  var totalSeg = ttGetProyectoTotalSeg(proyectoId);
   kpiEl.textContent = ttFormatoHMS(totalSeg);
   if (kpiHrsEl) kpiHrsEl.textContent = ttHorasDecimal(totalSeg) + ' hrs';
-
-  // Calcular valor por hora basado en presupuesto del proyecto
-  const presupEl = document.getElementById('resumen-kpi-presupuesto');
-  if (kpiValorEl && presupEl) {
-    const presup = parseFloat(presupEl.textContent.replace(/[^0-9.]/g, '')) || 0;
-    const horas = ttHorasDecimal(totalSeg);
-    const valorHora = horas > 0 ? (presup / horas).toFixed(2) : '—';
-    kpiValorEl.textContent = horas > 0 ? `USD ${valorHora}/hr` : '—';
+  if (kpiValorEl) {
+    var presupEl = document.getElementById('resumen-kpi-presupuesto');
+    var presup = presupEl ? parseFloat(presupEl.textContent.replace(/[^0-9.]/g,'')) || 0 : 0;
+    var horas = ttHorasDecimal(totalSeg);
+    kpiValorEl.textContent = horas > 0 ? 'USD ' + (presup / horas).toFixed(2) + '/hr' : '—';
   }
 }
 
-// ---------- Render completo del panel de Time Tracking ----------
-function ttRenderPanelEnTareas(proyectoId, tareas) {
-  // Este panel se inserta dentro del tab Tareas del proyecto
-  const contenedor = document.getElementById('tt-panel-proyecto');
+// ---------- Render panel KPIs ----------
+function ttRenderPanelEnTareas(proyectoId) {
+  var contenedor = document.getElementById('tt-panel-proyecto');
   if (!contenedor) return;
-
-  contenedor.innerHTML = `
-    <!-- KPIs de tiempo -->
-    <div class="tt-kpi-row">
-      <div class="tt-kpi-card">
-        <div class="tt-kpi-icon"><i class="ph ph-clock"></i></div>
-        <div>
-          <div class="tt-kpi-value" id="tt-kpi-total">00:00:00</div>
-          <div class="tt-kpi-label">Tiempo Total</div>
-        </div>
-      </div>
-      <div class="tt-kpi-card">
-        <div class="tt-kpi-icon"><i class="ph ph-hourglass"></i></div>
-        <div>
-          <div class="tt-kpi-value" id="tt-kpi-horas">0 hrs</div>
-          <div class="tt-kpi-label">Horas Decimales</div>
-        </div>
-      </div>
-      <div class="tt-kpi-card">
-        <div class="tt-kpi-icon"><i class="ph ph-currency-dollar"></i></div>
-        <div>
-          <div class="tt-kpi-value" id="tt-kpi-valor">—</div>
-          <div class="tt-kpi-label">Valor / Hora (est.)</div>
-        </div>
-      </div>
-    </div>
-  `;
-
+  contenedor.innerHTML =
+    '<div class="tt-kpi-row">' +
+      '<div class="tt-kpi-card"><div class="tt-kpi-icon"><i class="ph ph-clock"></i></div><div><div class="tt-kpi-value" id="tt-kpi-total">00:00:00</div><div class="tt-kpi-label">Tiempo Total</div></div></div>' +
+      '<div class="tt-kpi-card"><div class="tt-kpi-icon"><i class="ph ph-hourglass"></i></div><div><div class="tt-kpi-value" id="tt-kpi-horas">0 hrs</div><div class="tt-kpi-label">Horas Decimales</div></div></div>' +
+      '<div class="tt-kpi-card"><div class="tt-kpi-icon"><i class="ph ph-currency-dollar"></i></div><div><div class="tt-kpi-value" id="tt-kpi-valor">—</div><div class="tt-kpi-label">Valor / Hora (est.)</div></div></div>' +
+    '</div>';
   ttActualizarKPIsProyecto(proyectoId);
 }
 
-// ---------- HTML de controles para inyectar en cada tarjeta de tarea ----------
-function ttControlsHTML(tareaId, proyectoId, estimadoHrs = 0) {
-  const totalSeg = ttGetTareaHoras(proyectoId, tareaId);
-  const isRunning = gnTimer.activo && gnTimer.tareaId === tareaId;
-  return `
-    <div class="tt-controls" data-tarea-id="${tareaId}">
-      <div class="tt-controls-row">
-        <span class="tt-label"><i class="ph ph-clock"></i> Tiempo:</span>
-        <span class="tt-display" data-tarea-id="${tareaId}" data-proyecto-id="${proyectoId}">${ttFormatoHMS(totalSeg + (isRunning ? gnTimer.segundosAcumulados : 0))}</span>
-        <button class="tt-btn-iniciar ${isRunning ? 'tt-running' : ''}" 
-                title="${isRunning ? 'Pausar' : 'Iniciar'} timer"
-                onclick="ttIniciar('${tareaId}','${proyectoId}', this)">
-          <i class="ph ph-${isRunning ? 'pause' : 'play'}"></i>
-        </button>
-        <button class="tt-btn-stop" title="Detener y guardar" onclick="ttDetener('${tareaId}','${proyectoId}')">
-          <i class="ph ph-stop"></i>
-        </button>
-        <button class="tt-btn-manual" title="Registrar tiempo manual" onclick="ttRegistrarManual('${tareaId}','${proyectoId}')">
-          <i class="ph ph-pencil-simple"></i>
-        </button>
-        <button class="tt-btn-log" title="Ver sesiones" onclick="ttToggleSesiones('${tareaId}')">
-          <i class="ph ph-list"></i>
-        </button>
-      </div>
-      ${estimadoHrs > 0 ? `
-      <div class="tt-progress-wrap">
-        <div class="tt-progress-track">
-          <div class="tt-progress-bar" data-tarea-id="${tareaId}" style="width:0%"></div>
-        </div>
-        <span class="tt-estimado" data-tarea-id="${tareaId}" data-estimado="${estimadoHrs}">${estimadoHrs}h est.</span>
-      </div>` : ''}
-      <div class="tt-sesiones-panel" id="tt-sesiones-${tareaId}" style="display:none;"></div>
-    </div>
-  `;
+// ---------- HTML controles de tarea ----------
+function ttControlsHTML(tareaId, proyectoId, estimadoHrs) {
+  estimadoHrs = estimadoHrs || 0;
+  var totalSeg = ttGetTareaHoras(proyectoId, tareaId);
+  var isRunning = gnTimer.activo && gnTimer.tareaId === tareaId;
+  var html = '<div class="tt-controls" data-tarea-id="' + tareaId + '">';
+  html += '<div class="tt-controls-row">';
+  html += '<span class="tt-label"><i class="ph ph-clock"></i> Tiempo:</span>';
+  html += '<span class="tt-display" data-tarea-id="' + tareaId + '" data-proyecto-id="' + proyectoId + '">' + ttFormatoHMS(totalSeg + (isRunning ? gnTimer.segundosAcumulados : 0)) + '</span>';
+  html += '<button class="tt-btn-iniciar' + (isRunning ? ' tt-running' : '') + '" title="' + (isRunning ? 'Pausar' : 'Iniciar') + ' timer" onclick="ttIniciar(&#39;' + tareaId + '&#39;,&#39;' + proyectoId + '&#39;,this)"><i class="ph ph-' + (isRunning ? 'pause' : 'play') + '"></i></button>';
+  html += '<button class="tt-btn-stop" title="Detener y guardar" onclick="ttDetener(&#39;' + tareaId + '&#39;,&#39;' + proyectoId + '&#39;)"><i class="ph ph-stop"></i></button>';
+  html += '<button class="tt-btn-manual" title="Registrar tiempo manual" onclick="ttRegistrarManual(&#39;' + tareaId + '&#39;,&#39;' + proyectoId + '&#39;)"><i class="ph ph-pencil-simple"></i></button>';
+  html += '<button class="tt-btn-log" title="Ver sesiones" onclick="ttToggleSesiones(&#39;' + tareaId + '&#39;)"><i class="ph ph-list"></i></button>';
+  html += '</div>';
+  if (estimadoHrs > 0) {
+    html += '<div class="tt-progress-wrap"><div class="tt-progress-track"><div class="tt-progress-bar" data-tarea-id="' + tareaId + '" style="width:0%"></div></div><span class="tt-estimado" data-tarea-id="' + tareaId + '" data-estimado="' + estimadoHrs + '">' + estimadoHrs + 'h est.</span></div>';
+  }
+  html += '<div class="tt-sesiones-panel" id="tt-sesiones-' + tareaId + '" style="display:none;"></div>';
+  html += '</div>';
+  return html;
 }
 
 function ttToggleSesiones(tareaId) {
-  const panel = document.getElementById(`tt-sesiones-${tareaId}`);
+  var panel = document.getElementById('tt-sesiones-' + tareaId);
   if (!panel) return;
-  const visible = panel.style.display !== 'none';
+  var visible = panel.style.display !== 'none';
   panel.style.display = visible ? 'none' : 'block';
   if (!visible) {
-    const ctrlEl = document.querySelector(`.tt-controls[data-tarea-id="${tareaId}"]`);
-    const proyectoId = ctrlEl ? document.querySelector(`.tt-display[data-tarea-id="${tareaId}"]`).dataset.proyectoId : null;
+    var displayEl = document.querySelector('.tt-display[data-tarea-id="' + tareaId + '"]');
+    var proyectoId = displayEl ? displayEl.dataset.proyectoId : null;
     if (proyectoId) ttRenderSesiones(proyectoId, tareaId);
   }
 }
 
-// ---------- Exportar reporte de tiempo del proyecto ----------
+// ---------- Exportar CSV ----------
 function ttExportarReporte(proyectoId) {
-  const sesiones = ttGetSesiones(proyectoId);
-  if (sesiones.length === 0) {
-    gnMostrarToast('No hay sesiones para exportar', 'error');
+  if (!proyectoId) {
+    if (typeof gnMostrarToast === 'function') gnMostrarToast('Abre un proyecto primero', 'error');
     return;
   }
-
-  let csv = 'Fecha,Tarea ID,Duración (hh:mm:ss),Horas,Descripción,Tipo\n';
-  sesiones.forEach(s => {
-    const fecha = new Date(s.inicio).toLocaleDateString('es-PA');
-    csv += `"${fecha}","${s.tareaId}","${ttFormatoHMS(s.segundos)}","${ttHorasDecimal(s.segundos)}","${s.descripcion || ''}","${s.manual ? 'Manual' : 'Automático'}"\n`;
+  var sesiones = ttGetSesiones(proyectoId);
+  if (!sesiones.length) {
+    if (typeof gnMostrarToast === 'function') gnMostrarToast('No hay sesiones para exportar', 'error');
+    return;
+  }
+  var csv = 'Fecha,Tarea ID,Duracion (hh:mm:ss),Horas,Descripcion,Tipo\n';
+  sesiones.forEach(function(s){
+    var fecha = new Date(s.inicio).toLocaleDateString('es-PA');
+    csv += '"' + fecha + '","' + s.tareaId + '","' + ttFormatoHMS(s.segundos) + '","' + ttHorasDecimal(s.segundos) + '","' + (s.descripcion || '') + '","' + (s.manual ? 'Manual' : 'Automatico') + '"\n';
   });
-
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
   a.href = url;
-  a.download = `reporte-tiempo-${proyectoId}-${new Date().toISOString().split('T')[0]}.csv`;
+  a.download = 'reporte-tiempo-' + proyectoId + '-' + new Date().toISOString().split('T')[0] + '.csv';
   a.click();
   URL.revokeObjectURL(url);
-  gnMostrarToast('Reporte exportado como CSV', 'success');
+  if (typeof gnMostrarToast === 'function') gnMostrarToast('Reporte exportado como CSV', 'success');
 }
