@@ -8,6 +8,7 @@
   <title>GN Studio OS — Gestión Integral</title>
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="css/timetracking.css">
+  <link rel="stylesheet" href="css/calendario.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
@@ -442,6 +443,24 @@
       </div>
 
       <div id="proyectos-lista">
+
+        <!-- ============================================================
+             CALENDARIO DE PROYECTOS
+             ============================================================ -->
+        <div class="cal-wrapper">
+          <div class="cal-toolbar">
+            <h3><i class="ph ph-calendar-dots"></i> Calendario de Proyectos</h3>
+            <div class="cal-nav">
+              <button class="cal-nav-btn" onclick="calMesAnterior()" title="Mes anterior"><i class="ph ph-caret-left"></i></button>
+              <span id="cal-titulo">Cargando...</span>
+              <button class="cal-nav-btn" onclick="calMesSiguiente()" title="Mes siguiente"><i class="ph ph-caret-right"></i></button>
+              <button class="cal-btn-hoy" onclick="calHoy()">Hoy</button>
+            </div>
+          </div>
+          <div id="cal-grid"></div>
+        </div>
+        <!-- FIN CALENDARIO -->
+
         <div class="section">
           <div class="section-header">
             <h2 class="section-title"><i class="ph ph-buildings"></i> Proyectos Activos</h2>
@@ -751,6 +770,7 @@
   <script src="js/timetracking.js"></script>
   <script src="js/finanzas.js"></script>
   <script src="js/charts.js"></script>
+  <script src="js/calendario.js"></script>
   <script src="js/app.js"></script>
 
   <script>
@@ -769,6 +789,23 @@
           ttInjectarEnKanban(proyecto.id);
         };
       }
+
+      // Inicializar calendario cuando se carga la sección de proyectos
+      var _origSwitch = window.switchSection;
+      if (typeof _origSwitch === 'function') {
+        window.switchSection = function(seccion) {
+          _origSwitch(seccion);
+          if (seccion === 'proyectos' && typeof window.initCalendario === 'function') {
+            window.initCalendario();
+          }
+        };
+      }
+      // También inicializar si ya está en proyectos al cargar
+      setTimeout(function() {
+        if (typeof window.initCalendario === 'function') {
+          window.initCalendario();
+        }
+      }, 800);
     });
 
     function ttInjectarEnKanban(proyectoId) {
