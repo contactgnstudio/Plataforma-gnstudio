@@ -14,6 +14,46 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
 <base target="_blank">
+<style>
+  /* ── LOGO IMAGEN ── */
+  .logo-img-wrap {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, #123524 0%, #C5A253 100%);
+    box-shadow: 0 4px 16px rgba(18,53,36,0.30);
+  }
+  .logo-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+  /* fallback: mostrar cuadrado GN si imagen falla */
+  .logo-img-wrap img.logo-fallback-visible {
+    display: none;
+  }
+  .logo-img-wrap .logo-fallback {
+    display: none;
+    gap: 1px;
+    align-items: center;
+    justify-content: center;
+  }
+  .logo-img-wrap .logo-fallback.visible {
+    display: flex;
+  }
+  @media (max-width: 480px) {
+    .logo-img-wrap {
+      width: 34px;
+      height: 34px;
+    }
+  }
+</style>
 </head>
 <body>
 
@@ -88,9 +128,17 @@
        ============================================================ -->
   <nav class="top-navbar">
     <div class="nav-brand">
-      <div class="logo-box">
-        <span class="logo-g">G</span>
-        <span class="logo-n">N</span>
+      <!-- LOGO: sube tu imagen a assets/logo.png (o .svg / .webp) -->
+      <div class="logo-img-wrap" id="logo-wrap">
+        <img
+          src="assets/logo.png"
+          alt="GN Studio Logo"
+          id="gn-logo-img"
+          onerror="this.style.display='none';document.getElementById('logo-fallback').classList.add('visible');"
+        >
+        <span class="logo-fallback" id="logo-fallback">
+          <span class="logo-g">G</span><span class="logo-n">N</span>
+        </span>
       </div>
       <div class="logo-text">
         <span class="logo-brand">GN Studio</span>
