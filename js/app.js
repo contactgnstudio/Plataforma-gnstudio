@@ -628,13 +628,13 @@
   // ============================================================
   async function inicializarFinanzas() {
     if (typeof window.actualizarSelectProyectosFinanzas === 'function') {
-      window.actualizarSelectProyectosFinanzas();
+      await window.actualizarSelectProyectosFinanzas();
     }
     if (typeof window.generarEstadoCuenta === 'function') {
-      window.generarEstadoCuenta();
+      await window.generarEstadoCuenta();
     }
     if (typeof window.renderITBMS === 'function') {
-      window.renderITBMS();
+      await window.renderITBMS();
     }
     if (typeof window.inicializarFormularioGastoFinanzas === 'function') {
       window.inicializarFormularioGastoFinanzas();
