@@ -1,0 +1,255 @@
+/* ================================================
+   calendario.css — GN Studio OS
+   Estilos del módulo de Calendario de Proyectos
+   ================================================ */
+
+/* Contenedor principal */
+.cal-wrapper {
+  background: var(--gn-card, rgba(18,53,36,0.12));
+  border: 1px solid var(--gn-border, rgba(255,255,255,0.07));
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+/* Toolbar */
+.cal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cal-toolbar h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--gn-text, #e2e8f0);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.cal-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cal-nav-btn {
+  background: rgba(197,162,83,0.1);
+  border: 1px solid rgba(197,162,83,0.25);
+  color: #C5A253;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  transition: background 0.18s;
+}
+.cal-nav-btn:hover {
+  background: rgba(197,162,83,0.22);
+}
+
+#cal-titulo {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gn-text, #e2e8f0);
+  min-width: 140px;
+  text-align: center;
+}
+
+.cal-btn-hoy {
+  background: rgba(45,139,94,0.15);
+  border: 1px solid rgba(45,139,94,0.3);
+  color: #2D8B5E;
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+.cal-btn-hoy:hover {
+  background: rgba(45,139,94,0.28);
+}
+
+/* Grid del calendario */
+#cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+/* Cabeceras de días */
+.cal-header-day {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gn-text-muted, #94a3b8);
+  padding: 6px 2px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Celdas */
+.cal-cell {
+  min-height: 60px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 8px;
+  padding: 6px 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  position: relative;
+  transition: background 0.15s;
+}
+
+.cal-cell:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+.cal-cell-empty {
+  background: transparent;
+  border-color: transparent;
+}
+
+/* Día de hoy */
+.cal-hoy {
+  border-color: rgba(197,162,83,0.45) !important;
+  background: rgba(197,162,83,0.07) !important;
+}
+.cal-hoy .cal-dia-num {
+  color: #C5A253 !important;
+  font-weight: 700;
+}
+
+/* Número del día */
+.cal-dia-num {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gn-text-muted, #94a3b8);
+  line-height: 1;
+}
+
+/* Badge de conteo */
+.cal-badge {
+  background: #C5A253;
+  color: #0A0F0C;
+  border: none;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s, background 0.15s;
+  align-self: center;
+  margin: auto;
+}
+.cal-badge:hover {
+  background: #d4b06a;
+  transform: scale(1.15);
+}
+
+/* ──────────────────────────────────────────────
+   Popover
+────────────────────────────────────────────── */
+.cal-popover {
+  background: #141a18;
+  border: 1px solid rgba(197,162,83,0.3);
+  border-radius: 12px;
+  min-width: 240px;
+  max-width: 300px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.55);
+  z-index: 9999;
+  animation: calFadeIn 0.15s ease;
+  overflow: hidden;
+}
+
+@keyframes calFadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.cal-pop-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  font-size: 13px;
+  color: var(--gn-text, #e2e8f0);
+}
+
+.cal-pop-close {
+  background: none;
+  border: none;
+  color: var(--gn-text-muted, #94a3b8);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px;
+  line-height: 1;
+}
+.cal-pop-close:hover { color: #e2e8f0; }
+
+.cal-pop-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px 0;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.cal-pop-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: background 0.14s;
+  font-size: 13px;
+}
+.cal-pop-item:hover {
+  background: rgba(197,162,83,0.1);
+}
+
+.cal-pop-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cal-pop-nombre {
+  flex: 1;
+  color: var(--gn-text, #e2e8f0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cal-pop-tipo {
+  font-size: 10px;
+  color: var(--gn-text-muted, #94a3b8);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .cal-cell { min-height: 44px; }
+  .cal-dia-num { font-size: 10px; }
+  .cal-badge { width: 18px; height: 18px; font-size: 10px; }
+  #cal-titulo { min-width: 110px; font-size: 13px; }
+}
