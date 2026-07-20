@@ -37,13 +37,14 @@ function finStorageKey(name, fallback) {
   return fallback;
 }
 
-function finGetData(name, fallback) {
+async function finGetData(name, fallback) {
   if (typeof getData !== 'function') return [];
-  return finSafeArray(getData(finStorageKey(name, fallback)));
+  var rows = await getData(finStorageKey(name, fallback));
+  return finSafeArray(rows);
 }
 
-function finGetProjectsMap() {
-  var proyectos = finGetData('PROYECTOS', 'proyectos');
+async function finGetProjectsMap() {
+  var proyectos = await finGetData('PROYECTOS', 'proyectos');
   var map = {};
 
   for (var i = 0; i < proyectos.length; i++) {
@@ -65,9 +66,9 @@ function finProjectLabel(proyectoId, proyectosMap) {
 // Selects de proyecto en Finanzas
 // ============================================================
 
-function actualizarSelectProyectosFinanzas() {
-  var proyectos = finGetData('PROYECTOS', 'proyectos');
-  var proyectosMap = finGetProjectsMap();
+async function actualizarSelectProyectosFinanzas() {
+  var proyectos = await finGetData('PROYECTOS', 'proyectos');
+  var proyectosMap = await finGetProjectsMap();
 
   var selects = [
     finEl('ec-proyecto'),
@@ -141,7 +142,7 @@ async function finRefreshAfterChange() {
 
   // Refresca Estado de Cuenta
   if (typeof window.generarEstadoCuenta === 'function') {
-    window.generarEstadoCuenta();
+    await window.generarEstadoCuenta();
   }
 
   // Refresca detalle del proyecto actual (si existe)
@@ -150,22 +151,22 @@ async function finRefreshAfterChange() {
   }
 
   // Refresca ITBMS
-  renderITBMS();
+  await renderITBMS();
 }
 
 // ============================================================
 // ESTADO DE CUENTA
 // ============================================================
 
-function generarEstadoCuenta() {
+async function generarEstadoCuenta() {
   var desde = finEl('ec-desde') ? finEl('ec-desde').value : '';
   var hasta = finEl('ec-hasta') ? finEl('ec-hasta').value : '';
   var tipo = finEl('ec-tipo') ? finEl('ec-tipo').value : 'todos';
   var proyectoId = finEl('ec-proyecto') ? finEl('ec-proyecto').value : '';
 
-  var gastos = finGetData('GASTOS', 'gastos');
-  var pagos = finGetData('PAGOS', 'pagos');
-  var proyectosMap = finGetProjectsMap();
+  var gastos = await finGetData('GASTOS', 'gastos');
+  var pagos = await finGetData('PAGOS', 'pagos');
+  var proyectosMap = await finGetProjectsMap();
 
   if (desde) {
     gastos = gastos.filter(function(g) { return String(g.fecha || '') >= desde; });
@@ -280,18 +281,21 @@ function generarEstadoCuenta() {
 // ITBMS
 // ============================================================
 
-function calcularITBMSPeriodo() {
+async function calcularITBMSPeriodo() {
   var periodo = finEl('itbms-periodo') ? finEl('itbms-periodo').value : '';
   if (!periodo) {
     var hoy = new Date();
     periodo = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0');
   }
 
-  var pagos = finGetData('PAGOS', 'pagos').filter(function(p) {
+  var pagosRaw = await finGetData('PAGOS', 'pagos');
+  var gastosRaw = await finGetData('GASTOS', 'gastos');
+
+  var pagos = pagosRaw.filter(function(p) {
     return String(p.fecha || '').indexOf(periodo) === 0;
   });
 
-  var gastos = finGetData('GASTOS', 'gastos').filter(function(g) {
+  var gastos = gastosRaw.filter(function(g) {
     return String(g.fecha || '').indexOf(periodo) === 0;
   });
 
@@ -320,8 +324,8 @@ function calcularITBMSPeriodo() {
   };
 }
 
-function renderITBMS() {
-  var data = calcularITBMSPeriodo();
+async function renderITBMS() {
+  var data = await calcularITBMSPeriodo();
 
   finSetText(['itbms-ventas-gravadas'], finMoney(data.ventasGravadas));
   finSetText(['itbms-debito'], finMoney(data.debitoFiscal));
@@ -336,8 +340,8 @@ function renderITBMS() {
   return data;
 }
 
-function generarDeclaracionITBMS() {
-  return renderITBMS();
+async function generarDeclaracionITBMS() {
+  return await renderITBMS();
 }
 
 // ============================================================
