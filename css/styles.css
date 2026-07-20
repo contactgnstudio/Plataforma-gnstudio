@@ -509,6 +509,16 @@ body {
   max-height: 300px !important;
 }
 
+.proyecto-chart-wrap {
+  position: relative;
+  height: 280px;
+  width: 100%;
+}
+
+.proyecto-chart-wrap canvas {
+  max-height: 280px !important;
+}
+
 /* ── FORMS ── */
 .form-section {
   background: var(--gn-card);
