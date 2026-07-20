@@ -25,19 +25,22 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    /* Fondo solo visible como fallback (cuando no carga la imagen) */
     background: linear-gradient(135deg, #123524 0%, #C5A253 100%);
     box-shadow: 0 4px 16px rgba(18,53,36,0.30);
+  }
+  /* Cuando la imagen carga OK, el wrapper queda transparente */
+  .logo-img-wrap.logo-loaded {
+    background: transparent;
+    box-shadow: none;
   }
   .logo-img-wrap img {
     width: 100%;
     height: 100%;
-    object-fit: contain;
+    object-fit: cover;
     display: block;
   }
   /* fallback: mostrar cuadrado GN si imagen falla */
-  .logo-img-wrap img.logo-fallback-visible {
-    display: none;
-  }
   .logo-img-wrap .logo-fallback {
     display: none;
     gap: 1px;
@@ -128,12 +131,13 @@
        ============================================================ -->
   <nav class="top-navbar">
     <div class="nav-brand">
-      <!-- LOGO: sube tu imagen a assets/logo.png (o .svg / .webp) -->
+      <!-- LOGO: imagen desde assets/logo.png -->
       <div class="logo-img-wrap" id="logo-wrap">
         <img
           src="assets/logo.png"
           alt="GN Studio Logo"
           id="gn-logo-img"
+          onload="document.getElementById('logo-wrap').classList.add('logo-loaded');"
           onerror="this.style.display='none';document.getElementById('logo-fallback').classList.add('visible');"
         >
         <span class="logo-fallback" id="logo-fallback">
