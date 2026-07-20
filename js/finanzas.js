@@ -140,6 +140,14 @@ async function finRefreshAfterChange() {
     await window.actualizarKPIs();
   }
 
+  // Refresca Actividad Reciente y Alertas del dashboard
+  if (typeof window.renderActividadReciente === 'function') {
+    await window.renderActividadReciente();
+  }
+  if (typeof window.renderAlertas === 'function') {
+    await window.renderAlertas();
+  }
+
   // Refresca Estado de Cuenta
   if (typeof window.generarEstadoCuenta === 'function') {
     await window.generarEstadoCuenta();
