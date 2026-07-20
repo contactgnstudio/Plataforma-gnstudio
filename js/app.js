@@ -845,7 +845,7 @@
     // await safeCallAsync('inicializarCotizaciones'); // Eliminado — cotizaciones integradas en Proyectos
     await safeCallAsync('inicializarProyectos');
     await inicializarFinanzas();
-    safeCall('inicializarCharts');
+    await safeCallAsync('inicializarCharts');
 
     await actualizarKPIs();
     await renderActividadReciente();
