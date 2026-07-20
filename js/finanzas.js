@@ -160,6 +160,11 @@ async function finRefreshAfterChange() {
 
   // Refresca ITBMS
   await renderITBMS();
+
+  // Refresca gráficas del dashboard (Ingresos vs Gastos, Gastos por categoría)
+  if (typeof window.inicializarCharts === 'function') {
+    await window.inicializarCharts();
+  }
 }
 
 // ============================================================
