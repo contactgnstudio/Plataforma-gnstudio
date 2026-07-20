@@ -23,6 +23,7 @@
     GASTOS: 'proyecto_gastos',
     PAGOS: 'proyecto_pagos',
     TAREAS: 'tareas',
+    TIME_ENTRIES: 'time_entries',
     GRUPOS_SERVICIOS: 'gn_grupos_servicios',
     GRUPO_SERVICIO_MAP: 'gn_grupo_servicio_map'
   };
@@ -239,6 +240,7 @@
   window.updateItem = updateItem;
   window.deleteItem = deleteItem;
   window.setData = setData;
+  window.getSessionUserId = getSessionUserId;
   window.obtenerGastosProyecto = obtenerGastosProyecto;
   window.obtenerPagosProyecto = obtenerPagosProyecto;
   window.obtenerCotizacionProyecto = obtenerCotizacionProyecto;
@@ -253,5 +255,5 @@
     obtenerCotizacionProyecto: obtenerCotizacionProyecto, obtenerItemsCotizacion: obtenerItemsCotizacion
   };
 
-  log('info', 'storage.js cargado correctamente (v2.3)');
+  log('info', 'storage.js cargado correctamente (v2.4 — time_entries)');
 })(window);

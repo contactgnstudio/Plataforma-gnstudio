@@ -1,9 +1,14 @@
 /* ============================================================
-   GN Studio OS — Time Tracking Module v1.0
+   GN Studio OS — Time Tracking Module v2.0 (Supabase)
    Gerald Flores | GN Studio
+   ============================================================
+   Arquitectura:
+   - localStorage: caché del timer activo (cronómetro en curso)
+   - Supabase (time_entries): persistencia real de sesiones finalizadas
+   - Fallback: si Supabase falla, guarda en localStorage igual
    ============================================================ */
 
-// Estado global del timer
+// ---------- Estado global del timer ----------
 var gnTimer = {
   activo: false,
   tareaId: null,
@@ -13,6 +18,9 @@ var gnTimer = {
   segundosAcumulados: 0
 };
 
+// ---------- Caché en memoria de sesiones (por proyecto) ----------
+var _ttCache = {}; // { [proyectoId]: sesiones[] }
+
 // ---------- Utilidades ----------
 function ttFormatoHMS(segundos) {
   segundos = Math.max(0, Math.floor(segundos));
@@ -21,44 +29,122 @@ function ttFormatoHMS(segundos) {
   var s = segundos % 60;
   return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
 }
+function ttHorasDecimal(segundos) { return parseFloat((segundos / 3600).toFixed(2)); }
 
-function ttHorasDecimal(segundos) {
-  return parseFloat((segundos / 3600).toFixed(2));
+// ---------- localStorage helpers (caché local + offline fallback) ----------
+function _ttLSKey(proyectoId) { return 'gn_tt_sesiones_' + proyectoId; }
+function _ttLSGet(proyectoId) {
+  try { var r = localStorage.getItem(_ttLSKey(proyectoId)); return r ? JSON.parse(r) : []; }
+  catch(e) { return []; }
+}
+function _ttLSSave(proyectoId, sesiones) {
+  localStorage.setItem(_ttLSKey(proyectoId), JSON.stringify(sesiones));
+}
+function _ttLSAdd(proyectoId, sesion) {
+  var list = _ttLSGet(proyectoId);
+  list.push(sesion);
+  _ttLSSave(proyectoId, list);
+}
+function _ttLSDel(proyectoId, sesionId) {
+  _ttLSSave(proyectoId, _ttLSGet(proyectoId).filter(function(s){ return s.id !== sesionId; }));
 }
 
-// ---------- Persistencia localStorage ----------
-function ttGetSesiones(proyectoId) {
-  try {
-    var raw = localStorage.getItem('gn_tt_sesiones_' + proyectoId);
-    return raw ? JSON.parse(raw) : [];
-  } catch(e) { return []; }
+// ---------- Supabase helpers ----------
+async function _ttSbInsert(sesion) {
+  if (typeof window.addItem !== 'function') return null;
+  var payload = {
+    proyecto_id: sesion.proyectoId,
+    tarea_id:    sesion.tareaId,
+    inicio:      sesion.inicio,
+    fin:         sesion.fin,
+    segundos:    sesion.segundos,
+    descripcion: sesion.descripcion || '',
+    manual:      sesion.manual || false
+  };
+  return await window.addItem('time_entries', payload);
 }
 
-function ttSaveSesiones(proyectoId, sesiones) {
-  localStorage.setItem('gn_tt_sesiones_' + proyectoId, JSON.stringify(sesiones));
+async function _ttSbDelete(sesionId) {
+  if (typeof window.deleteItem !== 'function') return false;
+  return await window.deleteItem('time_entries', sesionId);
 }
 
-function ttGetTareaHoras(proyectoId, tareaId) {
-  return ttGetSesiones(proyectoId)
+async function _ttSbGetPorProyecto(proyectoId) {
+  if (typeof window.getDataFiltered !== 'function') return [];
+  var rows = await window.getDataFiltered('time_entries', { proyecto_id: proyectoId }, { orderBy: 'created_at', ascending: false });
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function _ttSbGetPorTarea(proyectoId, tareaId) {
+  if (typeof window.getDataFiltered !== 'function') return [];
+  // Filtrar por proyecto primero (índice), luego por tarea
+  var rows = await _ttSbGetPorProyecto(proyectoId);
+  return rows.filter(function(r){ return r.tarea_id === tareaId; });
+}
+
+// ---------- Normalizar fila Supabase → sesion local ----------
+function _ttNorm(row) {
+  return {
+    id:          row.id,
+    tareaId:     row.tarea_id,
+    proyectoId:  row.proyecto_id,
+    inicio:      row.inicio,
+    fin:         row.fin,
+    segundos:    row.segundos || 0,
+    descripcion: row.descripcion || '',
+    manual:      row.manual || false,
+    _sb: true  // marcador: viene de Supabase
+  };
+}
+
+// ---------- Obtener sesiones (Supabase + caché) ----------
+async function ttGetSesionesProyecto(proyectoId) {
+  if (_ttCache[proyectoId]) return _ttCache[proyectoId];
+  var rows = await _ttSbGetPorProyecto(proyectoId);
+  if (rows.length) {
+    _ttCache[proyectoId] = rows.map(_ttNorm);
+  } else {
+    // fallback localStorage
+    _ttCache[proyectoId] = _ttLSGet(proyectoId);
+  }
+  return _ttCache[proyectoId];
+}
+
+async function ttGetTareaHoras(proyectoId, tareaId) {
+  var sesiones = await ttGetSesionesProyecto(proyectoId);
+  return sesiones
     .filter(function(s){ return s.tareaId === tareaId; })
     .reduce(function(acc, s){ return acc + s.segundos; }, 0);
 }
 
-function ttGetProyectoTotalSeg(proyectoId) {
-  return ttGetSesiones(proyectoId).reduce(function(acc, s){ return acc + s.segundos; }, 0);
+async function ttGetProyectoTotalSeg(proyectoId) {
+  var sesiones = await ttGetSesionesProyecto(proyectoId);
+  return sesiones.reduce(function(acc, s){ return acc + s.segundos; }, 0);
+}
+
+// ---------- Guardar sesión (Supabase + fallback LS) ----------
+async function ttGuardarSesion(sesion) {
+  // Intentar Supabase
+  var result = await _ttSbInsert(sesion);
+  if (result && result.id) {
+    // Supabase OK: normalizar y agregar a caché
+    var norm = _ttNorm(result);
+    if (!_ttCache[sesion.proyectoId]) _ttCache[sesion.proyectoId] = [];
+    _ttCache[sesion.proyectoId].unshift(norm);
+    return norm;
+  }
+  // Fallback: localStorage
+  var fallback = Object.assign({ id: 'ses_' + Date.now() }, sesion);
+  _ttLSAdd(sesion.proyectoId, fallback);
+  if (!_ttCache[sesion.proyectoId]) _ttCache[sesion.proyectoId] = [];
+  _ttCache[sesion.proyectoId].unshift(fallback);
+  return fallback;
 }
 
 // ---------- Control del Timer ----------
 function ttIniciar(tareaId, proyectoId, btnEl) {
-  // Si hay timer activo en otra tarea, pausar primero
-  if (gnTimer.activo && gnTimer.tareaId !== tareaId) {
-    ttPausar();
-  }
-  // Si el mismo timer está activo, pausar
-  if (gnTimer.activo && gnTimer.tareaId === tareaId) {
-    ttPausar();
-    return;
-  }
+  if (gnTimer.activo && gnTimer.tareaId !== tareaId) { ttPausar(); }
+  if (gnTimer.activo && gnTimer.tareaId === tareaId) { ttPausar(); return; }
 
   gnTimer.activo = true;
   gnTimer.tareaId = tareaId;
@@ -66,7 +152,6 @@ function ttIniciar(tareaId, proyectoId, btnEl) {
   gnTimer.inicio = new Date().toISOString();
   gnTimer.segundosAcumulados = 0;
 
-  // Resetear todos los botones
   document.querySelectorAll('.tt-btn-iniciar').forEach(function(b){
     b.classList.remove('tt-running');
     b.innerHTML = '<i class="ph ph-play"></i>';
@@ -85,8 +170,7 @@ function ttIniciar(tareaId, proyectoId, btnEl) {
   }, 1000);
 
   ttActualizarBarraGlobal();
-  if (typeof gnMostrarToast === 'function') gnMostrarToast('Timer iniciado', 'success');
-  else if (typeof window.showToast === 'function') window.showToast({ type:'success', title:'Timer iniciado', message:'Registrando tiempo para la tarea.' });
+  if (typeof window.showToast === 'function') window.showToast({ type:'success', title:'Timer iniciado', message:'Registrando tiempo para la tarea.' });
 }
 
 function ttPausar() {
@@ -95,69 +179,63 @@ function ttPausar() {
   gnTimer.activo = false;
 
   if (gnTimer.segundosAcumulados > 5) {
-    var sesiones = ttGetSesiones(gnTimer.proyectoId);
-    sesiones.push({
-      id: 'ses_' + Date.now(),
-      tareaId: gnTimer.tareaId,
-      inicio: gnTimer.inicio,
-      fin: new Date().toISOString(),
-      segundos: gnTimer.segundosAcumulados,
-      descripcion: ''
+    var sesion = {
+      tareaId:     gnTimer.tareaId,
+      proyectoId:  gnTimer.proyectoId,
+      inicio:      gnTimer.inicio,
+      fin:         new Date().toISOString(),
+      segundos:    gnTimer.segundosAcumulados,
+      descripcion: '',
+      manual:      false
+    };
+    ttGuardarSesion(sesion).then(function(){
+      ttActualizarDisplayTareaAsync(sesion.tareaId);
+      ttActualizarKPIsProyecto(sesion.proyectoId);
     });
-    ttSaveSesiones(gnTimer.proyectoId, sesiones);
   }
 
   var tid = gnTimer.tareaId;
+  var pid = gnTimer.proyectoId;
   document.querySelectorAll('.tt-btn-iniciar').forEach(function(b){
     b.classList.remove('tt-running');
     b.innerHTML = '<i class="ph ph-play"></i>';
     b.title = 'Iniciar timer';
   });
-
+  gnTimer.segundosAcumulados = 0;
   ttActualizarBarraGlobal();
-  ttActualizarDisplayTarea(tid);
-  ttActualizarKPIsProyecto(gnTimer.proyectoId);
-  if (typeof gnMostrarToast === 'function') gnMostrarToast('Timer pausado', 'info');
-  else if (typeof window.showToast === 'function') window.showToast({ type:'info', title:'Timer pausado' });
+  if (typeof window.showToast === 'function') window.showToast({ type:'info', title:'Timer pausado. Sesión guardada.' });
 }
 
-function ttDetener(tareaId, proyectoId, mostrarToast) {
-  if (mostrarToast === undefined) mostrarToast = true;
+function ttDetener(tareaId, proyectoId) {
   if (!gnTimer.activo || gnTimer.tareaId !== tareaId) return;
-
   clearInterval(gnTimer.intervalo);
   gnTimer.activo = false;
 
   if (gnTimer.segundosAcumulados > 5) {
-    var sesiones = ttGetSesiones(proyectoId);
-    sesiones.push({
-      id: 'ses_' + Date.now(),
-      tareaId: tareaId,
-      inicio: gnTimer.inicio,
-      fin: new Date().toISOString(),
-      segundos: gnTimer.segundosAcumulados,
-      descripcion: ''
+    var sesion = {
+      tareaId:    tareaId,
+      proyectoId: proyectoId,
+      inicio:     gnTimer.inicio,
+      fin:        new Date().toISOString(),
+      segundos:   gnTimer.segundosAcumulados,
+      descripcion: '',
+      manual:     false
+    };
+    ttGuardarSesion(sesion).then(function(){
+      ttActualizarDisplayTareaAsync(tareaId);
+      ttActualizarKPIsProyecto(proyectoId);
+      ttRenderSesionesAsync(proyectoId, tareaId);
     });
-    ttSaveSesiones(proyectoId, sesiones);
   }
 
   gnTimer = { activo: false, tareaId: null, proyectoId: null, inicio: null, intervalo: null, segundosAcumulados: 0 };
-
   document.querySelectorAll('.tt-btn-iniciar').forEach(function(b){
     b.classList.remove('tt-running');
     b.innerHTML = '<i class="ph ph-play"></i>';
     b.title = 'Iniciar timer';
   });
-
   ttActualizarBarraGlobal();
-  ttActualizarDisplayTarea(tareaId);
-  ttActualizarKPIsProyecto(proyectoId);
-  ttRenderSesiones(proyectoId, tareaId);
-
-  if (mostrarToast) {
-    if (typeof gnMostrarToast === 'function') gnMostrarToast('Sesión guardada', 'success');
-    else if (typeof window.showToast === 'function') window.showToast({ type:'success', title:'Sesión guardada' });
-  }
+  if (typeof window.showToast === 'function') window.showToast({ type:'success', title:'Sesión guardada en Supabase' });
 }
 
 // ---------- Tiempo Manual ----------
@@ -169,50 +247,38 @@ function ttRegistrarManual(tareaId, proyectoId) {
   modal.style.display = 'flex';
   var fechaEl = document.getElementById('tt-manual-fecha');
   if (fechaEl) fechaEl.value = new Date().toISOString().split('T')[0];
-  var hEl = document.getElementById('tt-manual-horas');
-  var mEl = document.getElementById('tt-manual-min');
-  var dEl = document.getElementById('tt-manual-desc');
-  if (hEl) hEl.value = '';
-  if (mEl) mEl.value = '';
-  if (dEl) dEl.value = '';
+  ['tt-manual-horas','tt-manual-min','tt-manual-desc'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
 }
 
 function ttGuardarManual() {
   var modal = document.getElementById('tt-modal-manual');
   if (!modal) return;
-  var tareaId = modal.dataset.tareaId;
+  var tareaId    = modal.dataset.tareaId;
   var proyectoId = modal.dataset.proyectoId;
-  var horas = parseInt(document.getElementById('tt-manual-horas').value) || 0;
-  var mins = parseInt(document.getElementById('tt-manual-min').value) || 0;
-  var desc = document.getElementById('tt-manual-desc').value.trim();
-  var fecha = document.getElementById('tt-manual-fecha').value || new Date().toISOString().split('T')[0];
+  var horas  = parseInt(document.getElementById('tt-manual-horas').value) || 0;
+  var mins   = parseInt(document.getElementById('tt-manual-min').value) || 0;
+  var desc   = document.getElementById('tt-manual-desc').value.trim();
+  var fecha  = document.getElementById('tt-manual-fecha').value || new Date().toISOString().split('T')[0];
+  var seg    = (horas * 3600) + (mins * 60);
 
-  var segundos = (horas * 3600) + (mins * 60);
-  if (segundos < 60) {
-    if (typeof gnMostrarToast === 'function') gnMostrarToast('Ingresa al menos 1 minuto', 'error');
+  if (seg < 60) {
+    if (typeof window.showToast === 'function') window.showToast({ type:'warning', title:'Ingresa al menos 1 minuto' });
     return;
   }
 
   var inicio = new Date(fecha + 'T09:00:00').toISOString();
-  var fin = new Date(new Date(inicio).getTime() + segundos * 1000).toISOString();
+  var fin    = new Date(new Date(inicio).getTime() + seg * 1000).toISOString();
+  var sesion = { tareaId: tareaId, proyectoId: proyectoId, inicio: inicio, fin: fin, segundos: seg, descripcion: desc, manual: true };
 
-  var sesiones = ttGetSesiones(proyectoId);
-  sesiones.push({
-    id: 'ses_' + Date.now(),
-    tareaId: tareaId,
-    inicio: inicio,
-    fin: fin,
-    segundos: segundos,
-    descripcion: desc,
-    manual: true
+  ttGuardarSesion(sesion).then(function(){
+    modal.style.display = 'none';
+    ttActualizarDisplayTareaAsync(tareaId);
+    ttActualizarKPIsProyecto(proyectoId);
+    ttRenderSesionesAsync(proyectoId, tareaId);
+    if (typeof window.showToast === 'function') window.showToast({ type:'success', title:'Tiempo registrado manualmente' });
   });
-  ttSaveSesiones(proyectoId, sesiones);
-  modal.style.display = 'none';
-  ttActualizarDisplayTarea(tareaId);
-  ttRenderSesiones(proyectoId, tareaId);
-  ttActualizarKPIsProyecto(proyectoId);
-  if (typeof gnMostrarToast === 'function') gnMostrarToast('Tiempo registrado manualmente', 'success');
-  else if (typeof window.showToast === 'function') window.showToast({ type:'success', title:'Tiempo registrado' });
 }
 
 function ttCerrarModalManual() {
@@ -221,94 +287,141 @@ function ttCerrarModalManual() {
 }
 
 // ---------- Eliminar sesión ----------
-function ttEliminarSesion(proyectoId, sesionId, tareaId) {
+async function ttEliminarSesion(proyectoId, sesionId, tareaId) {
   if (!confirm('¿Eliminar esta sesión de tiempo?')) return;
-  var sesiones = ttGetSesiones(proyectoId).filter(function(s){ return s.id !== sesionId; });
-  ttSaveSesiones(proyectoId, sesiones);
-  ttActualizarDisplayTarea(tareaId);
-  ttRenderSesiones(proyectoId, tareaId);
+
+  // Supabase delete
+  await _ttSbDelete(sesionId);
+  // Limpiar caché
+  if (_ttCache[proyectoId]) {
+    _ttCache[proyectoId] = _ttCache[proyectoId].filter(function(s){ return s.id !== sesionId; });
+  }
+  // Limpiar localStorage por si acaso
+  _ttLSDel(proyectoId, sesionId);
+
+  ttActualizarDisplayTareaAsync(tareaId);
+  ttRenderSesionesAsync(proyectoId, tareaId);
   ttActualizarKPIsProyecto(proyectoId);
-  if (typeof gnMostrarToast === 'function') gnMostrarToast('Sesión eliminada', 'info');
+  if (typeof window.showToast === 'function') window.showToast({ type:'info', title:'Sesión eliminada' });
 }
 
-// ---------- UI: display en tarjeta ----------
+// ---------- UI: display en tarjeta (async) ----------
+function ttActualizarDisplayTareaAsync(tareaId) {
+  ttGetTareaHoras(
+    (gnTimer.activo && gnTimer.tareaId === tareaId ? gnTimer.proyectoId : null) ||
+    (document.querySelector('.tt-display[data-tarea-id="' + tareaId + '"]') || {}).dataset && document.querySelector('.tt-display[data-tarea-id="' + tareaId + '"]').dataset.proyectoId,
+    tareaId
+  ).then(function(totalSeg){
+    var el = document.querySelector('.tt-display[data-tarea-id="' + tareaId + '"]');
+    if (el) el.textContent = ttFormatoHMS(totalSeg);
+    _ttActualizarBarra(tareaId, totalSeg);
+  }).catch(function(){});
+}
+
 function ttActualizarDisplayTarea(tareaId) {
+  // Versión síncrona usando caché en memoria (para el setInterval)
   var el = document.querySelector('.tt-display[data-tarea-id="' + tareaId + '"]');
   if (!el) return;
   var proyectoId = el.dataset.proyectoId;
-  var total = ttGetTareaHoras(proyectoId, tareaId);
-  if (gnTimer.activo && gnTimer.tareaId === tareaId) total += gnTimer.segundosAcumulados;
-  el.textContent = ttFormatoHMS(total);
+  var cached = _ttCache[proyectoId] || [];
+  var totalBase = cached
+    .filter(function(s){ return s.tareaId === tareaId; })
+    .reduce(function(acc, s){ return acc + s.segundos; }, 0);
+  var live = (gnTimer.activo && gnTimer.tareaId === tareaId) ? gnTimer.segundosAcumulados : 0;
+  el.textContent = ttFormatoHMS(totalBase + live);
+  _ttActualizarBarra(tareaId, totalBase + live);
+}
 
+function _ttActualizarBarra(tareaId, totalSeg) {
   var barEl = document.querySelector('.tt-progress-bar[data-tarea-id="' + tareaId + '"]');
   var estEl = document.querySelector('.tt-estimado[data-tarea-id="' + tareaId + '"]');
   if (barEl && estEl) {
     var estimadoSeg = parseFloat(estEl.dataset.estimado || 0) * 3600;
     if (estimadoSeg > 0) {
-      var pct = Math.min(100, Math.round((total / estimadoSeg) * 100));
+      var pct = Math.min(100, Math.round((totalSeg / estimadoSeg) * 100));
       barEl.style.width = pct + '%';
       barEl.style.background = pct >= 100 ? '#F87171' : pct >= 80 ? '#C5A253' : '#2D8B5E';
     }
   }
 }
 
-// ---------- UI: barra flotante ----------
+// ---------- Barra flotante global ----------
 function ttActualizarBarraGlobal() {
   var barra = document.getElementById('tt-barra-global');
   if (!barra) return;
   if (!gnTimer.activo) { barra.style.display = 'none'; return; }
   barra.style.display = 'flex';
-  var total = ttGetTareaHoras(gnTimer.proyectoId, gnTimer.tareaId) + gnTimer.segundosAcumulados;
+  var cached = (_ttCache[gnTimer.proyectoId] || []);
+  var base = cached
+    .filter(function(s){ return s.tareaId === gnTimer.tareaId; })
+    .reduce(function(acc, s){ return acc + s.segundos; }, 0);
   var tiempoEl = document.getElementById('tt-global-tiempo');
-  if (tiempoEl) tiempoEl.textContent = ttFormatoHMS(total);
+  if (tiempoEl) tiempoEl.textContent = ttFormatoHMS(base + gnTimer.segundosAcumulados);
   var nombreEl = document.querySelector('.tt-tarea-nombre[data-tarea-id="' + gnTimer.tareaId + '"]');
   var globalNombre = document.getElementById('tt-global-nombre');
   if (globalNombre) globalNombre.textContent = nombreEl ? nombreEl.textContent : 'Tarea activa';
 }
 
-// ---------- Render sesiones de tarea ----------
-function ttRenderSesiones(proyectoId, tareaId) {
+// ---------- Render sesiones de tarea (async) ----------
+function ttRenderSesionesAsync(proyectoId, tareaId) {
   var contenedor = document.getElementById('tt-sesiones-' + tareaId);
   if (!contenedor) return;
-  var sesiones = ttGetSesiones(proyectoId).filter(function(s){ return s.tareaId === tareaId; });
-  if (!sesiones.length) {
-    contenedor.innerHTML = '<p class="tt-empty">Sin sesiones registradas aún.</p>';
-    return;
-  }
-  var html = '';
-  sesiones.forEach(function(s){
-    var fechaStr = new Date(s.inicio).toLocaleDateString('es-PA', { day:'2-digit', month:'short', year:'numeric' });
-    html += '<div class="tt-sesion-item">';
-    html += '<span class="tt-sesion-fecha">' + fechaStr + '</span>';
-    html += '<span class="tt-sesion-dur">' + ttFormatoHMS(s.segundos) + '</span>';
-    html += '<span class="tt-sesion-desc">' + (s.descripcion || (s.manual ? 'Manual' : 'Automático')) + '</span>';
-    html += '<button class="tt-sesion-del" onclick="ttEliminarSesion(&#39;' + proyectoId + '&#39;,&#39;' + s.id + '&#39;,&#39;' + tareaId + '&#39;)" title="Eliminar"><i class="ph ph-trash"></i></button>';
-    html += '</div>';
+  // Invalidar caché para forzar recarga
+  delete _ttCache[proyectoId];
+  ttGetSesionesProyecto(proyectoId).then(function(sesiones){
+    var tareaItems = sesiones.filter(function(s){ return s.tareaId === tareaId; });
+    if (!tareaItems.length) { contenedor.innerHTML = '<p class="tt-empty">Sin sesiones registradas aún.</p>'; return; }
+    var html = '';
+    tareaItems.forEach(function(s){
+      var fechaStr = new Date(s.inicio).toLocaleDateString('es-PA', { day:'2-digit', month:'short', year:'numeric' });
+      html += '<div class="tt-sesion-item">';
+      html += '<span class="tt-sesion-fecha">' + fechaStr + '</span>';
+      html += '<span class="tt-sesion-dur">' + ttFormatoHMS(s.segundos) + '</span>';
+      html += '<span class="tt-sesion-desc">' + (s.descripcion || (s.manual ? 'Manual' : 'Automático')) + '</span>';
+      html += '<button class="tt-sesion-del" onclick="ttEliminarSesion(&#39;' + proyectoId + '&#39;,&#39;' + s.id + '&#39;,&#39;' + tareaId + '&#39;)" title="Eliminar"><i class="ph ph-trash"></i></button>';
+      html += '</div>';
+    });
+    contenedor.innerHTML = html;
   });
-  contenedor.innerHTML = html;
+}
+
+function ttToggleSesiones(tareaId) {
+  var panel = document.getElementById('tt-sesiones-' + tareaId);
+  if (!panel) return;
+  var visible = panel.style.display !== 'none';
+  panel.style.display = visible ? 'none' : 'block';
+  if (!visible) {
+    var displayEl = document.querySelector('.tt-display[data-tarea-id="' + tareaId + '"]');
+    var proyectoId = displayEl ? displayEl.dataset.proyectoId : null;
+    if (proyectoId) ttRenderSesionesAsync(proyectoId, tareaId);
+  }
 }
 
 // ---------- KPIs del proyecto ----------
 function ttActualizarKPIsProyecto(proyectoId) {
-  var kpiEl = document.getElementById('tt-kpi-total');
-  var kpiHrsEl = document.getElementById('tt-kpi-horas');
-  var kpiValorEl = document.getElementById('tt-kpi-valor');
-  if (!kpiEl) return;
-  var totalSeg = ttGetProyectoTotalSeg(proyectoId);
-  kpiEl.textContent = ttFormatoHMS(totalSeg);
-  if (kpiHrsEl) kpiHrsEl.textContent = ttHorasDecimal(totalSeg) + ' hrs';
-  if (kpiValorEl) {
-    var presupEl = document.getElementById('resumen-kpi-presupuesto');
-    var presup = presupEl ? parseFloat(presupEl.textContent.replace(/[^0-9.]/g,'')) || 0 : 0;
-    var horas = ttHorasDecimal(totalSeg);
-    kpiValorEl.textContent = horas > 0 ? 'USD ' + (presup / horas).toFixed(2) + '/hr' : '—';
-  }
+  if (!proyectoId) return;
+  ttGetProyectoTotalSeg(proyectoId).then(function(totalSeg){
+    var kpiEl     = document.getElementById('tt-kpi-total');
+    var kpiHrsEl  = document.getElementById('tt-kpi-horas');
+    var kpiValorEl = document.getElementById('tt-kpi-valor');
+    if (!kpiEl) return;
+    kpiEl.textContent = ttFormatoHMS(totalSeg);
+    if (kpiHrsEl) kpiHrsEl.textContent = ttHorasDecimal(totalSeg) + ' hrs';
+    if (kpiValorEl) {
+      var presupEl = document.getElementById('resumen-kpi-presupuesto');
+      var presup = presupEl ? parseFloat(presupEl.textContent.replace(/[^0-9.]/g,'')) || 0 : 0;
+      var hrs = ttHorasDecimal(totalSeg);
+      kpiValorEl.textContent = hrs > 0 && presup > 0 ? 'USD ' + (presup / hrs).toFixed(2) + '/hr' : '—';
+    }
+  });
 }
 
 // ---------- Render panel KPIs ----------
 function ttRenderPanelEnTareas(proyectoId) {
   var contenedor = document.getElementById('tt-panel-proyecto');
   if (!contenedor) return;
+  // Invalidar caché al abrir nuevo proyecto
+  delete _ttCache[proyectoId];
   contenedor.innerHTML =
     '<div class="tt-kpi-row">' +
       '<div class="tt-kpi-card"><div class="tt-kpi-icon"><i class="ph ph-clock"></i></div><div><div class="tt-kpi-value" id="tt-kpi-total">00:00:00</div><div class="tt-kpi-label">Tiempo Total</div></div></div>' +
@@ -321,8 +434,13 @@ function ttRenderPanelEnTareas(proyectoId) {
 // ---------- HTML controles de tarea ----------
 function ttControlsHTML(tareaId, proyectoId, estimadoHrs) {
   estimadoHrs = estimadoHrs || 0;
-  var totalSeg = ttGetTareaHoras(proyectoId, tareaId);
+  // Obtener total de caché sincrónico (se actualiza al abrir el proyecto)
+  var cached = (_ttCache[proyectoId] || []);
+  var totalSeg = cached
+    .filter(function(s){ return s.tareaId === tareaId; })
+    .reduce(function(acc, s){ return acc + s.segundos; }, 0);
   var isRunning = gnTimer.activo && gnTimer.tareaId === tareaId;
+
   var html = '<div class="tt-controls" data-tarea-id="' + tareaId + '">';
   html += '<div class="tt-controls-row">';
   html += '<span class="tt-label"><i class="ph ph-clock"></i> Tiempo:</span>';
@@ -340,27 +458,17 @@ function ttControlsHTML(tareaId, proyectoId, estimadoHrs) {
   return html;
 }
 
-function ttToggleSesiones(tareaId) {
-  var panel = document.getElementById('tt-sesiones-' + tareaId);
-  if (!panel) return;
-  var visible = panel.style.display !== 'none';
-  panel.style.display = visible ? 'none' : 'block';
-  if (!visible) {
-    var displayEl = document.querySelector('.tt-display[data-tarea-id="' + tareaId + '"]');
-    var proyectoId = displayEl ? displayEl.dataset.proyectoId : null;
-    if (proyectoId) ttRenderSesiones(proyectoId, tareaId);
-  }
-}
-
 // ---------- Exportar CSV ----------
-function ttExportarReporte(proyectoId) {
+async function ttExportarReporte(proyectoId) {
   if (!proyectoId) {
-    if (typeof gnMostrarToast === 'function') gnMostrarToast('Abre un proyecto primero', 'error');
+    if (typeof window.showToast === 'function') window.showToast({ type:'warning', title:'Abre un proyecto primero' });
     return;
   }
-  var sesiones = ttGetSesiones(proyectoId);
+  // Forzar recarga desde Supabase
+  delete _ttCache[proyectoId];
+  var sesiones = await ttGetSesionesProyecto(proyectoId);
   if (!sesiones.length) {
-    if (typeof gnMostrarToast === 'function') gnMostrarToast('No hay sesiones para exportar', 'error');
+    if (typeof window.showToast === 'function') window.showToast({ type:'warning', title:'No hay sesiones para exportar' });
     return;
   }
   var csv = 'Fecha,Tarea ID,Duracion (hh:mm:ss),Horas,Descripcion,Tipo\n';
@@ -375,5 +483,5 @@ function ttExportarReporte(proyectoId) {
   a.download = 'reporte-tiempo-' + proyectoId + '-' + new Date().toISOString().split('T')[0] + '.csv';
   a.click();
   URL.revokeObjectURL(url);
-  if (typeof gnMostrarToast === 'function') gnMostrarToast('Reporte exportado como CSV', 'success');
+  if (typeof window.showToast === 'function') window.showToast({ type:'success', title:'Reporte exportado como CSV' });
 }
