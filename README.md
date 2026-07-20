@@ -1,33 +1,32 @@
 # 🧩 GN Studio OS — Dashboard Interno
 
-GN Studio OS es la plataforma interna de gestión para GN Studio (Burunga, Panamá Oeste), pensada para centralizar **clientes, proyectos, finanzas y actividad diaria** en un solo dashboard ligero y accesible desde obra o oficina.
+GN Studio OS es la plataforma interna de gestión para **GN Studio** (Burunga, Panamá Oeste), diseñada para centralizar **clientes, proyectos, finanzas, cotizaciones y actividad diaria** en un solo dashboard ligero y accesible desde cualquier dispositivo.
 
-Actualmente corre como sitio estático en **GitHub Pages** con frontend en HTML/CSS/JS y conexión a datos reales vía **Supabase**.
+Corre como sitio estático en **GitHub Pages** con frontend en HTML/CSS/JS y datos reales conectados a **Supabase**.
 
 ---
 
-## ✨ Módulos principales
+## ✨ Módulos activos
 
-- **AuthOS**  
-  Login por email/contraseña, panel inicial y estado de sesión en frontend.
-  
-- **FinanceOS**  
-  KPIs de ingresos, gastos, balance, proyectos activos y clientes activos, más gráficas de ingresos vs gastos y distribución por tipo de servicio.
+- **AuthOS** — Login por email/contraseña con Supabase Auth, manejo de sesión en frontend y flujo de restablecimiento de contraseña (`reset-password.html`).
 
-- **ProjectOS**  
-  Registro de proyectos (con cliente, fechas, presupuesto, avance), pestañas de detalle (financiero, tareas, documentos) y línea de tiempo de actividad.
+- **FinanceOS** — KPIs de ingresos, gastos y balance; gráficas de ingresos vs gastos y distribución por tipo de servicio. Módulo dedicado en `finanzas.js` + `charts.js`.
 
-- **AlertOS**  
-  Alertas de cotizaciones por vencer, pagos pendientes y proyectos completados listos para facturar.
+- **ProjectOS** — Gestión completa de proyectos: registro, detalle financiero, tareas, documentos, línea de tiempo y pipeline de ventas (Cotizado → Aprobado → En progreso → Completado). Implementado en `proyectos.js` (~60 KB).
 
-- **PipelineOS**  
-  Pipeline de ventas en el dashboard de inicio: etapas de **Cotizado → Aprobado → En progreso → Completado**, con conteo y montos por etapa.
+- **CotizacionesOS** — Creación, seguimiento y control de cotizaciones ligadas a clientes y proyectos. Implementado en `cotizaciones.js`.
 
-- **ReportOS**  
-  Gráficas y reportes rápidos: estado de cuenta, ITBMS, reportes de ingresos/gastos y actividad por proyecto.
+- **ClientOS** — CRM de clientes: alta, edición, historial de proyectos y estado. Implementado en `clientes.js`.
 
-- **ActivityOS**  
-  Registro cronológico de actividad (gastos, pagos, tareas, notas) ligado a cada proyecto.
+- **CatálogoOS** — Catálogo de servicios de GN Studio con precios y descripción por categoría. Implementado en `catalogo.js`.
+
+- **GruposOS** — Agrupación y organización de proyectos o clientes por grupos/categorías. Implementado en `grupos.js`.
+
+- **CalendarioOS** — Calendario de eventos, fechas de entrega y recordatorios vinculados a proyectos. Implementado en `calendario.js`.
+
+- **TimeTrackingOS** — Registro de tiempo trabajado por proyecto o tarea, con resumen de horas. Implementado en `timetracking.js` (~21 KB).
+
+- **AlertOS** — Alertas de cotizaciones por vencer, pagos pendientes y proyectos completados listos para facturar.
 
 ---
 
@@ -35,14 +34,17 @@ Actualmente corre como sitio estático en **GitHub Pages** con frontend en HTML/
 
 - **Frontend**: HTML, CSS, JavaScript vanilla (sin frameworks pesados).
 - **Hosting**: GitHub Pages (sitio estático).
-- **Datos**: Supabase (PostgreSQL + APIs), tablas para:
+- **Base de datos**: Supabase (PostgreSQL + REST API). Tablas principales:
   - `clientes`
   - `proyectos`
   - `proyecto_gastos`
   - `proyecto_pagos`
-- **Gráficas**: Librería ligera (Chart.js / equivalente) integrada en el dashboard.
-
-El foco actual es **retrocompatibilidad**: la UI original del dashboard se mantiene mientras se sustituyen datos estáticos por datos reales desde Supabase.
+  - `cotizaciones`
+  - `grupos`
+  - `timetracking`
+- **Gráficas**: Chart.js integrado en `charts.js`.
+- **Storage**: Manejo de archivos y adjuntos vía `storage.js` (Supabase Storage).
+- **Utilidades**: Helpers globales en `utils.js` y datos de configuración en `data.js`.
 
 ---
 
@@ -50,36 +52,47 @@ El foco actual es **retrocompatibilidad**: la UI original del dashboard se manti
 
 1. Clona este repositorio.
 2. Abre `index.html` en un navegador moderno (Chrome, Edge, Firefox).
-3. Configura las claves de Supabase en tu entorno local (archivo JS de configuración, nunca commit directo de claves reales).
-4. Inicia sesión desde la pantalla de AuthOS.
-5. Navega por las secciones:
-   - Negocio (CRM de clientes y catálogo de servicios).
-   - Proyectos (ProjectOS).
-   - Finanzas (FinanceOS).
-   - Reportes y actividad.
-
-En producción, la versión está disponible vía GitHub Pages en la URL configurada para la plataforma.
+3. Configura las claves de Supabase en el archivo de configuración JS (nunca hagas commit de claves reales).
+4. Inicia sesión desde la pantalla de **AuthOS**.
+5. Navega por las secciones del dashboard:
+   - Dashboard principal (KPIs + Pipeline)
+   - Clientes (ClientOS)
+   - Proyectos (ProjectOS)
+   - Cotizaciones (CotizacionesOS)
+   - Catálogo de servicios (CatálogoOS)
+   - Grupos (GruposOS)
+   - Calendario (CalendarioOS)
+   - Time Tracking (TimeTrackingOS)
+   - Finanzas (FinanceOS)
 
 ---
 
 ## 📁 Estructura del proyecto
 
 ```text
-gnstudio-os/
-├── index.html          # Dashboard principal (AuthOS, FinanceOS, ProjectOS, etc.)
+Plataforma-gnstudio/
+├── index.html              # Dashboard principal (punto de entrada)
+├── reset-password.html     # Flujo de restablecimiento de contraseña
 ├── css/
-│   └── styles.css      # Estilos globales y componentes del dashboard
+│   └── styles.css          # Estilos globales y componentes del dashboard
 ├── js/
-│   ├── auth.js         # Lógica de autenticación frontend
-│   ├── clientes.js     # CRM de clientes (ClientOS básico)
-│   ├── proyectos.js    # Gestión de proyectos, pipeline y detalle
-│   ├── finanzas.js     # KPIs, estado de cuenta y gráficas financieras
-│   ├── supabase.js     # Helpers de conexión y storage (getAll, getFiltered, insertRow...)
-│   └── app.js          # Inicialización general del dashboard
+│   ├── app.js              # Inicialización general y navegación (~33 KB)
+│   ├── auth.js             # Autenticación con Supabase Auth
+│   ├── clientes.js         # CRM de clientes
+│   ├── proyectos.js        # Gestión de proyectos y pipeline (~60 KB)
+│   ├── cotizaciones.js     # Módulo de cotizaciones
+│   ├── catalogo.js         # Catálogo de servicios
+│   ├── grupos.js           # Agrupación de proyectos/clientes
+│   ├── calendario.js       # Calendario y eventos
+│   ├── timetracking.js     # Registro de tiempo trabajado
+│   ├── finanzas.js         # KPIs y estado financiero
+│   ├── charts.js           # Gráficas con Chart.js
+│   ├── storage.js          # Manejo de archivos (Supabase Storage)
+│   ├── utils.js            # Utilidades globales
+│   └── data.js             # Configuración y datos base
+├── supabase/               # Helpers y configuración de Supabase
 └── README.md
 ```
-
-Los nombres exactos pueden variar, pero la organización sigue este patrón modular.
 
 ---
 
@@ -89,12 +102,11 @@ Los nombres exactos pueden variar, pero la organización sigue este patrón modu
 2. Source: `Deploy from a branch`.
 3. Branch: `main` → `/ (root)`.
 4. Guarda y espera 1–5 minutos.
-5. La plataforma quedará accesible en:  
-   `https://TU_USUARIO.github.io/Plataforma-gnstudio/` (o la URL que hayas configurado).
+5. La plataforma queda accesible en:
+   `https://contactgnstudio.github.io/Plataforma-gnstudio/`
 
 Para cambios en producción:
-
-- Trabajar en rama de `staging`.
+- Trabajar en rama `staging`.
 - Probar conexión a Supabase con datos de prueba.
 - Hacer merge a `main` solo cuando el dashboard cargue sin errores en consola.
 
@@ -102,35 +114,39 @@ Para cambios en producción:
 
 ## 🔐 Notas de seguridad
 
-- No exponer **API keys** de Supabase ni datos sensibles en el código público.
-- Evitar guardar credenciales de usuarios en `localStorage`; usar sesiones controladas o tokens.
-- Los datos de clientes y proyectos deben vivir en Supabase o repositorios privados, nunca como JSON plano en el frontend.
-- Para uso en producción con datos reales:
-  - Activar reglas de acceso en Supabase.
+- No exponer **API keys** de Supabase en el código público.
+- No guardar credenciales de usuarios en `localStorage`; usar tokens de sesión controlados por Supabase Auth.
+- Los datos de clientes y proyectos viven en Supabase, nunca como JSON plano en el frontend.
+- Para producción con datos reales:
+  - Activar **Row Level Security (RLS)** en todas las tablas de Supabase.
   - Habilitar backups automáticos de la base de datos.
-  - Revisar inputs de formularios para evitar inyecciones/XSS.
+  - Revisar inputs de formularios para prevenir XSS.
 
 ---
 
-## 🛣️ Roadmap de evolución
+## 🛣️ Roadmap
 
-**Fase 1 — Consolidación (actual)**  
-- Conectar todos los módulos existentes (Negocio, Proyectos, Finanzas, Reportes) a Supabase.  
-- Eliminar datos hardcodeados y mantener la UI actual.
+**Fase 1 — Consolidación ✅ (actual)**
+- Todos los módulos principales conectados a Supabase.
+- Dashboard operativo en GitHub Pages.
+- Time Tracking, Cotizaciones, Grupos y Calendario implementados.
 
-**Fase 2 — JAMstack**  
-- Migrar a Next.js o Astro con salida estática.  
-- Usar funciones serverless (Netlify/Vercel) como proxy seguro para APIs.  
-- Integrar Supabase Auth para autenticación real.
+**Fase 2 — JAMstack**
+- Migrar a Next.js o Astro con salida estática.
+- Funciones serverless (Netlify/Vercel) como proxy seguro para APIs.
+- Supabase Auth con flujo completo de roles y permisos.
 
-**Fase 3 — Hosting propio**  
-- VPS con Node.js/Express + PostgreSQL y frontend React/Vue.  
-- Dominio dedicado (ej. `os.gnstudio.space`) con SSL, backups y CDN.  
+**Fase 3 — Hosting propio**
+- VPS con Node.js/Express + PostgreSQL y frontend React/Vue.
+- Dominio dedicado (`os.gnstudio.space`) con SSL, backups y CDN.
 
 ---
 
 ## 📌 Estado actual
 
-- Dashboard operativo en GitHub Pages.
-- Módulos de proyectos y finanzas conectados a Supabase.
-- Pipeline de ventas y tablas de proyectos actualizadas para trabajar con datos reales.
+- ✅ Dashboard operativo en GitHub Pages.
+- ✅ Módulos de proyectos, finanzas y cotizaciones conectados a Supabase.
+- ✅ Time Tracking, Grupos, Calendario y Catálogo implementados.
+- ✅ Flujo de reset de contraseña activo (`reset-password.html`).
+- ✅ Pipeline de ventas en dashboard principal con datos reales.
+- 🔄 Activación de RLS en Supabase pendiente para producción segura.
