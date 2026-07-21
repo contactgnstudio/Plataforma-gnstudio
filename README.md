@@ -142,6 +142,22 @@ Para cambios en producción:
 
 ---
 
+## 💼 Negocios — Mejoras planificadas
+
+Sub-sección / Mejoras para la sección de **Negocio** del dashboard, ordenadas por prioridad de implementación.
+
+| # | Sub-sección / Mejora | Estado |
+|---|----------------------|--------|
+| 1 | **Cotizaciones independientes** — nueva pestaña en Negocio con formulario, tabla con estados y botón "Convertir en Proyecto" | ⏳ Primero |
+| 2 | **Mejoras al CRM** — ficha expandida (RUC, industria, notas), tags, historial de interacciones, valoración, fecha último contacto | 🔜 |
+| 3 | **Proveedores** — tabla de proveedores con categorías y enlace a gastos de proyectos | 🔜 |
+| 4 | **Analítica de Ventas** — tasa de conversión, valor promedio, gráficas de clientes nuevos vs recurrentes | 🔜 |
+| 5 | **Paquetes en Catálogo** — agrupar servicios en packs con precio especial, precios diferenciados, estado activo/inactivo | 🔜 |
+| 6 | **Plantillas de Propuestas** — biblioteca reutilizable con variables dinámicas e historial de envíos | 🔜 |
+| 7 | **Panel de Oportunidades** — recuadro conectado a Upwork, Freelancer y Fiverr (scraping/API) | 🔜 Último |
+
+---
+
 ## 📌 Estado actual
 
 - ✅ Dashboard operativo en GitHub Pages.
