@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="css/timetracking.css">
   <link rel="stylesheet" href="css/calendario.css">
   <link rel="stylesheet" href="css/proyectos-hero.css">
+  <link rel="stylesheet" href="css/negocio-cotizaciones.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
@@ -575,14 +576,8 @@
         </button>
       </div>
 
-      <!-- ══ KPI GRID — 4×2 simétrico ══
-           Fila 1: Ingresos · Gastos · Por Cobrar · Cotizaciones
-           Fila 2: Proyectos Activos · Tasa de Cierre · Balance Neto · [libre]
-           (eliminadas: Horas del Mes, Clientes Activos)
-      -->
       <div class="kpi-grid kpi-dashboard">
 
-        <!-- F1-1: Ingresos del Mes -->
         <div class="kpi-card kpi-highlight">
           <div class="kpi-icon" style="background:rgba(18,53,36,0.25);color:#2D8B5E;"><i class="ph ph-currency-dollar"></i></div>
           <div class="kpi-info">
@@ -592,7 +587,6 @@
           </div>
         </div>
 
-        <!-- F1-2: Gastos del Mes -->
         <div class="kpi-card">
           <div class="kpi-icon" style="background:rgba(248,113,113,0.12);color:#F87171;"><i class="ph ph-money"></i></div>
           <div class="kpi-info">
@@ -602,7 +596,6 @@
           </div>
         </div>
 
-        <!-- F1-3: Por Cobrar (widget 2) -->
         <div class="kpi-card kpi-por-cobrar" onclick="switchSection('finanzas')" title="Ver estado de cuenta">
           <div class="kpi-icon" style="background:rgba(197,162,83,0.15);color:#C5A253;"><i class="ph ph-hand-coins"></i></div>
           <div class="kpi-info">
@@ -612,7 +605,6 @@
           </div>
         </div>
 
-        <!-- F1-4: Cotizaciones Pendientes -->
         <div class="kpi-card">
           <div class="kpi-icon" style="background:rgba(197,162,83,0.15);color:#C5A253;"><i class="ph ph-file-text"></i></div>
           <div class="kpi-info">
@@ -621,7 +613,6 @@
           </div>
         </div>
 
-        <!-- F2-1: Proyectos Activos -->
         <div class="kpi-card">
           <div class="kpi-icon" style="background:rgba(197,162,83,0.15);color:#C5A253;"><i class="ph ph-buildings"></i></div>
           <div class="kpi-info">
@@ -630,7 +621,6 @@
           </div>
         </div>
 
-        <!-- F2-2: Tasa de Cierre -->
         <div class="kpi-card">
           <div class="kpi-icon" style="background:rgba(197,162,83,0.15);color:#C5A253;"><i class="ph ph-percent"></i></div>
           <div class="kpi-info">
@@ -640,7 +630,6 @@
           </div>
         </div>
 
-        <!-- F2-3: Balance Neto -->
         <div class="kpi-card">
           <div class="kpi-icon" style="background:rgba(197,162,83,0.15);color:#C5A253;"><i class="ph ph-scales"></i></div>
           <div class="kpi-info">
@@ -650,7 +639,6 @@
           </div>
         </div>
 
-        <!-- F2-4: Clientes Activos (reubicado, dato de contexto) -->
         <div class="kpi-card">
           <div class="kpi-icon" style="background:rgba(45,139,94,0.15);color:#2D8B5E;"><i class="ph ph-users"></i></div>
           <div class="kpi-info">
@@ -660,7 +648,6 @@
         </div>
 
       </div>
-      <!-- fin kpi-grid -->
 
       <!-- ══ WIDGET 6: META MENSUAL ══ -->
       <div class="gn-meta-card">
@@ -765,13 +752,14 @@
     <section id="negocio" class="section-panel">
       <div class="sub-nav">
         <button class="sub-nav-item active" onclick="switchSubSection('negocio', 'crm')"><i class="ph ph-address-book"></i> CRM</button>
-        <button class="sub-nav-item" onclick="switchSubSection('negocio', 'catalogo')"><i class="ph ph-list-checks"></i> Catálogo & Grupos</button>
+        <button class="sub-nav-item" onclick="switchSubSection('negocio', 'catalogo')"><i class="ph ph-list-checks"></i> Catálogo &amp; Grupos</button>
+        <button class="sub-nav-item" onclick="switchSubSection('negocio', 'cotizaciones'); if(typeof ncIniciarModulo==='function') ncIniciarModulo();"><i class="ph ph-file-text"></i> Cotizaciones</button>
       </div>
 
       <div id="negocio-crm" class="sub-section active">
         <div class="section">
           <div class="section-header">
-            <h2 class="section-title"><i class="ph ph-address-book"></i> Clientes & Pipeline</h2>
+            <h2 class="section-title"><i class="ph ph-address-book"></i> Clientes &amp; Pipeline</h2>
             <div class="section-actions">
               <button class="btn-secondary" onclick="abrirModalCliente()"><i class="ph ph-plus"></i> Nuevo Cliente</button>
             </div>
@@ -875,6 +863,153 @@
           </div>
         </div>
       </div>
+
+      <!-- ══ SUB-SECCIÓN: COTIZACIONES INDEPENDIENTES ══ -->
+      <div id="negocio-cotizaciones" class="sub-section">
+
+        <!-- Encabezado + botón nueva -->
+        <div class="section-header" style="margin-bottom:16px;">
+          <h2 class="section-title"><i class="ph ph-file-text"></i> Cotizaciones Independientes</h2>
+          <div class="section-actions">
+            <button class="btn-primary" id="nc-btn-nueva" onclick="ncAbrirFormulario()">
+              <i class="ph ph-plus"></i> Nueva Cotización
+            </button>
+          </div>
+        </div>
+
+        <!-- ── PANEL FORMULARIO (oculto por defecto) ── -->
+        <div id="nc-panel-form">
+          <div class="nc-form-header">
+            <span class="nc-form-title"><i class="ph ph-file-plus"></i> Nueva Cotización Independiente</span>
+            <button type="button" class="btn-secondary" id="nc-btn-cancelar" style="font-size:12px;padding:6px 14px;">
+              <i class="ph ph-x"></i> Cancelar
+            </button>
+          </div>
+
+          <form id="nc-form">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="nc-numero">N° Cotización</label>
+                <input type="text" id="nc-numero" placeholder="COT-DDMMYY-XXXX" readonly style="opacity:0.7;">
+              </div>
+              <div class="form-group">
+                <label for="nc-cliente">Cliente</label>
+                <select id="nc-cliente"><option value="">— Selecciona cliente —</option></select>
+              </div>
+              <div class="form-group full-width">
+                <label for="nc-titulo">Título / Nombre del servicio <span class="required">*</span></label>
+                <input type="text" id="nc-titulo" placeholder="Ej: Diseño de branding completo" required maxlength="200">
+              </div>
+              <div class="form-group">
+                <label for="nc-fecha">Fecha de emisión</label>
+                <input type="date" id="nc-fecha">
+              </div>
+              <div class="form-group">
+                <label for="nc-fecha-vencimiento">Válida hasta</label>
+                <input type="date" id="nc-fecha-vencimiento">
+              </div>
+            </div>
+
+            <!-- Ítems de la propuesta económica -->
+            <div style="margin-top:20px;">
+              <h3 class="sub-title" style="margin-bottom:12px;"><i class="ph ph-currency-dollar"></i> Propuesta Económica</h3>
+
+              <div class="nc-items-toolbar">
+                <select id="nc-select-catalogo">
+                  <option value="">— Agregar desde catálogo —</option>
+                </select>
+                <button type="button" class="btn-secondary" id="nc-btn-add-catalogo">
+                  <i class="ph ph-plus"></i> Del catálogo
+                </button>
+                <button type="button" class="btn-secondary" id="nc-btn-agregar-item">
+                  <i class="ph ph-pencil-simple"></i> Línea manual
+                </button>
+              </div>
+
+              <div class="table-wrap">
+                <table class="nc-items-table">
+                  <thead>
+                    <tr>
+                      <th style="min-width:160px;">Descripción</th>
+                      <th style="width:70px;">Unidad</th>
+                      <th style="width:80px;">Cant.</th>
+                      <th style="width:110px;">P. Unit.</th>
+                      <th style="width:80px;">ITBMS</th>
+                      <th style="width:100px;text-align:right;">Total</th>
+                      <th style="width:40px;"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="nc-items-tbody"></tbody>
+                </table>
+              </div>
+
+              <div class="nc-totales">
+                <div class="nc-total-row">
+                  <span>Subtotal</span>
+                  <span id="nc-subtotal">USD 0.00</span>
+                </div>
+                <div class="nc-total-row">
+                  <span>ITBMS (7%)</span>
+                  <span id="nc-itbms">USD 0.00</span>
+                </div>
+                <div class="nc-total-row nc-grand-total">
+                  <span>Total</span>
+                  <span id="nc-total">USD 0.00</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group full-width" style="margin-top:16px;">
+              <label for="nc-notas">Notas / condiciones (opcional)</label>
+              <textarea id="nc-notas" rows="3" placeholder="Ej: Validez 15 días, incluye 2 revisiones..."></textarea>
+            </div>
+
+            <div id="nc-feedback"></div>
+
+            <div class="form-actions">
+              <button type="submit" class="btn-primary"><i class="ph ph-floppy-disk"></i> Guardar Cotización</button>
+            </div>
+          </form>
+        </div>
+        <!-- fin panel-form -->
+
+        <!-- ── TABLA DE COTIZACIONES ── -->
+        <div class="section" style="margin-top:24px;">
+          <div class="section-header">
+            <h2 class="section-title"><i class="ph ph-list-checks"></i> Cotizaciones</h2>
+            <div class="section-actions">
+              <input type="text" id="nc-buscar" placeholder="Buscar..." class="search-input" style="width:180px;">
+              <select id="nc-filtro-estado" class="filter-btn">
+                <option value="">Todos los estados</option>
+                <option value="cotizado">Cotizado</option>
+                <option value="enviado">Enviado</option>
+                <option value="aprobado">Aprobado</option>
+                <option value="rechazado">Rechazado</option>
+                <option value="convertido">Convertido</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table id="nc-tabla-cotizaciones">
+              <thead>
+                <tr>
+                  <th>N°</th>
+                  <th>Cliente</th>
+                  <th>Título</th>
+                  <th style="text-align:right;">Total</th>
+                  <th>Fecha</th>
+                  <th style="text-align:center;">Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="nc-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+      <!-- fin negocio-cotizaciones -->
+
     </section>
 
     <!-- ============================================================
@@ -1250,7 +1385,7 @@
       </div>
 
       <div id="finanzas-reportes" class="sub-section">
-        <div class="section"><div class="section-header"><h2 class="section-title"><i class="ph ph-trend-up"></i> Reportes & Análisis</h2></div></div>
+        <div class="section"><div class="section-header"><h2 class="section-title"><i class="ph ph-trend-up"></i> Reportes &amp; Análisis</h2></div></div>
         <div class="charts-row">
           <div class="chart-card"><h3 class="chart-title">Evolución Mensual</h3><canvas id="chartEvolucionMensual"></canvas></div>
           <div class="chart-card"><h3 class="chart-title">Ingresos por Tipo de Servicio</h3><canvas id="chartIngresosPorServicio"></canvas></div>
@@ -1285,6 +1420,7 @@
   <script src="js/calendario.js"></script>
   <script src="js/app.js"></script>
   <script src="js/dashboard-widgets.js"></script>
+  <script src="js/negocio-cotizaciones.js"></script>
 
   <script>
     document.addEventListener('click', function(e) {
