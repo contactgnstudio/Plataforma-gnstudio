@@ -58,6 +58,13 @@
     return [];
   }
 
+  // ── Nombre real de la tabla de servicios (mismo que catalogo.js) ──
+  function _tablaServicios() {
+    return (window.STORAGE_KEYS && window.STORAGE_KEYS.SERVICIOS)
+      ? window.STORAGE_KEYS.SERVICIOS
+      : 'servicios';
+  }
+
   function toast(type, title, message) {
     if (window.showToast) window.showToast({ type: type, title: title, message: message });
   }
@@ -301,7 +308,6 @@
       var f = _cotizaciones.filter(function(c){ return (c.estado||'cotizado') === est; });
       var tbody = byId('nc-tbody');
       if (tbody) {
-        // render temporal con subset
         var orig = _cotizaciones;
         _cotizaciones = f;
         renderTabla();
@@ -340,34 +346,50 @@
     _items = [];
   };
 
+  // ============================================================
+  // CARGAR CATÁLOGO EN SELECT
+  // FIX: usa la tabla correcta 'servicios' (no 'catalogo')
+  //      y siempre recarga desde Supabase para reflejar cambios
+  // ============================================================
+  function _poblarSelectCatalogo(sel, rows) {
+    rows.forEach(function (s) {
+      var opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = (s.descripcion || s.nombre || 'Servicio') + ' — ' + money(s.precio_unitario || s.precio || 0);
+      opt.dataset.precio = s.precio_unitario || s.precio || 0;
+      opt.dataset.itbms  = s.aplica_itbms || s.itbms || 0;
+      opt.dataset.unidad = s.unidad || 'und';
+      sel.appendChild(opt);
+    });
+  }
+
   function _cargarCatalogoEnSelect() {
     var sel = byId('nc-select-catalogo');
     if (!sel) return;
     sel.innerHTML = '<option value="">— Agregar desde catálogo —</option>';
-    var servicios = window._catalogoServicios || [];
-    if (!servicios.length && typeof window.getDataFiltered === 'function') {
-      window.getDataFiltered('catalogo', [], {}).then(function (rows) {
+
+    // FIX 1: usar la tabla correcta 'servicios' (catálogo.js la llama así)
+    // FIX 2: siempre pedir a Supabase para no mostrar datos desactualizados;
+    //        si obtenerServicios() está disponible (catalogo.js), úsala directo.
+    if (typeof window.obtenerServicios === 'function') {
+      window.obtenerServicios().then(function (rows) {
+        if (!Array.isArray(rows) || !rows.length) return;
+        window._catalogoServicios = rows;   // actualizar cache global
+        _poblarSelectCatalogo(sel, rows);
+      }).catch(function (e) {
+        log('warn', '[NC] No se pudo cargar catálogo via obtenerServicios', e);
+      });
+      return;
+    }
+
+    // Fallback: query directa con la tabla correcta
+    if (typeof window.getDataFiltered === 'function') {
+      window.getDataFiltered(_tablaServicios(), [], { order: 'codigo', ascending: true }).then(function (rows) {
         if (!Array.isArray(rows)) return;
         window._catalogoServicios = rows;
-        rows.forEach(function (s) {
-          var opt = document.createElement('option');
-          opt.value = s.id;
-          opt.textContent = (s.descripcion || s.nombre || 'Servicio') + ' — ' + money(s.precio_unitario || s.precio || 0);
-          opt.dataset.precio = s.precio_unitario || s.precio || 0;
-          opt.dataset.itbms  = s.aplica_itbms || s.itbms || 0;
-          opt.dataset.unidad = s.unidad || 'und';
-          sel.appendChild(opt);
-        });
-      });
-    } else {
-      servicios.forEach(function (s) {
-        var opt = document.createElement('option');
-        opt.value = s.id;
-        opt.textContent = (s.descripcion || s.nombre || 'Servicio') + ' — ' + money(s.precio_unitario || s.precio || 0);
-        opt.dataset.precio = s.precio_unitario || s.precio || 0;
-        opt.dataset.itbms  = s.aplica_itbms || s.itbms || 0;
-        opt.dataset.unidad = s.unidad || 'und';
-        sel.appendChild(opt);
+        _poblarSelectCatalogo(sel, rows);
+      }).catch(function (e) {
+        log('warn', '[NC] No se pudo cargar catálogo via getDataFiltered', e);
       });
     }
   }
@@ -531,7 +553,6 @@
         items = typeof cot.items === 'string' ? JSON.parse(cot.items) : (Array.isArray(cot.items) ? cot.items : []);
       } catch(e) { items = []; }
 
-      // Crear proyecto en Supabase
       var proyectoPayload = {
         user_id:        userId,
         nombre:         cot.titulo || cot.nombre_proyecto || 'Proyecto desde ' + cot.numero,
@@ -547,13 +568,11 @@
       var nuevoProyecto = await addItem('proyectos', proyectoPayload);
       if (!nuevoProyecto) throw new Error('No se pudo crear el proyecto.');
 
-      // Vincular cotización al proyecto recién creado
       await updateItem('cotizaciones', id, {
         proyecto_id: nuevoProyecto.id,
         estado: 'convertido'
       });
 
-      // Crear cotización formal vinculada al proyecto (re-usa crearCotizacionDesdeProforma si existe)
       if (typeof window.crearCotizacionDesdeProforma === 'function') {
         await window.crearCotizacionDesdeProforma({
           proyectoId:     nuevoProyecto.id,
@@ -569,11 +588,8 @@
       }
 
       toast('success', '¡Convertido!', 'El proyecto "' + proyectoPayload.nombre + '" fue creado. Ve a la sección Proyectos para verlo.');
-
-      // Recargar lista
       await cargarCotizaciones();
 
-      // Ofrecer ir a Proyectos
       setTimeout(function () {
         if (confirm('¿Ir a la sección Proyectos ahora?')) {
           if (typeof window.switchSection === 'function') window.switchSection('proyectos');
@@ -590,10 +606,7 @@
   // ============================================================
   window.ncIniciarModulo = iniciarModulo;
 
-  // Auto-init cuando la sub-sección es visible
   document.addEventListener('DOMContentLoaded', function () {
-    // Se inicializa cuando el usuario entra a negocio > cotizaciones
-    // El llamado real lo hace switchSubSection en app.js (ver integración en index.html)
     if (byId('negocio-cotizaciones')) {
       iniciarModulo();
     }
