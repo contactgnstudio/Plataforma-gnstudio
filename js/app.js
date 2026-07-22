@@ -30,7 +30,7 @@
     initialized: false,
     sections: ['dashboard', 'negocio', 'proyectos', 'finanzas'],
     subSections: {
-      negocio: ['crm', 'catalogo'],
+      negocio: ['crm', 'oportunidades', 'radar', 'cotizaciones', 'catalogo', 'proveedores'],
       finanzas: ['estado-cuenta', 'itbms', 'reportes']
     },
     currentSection: 'dashboard',
@@ -225,7 +225,7 @@
 
     var breadcrumbMap = {
       dashboard: 'Inicio · Dashboard',
-      negocio: 'Negocio · CRM · Catálogo · Cotizaciones',
+      negocio: 'Negocio · CRM · Oportunidades · Radar · Cotizaciones · Catálogo · Proveedores',
       proyectos: 'Proyectos · Estado y detalle',
       finanzas: 'Finanzas · Estado de cuenta · ITBMS · Reportes'
     };
