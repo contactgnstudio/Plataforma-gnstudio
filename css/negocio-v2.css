@@ -1,0 +1,197 @@
+/* ============================================================
+   css/negocio-v2.css — GN Studio OS
+   Estilos para la sección Negocio reestructurada
+   ============================================================ */
+
+/* ── Oportunidades Kanban ── */
+.opp-kanban-wrap {
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+.opp-kanban-board {
+  display: flex;
+  gap: 12px;
+  min-width: max-content;
+  padding: 4px 2px;
+}
+.opp-column {
+  width: 210px;
+  flex-shrink: 0;
+  background: rgba(18,53,36,0.18);
+  border-radius: 12px;
+  border: 1px solid rgba(197,162,83,0.1);
+  display: flex;
+  flex-direction: column;
+  max-height: 600px;
+}
+.opp-col-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 10px;
+  border-top: 3px solid #C5A253;
+  border-radius: 12px 12px 0 0;
+}
+.opp-col-title { font-size: 12px; font-weight: 700; color: #E8F0EC; text-transform: uppercase; letter-spacing: 0.5px; }
+.opp-col-count { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 99px; background: rgba(197,162,83,0.15); color: #C5A253; }
+.opp-col-body { padding: 8px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.opp-empty { font-size: 12px; color: rgba(143,171,154,0.5); text-align: center; padding: 16px 8px; }
+.opp-card {
+  background: rgba(13,22,17,0.8);
+  border: 1px solid rgba(197,162,83,0.12);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.1s;
+}
+.opp-card:hover { border-color: rgba(197,162,83,0.35); transform: translateY(-1px); }
+.opp-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.opp-plataforma { font-size: 10px; color: #8FAB9A; text-transform: capitalize; }
+.opp-budget { font-size: 11px; font-weight: 700; color: #C5A253; }
+.opp-card-title { font-size: 12px; font-weight: 600; color: #E8F0EC; line-height: 1.4; margin-bottom: 4px; }
+.opp-card-cliente { font-size: 11px; color: #8FAB9A; margin-bottom: 8px; }
+.opp-card-actions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+
+/* ── KPIs Oportunidades ── */
+.opp-kpis {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+@media (max-width: 900px) { .opp-kpis { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 600px) { .opp-kpis { grid-template-columns: repeat(2, 1fr); } }
+.opp-kpi-card {
+  background: rgba(18,53,36,0.25);
+  border: 1px solid rgba(197,162,83,0.12);
+  border-radius: 12px;
+  padding: 14px 16px;
+  text-align: center;
+}
+.opp-kpi-val { font-size: 22px; font-weight: 800; color: #E8F0EC; display: block; }
+.opp-kpi-lbl { font-size: 11px; color: #8FAB9A; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; display: block; }
+
+/* ── Radar de Trabajos ── */
+.radar-plataformas-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+@media (max-width: 1100px) { .radar-plataformas-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 700px)  { .radar-plataformas-grid { grid-template-columns: 1fr; } }
+.radar-card {
+  border: 1px solid rgba(197,162,83,0.15);
+  border-radius: 14px;
+  padding: 18px;
+  background: rgba(18,53,36,0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: border-color 0.2s, transform 0.15s;
+}
+.radar-card:hover { border-color: rgba(197,162,83,0.35); transform: translateY(-2px); }
+.radar-card-header { display: flex; align-items: center; gap: 12px; }
+.radar-logo { font-size: 28px; line-height: 1; flex-shrink: 0; }
+.radar-info { display: flex; flex-direction: column; gap: 2px; }
+.radar-nombre { font-size: 16px; font-weight: 700; }
+.radar-desc { font-size: 11px; color: #8FAB9A; }
+.radar-busquedas { display: flex; flex-wrap: wrap; gap: 6px; }
+.radar-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 99px;
+  border: 1px solid rgba(197,162,83,0.2);
+  color: #C5A253;
+  text-decoration: none;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.radar-tag:hover { background: rgba(197,162,83,0.12); }
+.radar-card-footer { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+.radar-btn-opp {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 0.15s;
+}
+.radar-btn-opp:hover { background: rgba(197,162,83,0.1); }
+.radar-btn-open {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: opacity 0.15s;
+}
+.radar-btn-open:hover { opacity: 0.85; }
+
+/* ── Radar intro banner ── */
+.radar-intro {
+  background: linear-gradient(135deg, rgba(18,53,36,0.5) 0%, rgba(197,162,83,0.1) 100%);
+  border: 1px solid rgba(197,162,83,0.2);
+  border-radius: 14px;
+  padding: 18px 22px;
+  margin-bottom: 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.radar-intro-icon { font-size: 32px; flex-shrink: 0; }
+.radar-intro-texto h4 { margin: 0 0 4px; font-size: 15px; font-weight: 700; color: #E8F0EC; }
+.radar-intro-texto p { margin: 0; font-size: 13px; color: #8FAB9A; line-height: 1.5; }
+
+/* ── Proveedores ── */
+.prov-rating { color: #C5A253; font-size: 13px; }
+
+/* ── Analítica Negocio ── */
+.negocio-analitica-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+@media (max-width: 700px) { .negocio-analitica-grid { grid-template-columns: 1fr; } }
+
+/* ── Paquetes ── */
+.paquetes-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+@media (max-width: 900px) { .paquetes-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .paquetes-grid { grid-template-columns: 1fr; } }
+.paquete-card {
+  background: rgba(18,53,36,0.2);
+  border: 1px solid rgba(197,162,83,0.15);
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.paquete-nombre { font-size: 15px; font-weight: 700; color: #E8F0EC; }
+.paquete-precio { font-size: 22px; font-weight: 800; color: #C5A253; }
+.paquete-items { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.paquete-items li { font-size: 12px; color: #8FAB9A; display: flex; align-items: center; gap: 6px; }
+.paquete-items li::before { content: '✓'; color: #2D8B5E; font-weight: 700; }
