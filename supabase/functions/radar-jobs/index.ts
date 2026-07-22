@@ -1,18 +1,22 @@
 // ============================================================
 // supabase/functions/radar-jobs/index.ts — GN Studio OS v2.0
 // Edge Function: GET /radar-jobs
-// Fase 2: Intenta RSS real por plataforma → guarda en radar_jobs
-//         → fallback a caché → fallback a array vacío (mock en frontend)
+// Fase 4: Filtros por categoría, métricas de lanzamiento y
+//         TTL de caché configurable (por defecto 5 min).
 // ============================================================
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const CORS_HEADERS = {
-   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, apikey, Authorization',
 };
+
+// TTL de caché RSS: si el job en BD tiene menos de N segundos de antigüedad,
+// se devuelve desde caché sin llamar al feed externo.
+const CACHE_TTL_SECONDS = 300; // 5 minutos
 
 // ── Tipos ─────────────────────────────────────────────────────
 interface JobNormalizado {
@@ -38,7 +42,6 @@ interface PlataformaRow {
 // ── Parser RSS (XML → jobs) ────────────────────────────────────
 function parseRSSItems(xml: string, limit: number): JobNormalizado[] {
   const jobs: JobNormalizado[] = [];
-  // Match <item>...</item> blocks
   const itemRegex = /<item[^>]*>([\s\S]*?)<\/item>/gi;
   let match;
   while ((match = itemRegex.exec(xml)) !== null && jobs.length < limit) {
@@ -77,34 +80,29 @@ function extractAttr(xml: string, tag: string, attr: string): string {
 }
 
 function stripTags(str: string): string {
-  return str.replace(/<[^>]+>/g, '').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").trim();
+  return str
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .trim();
 }
 
 function extractPresupuesto(block: string): string {
-  // Buscar patrones de precio en el contenido del item
   const text = stripTags(block);
-  // Patrones: $xxx, $xxx-$xxx, Budget: $xxx
   const m = text.match(/(?:Budget|budget|Presupuesto|presupuesto)?:?\s*(\$[\d,]+(?:\s*[-–]\s*\$[\d,]+)?(?:\/hr|\/hour|\/mes|\/yr|k)?)/i);
   if (m) return m[1].trim();
   return '';
 }
 
 // ── Configuración RSS por plataforma ──────────────────────────
-// Solo plataformas con feeds públicos disponibles
 const RSS_FEEDS: Record<string, string> = {
-  // Upwork: RSS público de búsqueda de jobs de diseño
   upwork:
     'https://www.upwork.com/ab/feed/jobs/rss?q=brand+design+logo+identity&sort=recency&paging=0%3B10',
-
-  // Workana: RSS público de categoría diseño
   workana:
     'https://www.workana.com/jobs/feed?category=design&language=es',
-
-  // Behance: RSS del job board de diseño/branding
   behance:
     'https://www.behance.net/feeds/jobs?field=132',
-
-  // Freelancer: feed RSS de proyectos de diseño gráfico
   freelancer:
     'https://www.freelancer.com/rss/V2/job/category/graphic-design.xml',
 };
@@ -112,12 +110,11 @@ const RSS_FEEDS: Record<string, string> = {
 // ── Fetch RSS con timeout ──────────────────────────────────────
 async function fetchRSSJobs(plataformaId: string, limit: number): Promise<JobNormalizado[] | null> {
   const feedUrl = RSS_FEEDS[plataformaId];
-  if (!feedUrl) return null; // Sin feed configurado
+  if (!feedUrl) return null;
 
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
-
     const res = await fetch(feedUrl, {
       signal: controller.signal,
       headers: {
@@ -126,13 +123,12 @@ async function fetchRSSJobs(plataformaId: string, limit: number): Promise<JobNor
       },
     });
     clearTimeout(timeout);
-
     if (!res.ok) return null;
     const xml = await res.text();
     const jobs = parseRSSItems(xml, limit);
     return jobs.length > 0 ? jobs : null;
   } catch (_e) {
-    return null; // timeout o error de red
+    return null;
   }
 }
 
@@ -143,7 +139,6 @@ async function guardarJobsEnBD(
   jobs: JobNormalizado[],
 ): Promise<void> {
   for (const job of jobs) {
-    // Upsert por URL (identidad del job)
     await supabase.from('radar_jobs').upsert(
       {
         plataforma_id:     plataformaId,
@@ -159,17 +154,85 @@ async function guardarJobsEnBD(
   }
 }
 
+// ── Verificar si el caché sigue vigente (TTL) ──────────────────
+async function cachéVigente(
+  supabase: ReturnType<typeof createClient>,
+  plataformaId: string,
+): Promise<boolean> {
+  const { data } = await supabase
+    .from('radar_jobs')
+    .select('actualizado_en')
+    .eq('plataforma_id', plataformaId)
+    .order('actualizado_en', { ascending: false })
+    .limit(1);
+
+  if (!data || data.length === 0) return false;
+  const ultima = new Date(data[0].actualizado_en).getTime();
+  const ahora  = Date.now();
+  return (ahora - ultima) / 1000 < CACHE_TTL_SECONDS;
+}
+
+// ── Registrar métrica de lanzamiento ──────────────────────────
+// POST /radar-jobs/track { plataforma_id, job_url }
+async function registrarLanzamiento(
+  supabase: ReturnType<typeof createClient>,
+  plataformaId: string,
+  jobUrl: string,
+): Promise<void> {
+  await supabase.from('radar_metricas').insert({
+    plataforma_id: plataformaId,
+    job_url:       jobUrl,
+    lanzado_en:    new Date().toISOString(),
+  }).catch(() => {}); // best-effort
+}
+
 // ── Handler principal ──────────────────────────────────────────
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
   }
 
+  const reqUrl = new URL(req.url);
+
+  // ── Ruta POST /radar-jobs/track (métricas) ────────────────
+  if (req.method === 'POST' && reqUrl.pathname.endsWith('/track')) {
+    try {
+      const body = await req.json();
+      const { plataforma_id, job_url } = body;
+      if (!plataforma_id || !job_url) {
+        return new Response(JSON.stringify({ error: 'Faltan plataforma_id o job_url' }), {
+          status: 400,
+          headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+        });
+      }
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      );
+      await registrarLanzamiento(supabase, plataforma_id, job_url);
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      return new Response(JSON.stringify({ error: message }), {
+        status: 500,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      });
+    }
+  }
+
+  // ── GET /radar-jobs ───────────────────────────────────────
+  if (req.method !== 'GET') {
+    return new Response('Method Not Allowed', { status: 405, headers: CORS_HEADERS });
+  }
+
   try {
-    const url    = new URL(req.url);
-    const limit  = Math.min(parseInt(url.searchParams.get('limit')  ?? '3'), 10);
-    const platId = url.searchParams.get('plataforma') ?? null;
-    const categ  = url.searchParams.get('categoria')  ?? null;
+    const limit  = Math.min(parseInt(reqUrl.searchParams.get('limit')     ?? '3'), 10);
+    const platId = reqUrl.searchParams.get('plataforma') ?? null;
+    // Fase 4: filtro real por categoría
+    const categ  = reqUrl.searchParams.get('categoria')  ?? null;
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -184,23 +247,34 @@ serve(async (req: Request) => {
       .order('id');
 
     if (platId) platQuery = platQuery.eq('id', platId);
+    // Fase 4: filtro por categoria aplicado en BD
     if (categ)  platQuery = platQuery.eq('categoria', categ);
 
     const { data: plataformas, error: platError } = await platQuery;
     if (platError) throw platError;
 
-    // ── 2. Para cada plataforma: RSS real → caché BD → vacío ─
+    // ── 2. Para cada plataforma: TTL → RSS → caché BD → vacío
     const result = await Promise.all(
       (plataformas ?? []).map(async (p: PlataformaRow) => {
+        let jobs: JobNormalizado[] = [];
+        let fuente = 'bd';
 
-        // Intento A: Fetch RSS real
-        let jobs: JobNormalizado[] | null = await fetchRSSJobs(p.id, limit);
+        // Fase 4: respetar TTL — si la caché aún es válida, usarla directo
+        const usarCache = await cachéVigente(supabase, p.id);
 
-        if (jobs && jobs.length > 0) {
-          // Guardar en caché (no bloqueante, best-effort)
-          guardarJobsEnBD(supabase, p.id, jobs).catch(() => {});
-        } else {
-          // Intento B: Leer caché de BD (últimos registros guardados)
+        if (!usarCache) {
+          // Intentar RSS real
+          const rssJobs = await fetchRSSJobs(p.id, limit);
+          if (rssJobs && rssJobs.length > 0) {
+            jobs   = rssJobs;
+            fuente = 'rss';
+            // Guardar en caché (best-effort, no bloqueante)
+            guardarJobsEnBD(supabase, p.id, rssJobs).catch(() => {});
+          }
+        }
+
+        // Si no hay jobs frescos del RSS (o caché vigente), leer BD
+        if (jobs.length === 0) {
           const { data: cached } = await supabase
             .from('radar_jobs')
             .select('titulo, presupuesto, fecha_publicacion, url')
@@ -208,14 +282,16 @@ serve(async (req: Request) => {
             .order('fecha_publicacion', { ascending: false })
             .limit(limit);
 
-          jobs = (cached && cached.length > 0)
-            ? cached.map((j: Record<string, unknown>) => ({
-                titulo:            String(j.titulo),
-                presupuesto:       String(j.presupuesto ?? 'Negociable'),
-                fecha_publicacion: j.fecha_publicacion as string | null,
-                url:               String(j.url),
-              }))
-            : []; // Frontend usará mock visual + search_url
+          if (cached && cached.length > 0) {
+            jobs   = cached.map((j: Record<string, unknown>) => ({
+              titulo:            String(j.titulo),
+              presupuesto:       String(j.presupuesto ?? 'Negociable'),
+              fecha_publicacion: j.fecha_publicacion as string | null,
+              url:               String(j.url),
+            }));
+            fuente = 'cache';
+          }
+          // Si sigue vacío → frontend usará mock visual + search_url
         }
 
         return {
@@ -229,7 +305,7 @@ serve(async (req: Request) => {
           search_url:   p.search_url,
           categoria:    p.categoria,
           jobs,
-          fuente:       RSS_FEEDS[p.id] ? 'rss' : 'bd',
+          fuente, // 'rss' | 'cache' | 'bd'
         };
       })
     );
@@ -241,7 +317,7 @@ serve(async (req: Request) => {
         headers: {
           ...CORS_HEADERS,
           'Content-Type': 'application/json',
-          'Cache-Control': 'public, max-age=300', // caché HTTP 5 min
+          'Cache-Control': `public, max-age=${CACHE_TTL_SECONDS}`,
         },
       },
     );

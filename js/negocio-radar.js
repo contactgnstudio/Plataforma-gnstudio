@@ -2,6 +2,7 @@
 // js/negocio-radar.js — GN Studio OS v2.0
 // Radar de Oportunidades: consume la Edge Function radar-jobs
 // y renderiza tarjetas con trabajos reales (o fallback mock).
+// Fase 4: filtros por categoría + métricas de lanzamiento.
 // ============================================================
 
 // ─── Config ─────────────────────────────────────────────────
@@ -10,9 +11,9 @@ var RADAR_API_URL = (window.SUPABASE_FUNCTIONS_URL || '') + '/radar-jobs';
 // ─── Datos mock (fallback mientras no hay integración real) ──
 var RADAR_MOCK_JOBS = {
   upwork:     [
-    { titulo: 'Brand Identity Designer needed',  presupuesto: '$500–$1,500', fecha_publicacion: null, url: 'https://www.upwork.com/nx/search/jobs/?q=brand+design+identity&sort=recency' },
-    { titulo: 'Logo & Visual Identity for Startup', presupuesto: '$300–$800', fecha_publicacion: null, url: 'https://www.upwork.com/nx/search/jobs/?q=logo+design+branding&sort=recency' },
-    { titulo: 'UI/UX Web Designer – Remote',     presupuesto: '$1,000–$3,000', fecha_publicacion: null, url: 'https://www.upwork.com/nx/search/jobs/?q=web+design+ui+ux&sort=recency' }
+    { titulo: 'Brand Identity Designer needed',      presupuesto: '$500–$1,500',   fecha_publicacion: null, url: 'https://www.upwork.com/nx/search/jobs/?q=brand+design+identity&sort=recency' },
+    { titulo: 'Logo & Visual Identity for Startup',   presupuesto: '$300–$800',     fecha_publicacion: null, url: 'https://www.upwork.com/nx/search/jobs/?q=logo+design+branding&sort=recency' },
+    { titulo: 'UI/UX Web Designer – Remote',          presupuesto: '$1,000–$3,000', fecha_publicacion: null, url: 'https://www.upwork.com/nx/search/jobs/?q=web+design+ui+ux&sort=recency' }
   ],
   workana:    [
     { titulo: 'Diseño de identidad corporativa completa', presupuesto: '$400–$1,200', fecha_publicacion: null, url: 'https://www.workana.com/jobs?category=design&subcategory=brand-design&language=es' },
@@ -25,19 +26,19 @@ var RADAR_MOCK_JOBS = {
     { titulo: 'Custom Website UI/UX Design',     presupuesto: 'Desde $500', fecha_publicacion: null, url: 'https://www.fiverr.com/search/gigs?query=website+design+ui&sort_by=rating' }
   ],
   linkedin:   [
-    { titulo: 'Senior Brand Designer – Remote',      presupuesto: '$80k–$110k/yr', fecha_publicacion: null, url: 'https://www.linkedin.com/jobs/search/?keywords=brand+designer&f_TPR=r86400&sortBy=DD' },
-    { titulo: 'Freelance Graphic Designer',           presupuesto: 'Negociable',    fecha_publicacion: null, url: 'https://www.linkedin.com/jobs/search/?keywords=graphic+designer+freelance&f_TPR=r86400&sortBy=DD' },
-    { titulo: 'UI/UX Designer – Contract Remote',     presupuesto: '$60–$90/hr',    fecha_publicacion: null, url: 'https://www.linkedin.com/jobs/search/?keywords=ui+ux+designer+remote&f_TPR=r86400&sortBy=DD' }
+    { titulo: 'Senior Brand Designer – Remote',    presupuesto: '$80k–$110k/yr', fecha_publicacion: null, url: 'https://www.linkedin.com/jobs/search/?keywords=brand+designer&f_TPR=r86400&sortBy=DD' },
+    { titulo: 'Freelance Graphic Designer',         presupuesto: 'Negociable',    fecha_publicacion: null, url: 'https://www.linkedin.com/jobs/search/?keywords=graphic+designer+freelance&f_TPR=r86400&sortBy=DD' },
+    { titulo: 'UI/UX Designer – Contract Remote',   presupuesto: '$60–$90/hr',    fecha_publicacion: null, url: 'https://www.linkedin.com/jobs/search/?keywords=ui+ux+designer+remote&f_TPR=r86400&sortBy=DD' }
   ],
   freelancer: [
-    { titulo: 'Logo Design for Tech Company',        presupuesto: '$30–$250',     fecha_publicacion: null, url: 'https://www.freelancer.com/jobs/graphic-design/?q=branding+logo' },
-    { titulo: 'Landing Page Design – Responsive',    presupuesto: '$100–$400',    fecha_publicacion: null, url: 'https://www.freelancer.com/jobs/website-design/?q=web+design' },
-    { titulo: 'Brand Identity Contest – $500 prize', presupuesto: '$500 premio',  fecha_publicacion: null, url: 'https://www.freelancer.com/contest/?q=logo+brand' }
+    { titulo: 'Logo Design for Tech Company',        presupuesto: '$30–$250',    fecha_publicacion: null, url: 'https://www.freelancer.com/jobs/graphic-design/?q=branding+logo' },
+    { titulo: 'Landing Page Design – Responsive',    presupuesto: '$100–$400',   fecha_publicacion: null, url: 'https://www.freelancer.com/jobs/website-design/?q=web+design' },
+    { titulo: 'Brand Identity Contest – $500 prize', presupuesto: '$500 premio', fecha_publicacion: null, url: 'https://www.freelancer.com/contest/?q=logo+brand' }
   ],
   behance:    [
-    { titulo: 'Brand & Visual Identity Designer', presupuesto: 'Full-time / Remote', fecha_publicacion: null, url: 'https://www.behance.net/joblist?tracking_source=nav20&field=132' },
-    { titulo: 'Senior Motion Designer',           presupuesto: '$75k–$95k',          fecha_publicacion: null, url: 'https://www.behance.net/joblist?tracking_source=nav20&field=135' },
-    { titulo: 'Visual Designer – Creative Studio', presupuesto: 'Contract Remote',   fecha_publicacion: null, url: 'https://www.behance.net/joblist?tracking_source=nav20&field=132&location=remote' }
+    { titulo: 'Brand & Visual Identity Designer',  presupuesto: 'Full-time / Remote', fecha_publicacion: null, url: 'https://www.behance.net/joblist?tracking_source=nav20&field=132' },
+    { titulo: 'Senior Motion Designer',             presupuesto: '$75k–$95k',          fecha_publicacion: null, url: 'https://www.behance.net/joblist?tracking_source=nav20&field=135' },
+    { titulo: 'Visual Designer – Creative Studio',  presupuesto: 'Contract Remote',    fecha_publicacion: null, url: 'https://www.behance.net/joblist?tracking_source=nav20&field=132&location=remote' }
   ]
 };
 
@@ -45,27 +46,44 @@ var RADAR_MOCK_JOBS = {
 function radarFormatFecha(iso) {
   if (!iso) return null;
   var d = new Date(iso);
-  var diff = Math.floor((Date.now() - d.getTime()) / 60000); // minutos
+  var diff = Math.floor((Date.now() - d.getTime()) / 60000);
   if (diff < 60)   return 'hace ' + diff + ' min';
   if (diff < 1440) return 'hace ' + Math.floor(diff / 60) + 'h';
   return 'hace ' + Math.floor(diff / 1440) + 'd';
 }
 
+// ─── Fase 4: Registrar lanzamiento (métrica) ─────────────────
+function radarTrackLanzamiento(plataformaId, jobUrl) {
+  if (!RADAR_API_URL || RADAR_API_URL === '/radar-jobs') return;
+  fetch(RADAR_API_URL + '/track', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ plataforma_id: plataformaId, job_url: jobUrl })
+  }).catch(function() {}); // best-effort, no bloquea UI
+}
+
 // ─── Fetch de la API ─────────────────────────────────────────
-function radarFetchPlataformas(callback) {
+// Fase 4: acepta parámetro opcional de categoría
+function radarFetchPlataformas(callback, opciones) {
   if (!RADAR_API_URL || RADAR_API_URL === '/radar-jobs') {
-    // Sin URL de Supabase configurada → usar mock directamente
     callback(null);
     return;
   }
-  fetch(RADAR_API_URL + '?limit=3')
+  var params = new URLSearchParams({ limit: '3' });
+  if (opciones && opciones.categoria) params.set('categoria', opciones.categoria);
+  if (opciones && opciones.plataforma) params.set('plataforma', opciones.plataforma);
+
+  fetch(RADAR_API_URL + '?' + params.toString())
     .then(function(res) { return res.json(); })
     .then(function(data) { callback(data.plataformas || null); })
-    .catch(function() { callback(null); }); // fallback a mock en error
+    .catch(function() { callback(null); });
 }
 
 // ─── Mini-Viewer Modal ───────────────────────────────────────
-function radarAbrirViewer(url, nombre, color) {
+function radarAbrirViewer(url, nombre, color, plataformaId) {
+  // Fase 4: registrar métrica al abrir viewer
+  if (plataformaId) radarTrackLanzamiento(plataformaId, url);
+
   var existente = document.getElementById('radar-viewer-overlay');
   if (existente) existente.remove();
 
@@ -156,6 +174,39 @@ function radarViewerIframeLoaded(iframe) {
   } catch(e) { /* Cross-origin = OK */ }
 }
 
+// ─── Fase 4: Render filtros de categoría ─────────────────────
+function radarRenderFiltros(categorias, categoriaActiva) {
+  var wrapId = 'radar-filtros-wrap';
+  var wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+
+  var html = '<button onclick="radarCambiarCategoria(null)" '
+    + 'style="padding:5px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;'
+    + 'border:1px solid rgba(255,255,255,0.18);margin-right:6px;transition:all 0.15s;'
+    + (categoriaActiva ? 'background:transparent;color:rgba(255,255,255,0.5);'
+                       : 'background:rgba(255,255,255,0.12);color:#fff;')
+    + '">Todas</button>';
+
+  categorias.forEach(function(cat) {
+    var activa = cat === categoriaActiva;
+    html += '<button onclick="radarCambiarCategoria(\''+cat+'\')" '
+      + 'style="padding:5px 14px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;'
+      + 'border:1px solid rgba(255,255,255,0.18);margin-right:6px;transition:all 0.15s;'
+      + (activa ? 'background:rgba(255,255,255,0.12);color:#fff;'
+                : 'background:transparent;color:rgba(255,255,255,0.5);')
+      + '">' + cat.charAt(0).toUpperCase() + cat.slice(1) + '</button>';
+  });
+
+  wrap.innerHTML = html;
+}
+
+// ─── Cambiar categoría activa ─────────────────────────────────
+var _radarCategoriaActiva = null;
+function radarCambiarCategoria(categoria) {
+  _radarCategoriaActiva = categoria;
+  radarRender();
+}
+
 // ─── Render principal ────────────────────────────────────────
 function radarRenderConData(plataformas) {
   var container = document.getElementById('radar-plataformas-grid');
@@ -178,13 +229,35 @@ function radarRenderConData(plataformas) {
     document.head.appendChild(style);
   }
 
+  // Fase 4: recolectar y renderizar filtros de categorías disponibles
+  var categsSet = {};
+  plataformas.forEach(function(p) { if (p.categoria) categsSet[p.categoria] = true; });
+  var categorias = Object.keys(categsSet).sort();
+  radarRenderFiltros(categorias, _radarCategoriaActiva);
+
   var html = '';
   plataformas.forEach(function(p) {
-    // Jobs: si API devuelve vacío, usar mock como fallback visual
     var jobs = (p.jobs && p.jobs.length > 0)
       ? p.jobs
       : (RADAR_MOCK_JOBS[p.id] || []);
     var usandoMock = !(p.jobs && p.jobs.length > 0);
+
+    // Fase 4: badge de fuente de datos
+    var fuenteBadge = '';
+    if (!usandoMock) {
+      if (p.fuente === 'rss') {
+        fuenteBadge = '<span style="font-size:9px;color:#4ade80;margin-left:auto;padding:2px 7px;'
+          + 'background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.2);'
+          + 'border-radius:4px;white-space:nowrap;">● En vivo</span>';
+      } else if (p.fuente === 'cache' || p.fuente === 'bd') {
+        fuenteBadge = '<span style="font-size:9px;color:rgba(255,200,60,0.9);margin-left:auto;padding:2px 7px;'
+          + 'background:rgba(255,200,60,0.06);border:1px solid rgba(255,200,60,0.15);'
+          + 'border-radius:4px;white-space:nowrap;">⏱ Caché</span>';
+      }
+    } else {
+      fuenteBadge = '<span style="font-size:9px;color:rgba(255,255,255,0.25);margin-left:auto;padding:2px 6px;'
+        + 'background:rgba(255,255,255,0.04);border-radius:4px;white-space:nowrap;">datos de ejemplo</span>';
+    }
 
     html += '<div class="radar-card" style="border-color:'+p.color_border+';background:'+p.color_bg+';padding:0;overflow:hidden;">';
 
@@ -195,10 +268,7 @@ function radarRenderConData(plataformas) {
     html += '<span class="radar-nombre" style="color:'+p.color+';">'+p.nombre+'</span>';
     html += '<span class="radar-desc">'+(p.descripcion||'')+'</span>';
     html += '</div>';
-    if (usandoMock) {
-      html += '<span style="font-size:9px;color:rgba(255,255,255,0.25);margin-left:auto;padding:2px 6px;'
-             + 'background:rgba(255,255,255,0.04);border-radius:4px;white-space:nowrap;">datos de ejemplo</span>';
-    }
+    html += fuenteBadge;
     html += '</div>';
 
     // Sección de jobs
@@ -208,14 +278,14 @@ function radarRenderConData(plataformas) {
            + 'border-bottom:1px solid rgba(255,255,255,0.06);">📋 Trabajos recientes</p>';
 
     if (jobs.length === 0) {
-      // Sin jobs: solo mostrar botón de búsqueda
       html += '<p style="color:rgba(255,255,255,0.3);font-size:12px;text-align:center;padding:16px 0;">'
              + 'Sin datos aún — usa el botón de abajo</p>';
     } else {
       jobs.forEach(function(job) {
         var jobUrl  = job.url || p.search_url || '#';
         var tiempo  = radarFormatFecha(job.fecha_publicacion) || '';
-        html += '<div class="radar-job-item" onclick="radarAbrirViewer(\''+jobUrl+'\',\''+p.nombre+'\',\''+p.color+'\')" '
+        // Fase 4: pasar plataformaId al viewer para registrar métrica
+        html += '<div class="radar-job-item" onclick="radarAbrirViewer(\''+jobUrl+'\',\''+p.nombre+'\',\''+p.color+'\',\''+p.id+'\')" '
                + 'style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;'
                + 'border-radius:8px;cursor:pointer;margin-bottom:4px;background:rgba(255,255,255,0.03);">';
         html += '<div style="flex:1;min-width:0;">';
@@ -235,7 +305,7 @@ function radarRenderConData(plataformas) {
 
     // Botón ver todos
     var searchUrl = p.search_url || '#';
-    html += '<button class="radar-btn-viewer" onclick="radarAbrirViewer(\''+searchUrl+'\',\''+p.nombre+'\',\''+p.color+'\')" '
+    html += '<button class="radar-btn-viewer" onclick="radarAbrirViewer(\''+searchUrl+'\',\''+p.nombre+'\',\''+p.color+'\',\''+p.id+'\')" '
            + 'style="width:100%;background:rgba(255,255,255,0.05);border:1px solid '+p.color_border+';'
            + 'color:'+p.color+';padding:7px;border-radius:8px;font-size:11px;font-weight:600;'
            + 'cursor:pointer;margin-top:4px;display:flex;align-items:center;justify-content:center;gap:6px;">'
@@ -246,7 +316,9 @@ function radarRenderConData(plataformas) {
     html += '<div class="radar-card-footer" style="padding:10px 16px;border-top:1px solid rgba(255,255,255,0.06);">';
     html += '<button onclick="radarGuardarOpp(\''+p.id+'\',\''+p.nombre+'\')" class="radar-btn-opp" style="border-color:'+p.color_border+';color:'+p.color+';">';
     html += '<i class="ph ph-lightning"></i> Guardar Oportunidad</button>';
-    html += '<a href="'+searchUrl+'" target="_blank" rel="noopener noreferrer" class="radar-btn-open" style="background:'+p.color+';">';
+    html += '<a href="'+searchUrl+'" target="_blank" rel="noopener noreferrer" class="radar-btn-open" style="background:'+p.color+';"';
+    // Fase 4: registrar lanzamiento al abrir link directo también
+    html += ' onclick="radarTrackLanzamiento(\''+p.id+'\',\''+searchUrl+'\')">'
     html += '<i class="ph ph-arrow-square-out"></i> Abrir '+p.nombre+'</a>';
     html += '</div>';
 
@@ -261,25 +333,31 @@ function radarRender() {
   var container = document.getElementById('radar-plataformas-grid');
   if (!container) return;
 
-  // Mostrar estado de carga
   container.innerHTML = '<div class="radar-loading"><i class="ph ph-spinner" style="animation:spin 1s linear infinite"></i> Cargando plataformas…</div>';
+
+  // Fase 4: pasar opciones de filtro (categoría activa si la hay)
+  var opciones = {};
+  if (_radarCategoriaActiva) opciones.categoria = _radarCategoriaActiva;
 
   radarFetchPlataformas(function(plataformas) {
     if (!plataformas || plataformas.length === 0) {
-      // Fallback: construir lista desde datos mock estáticos
       var fallback = [
-        { id:'upwork',     nombre:'Upwork',         color:'#14a800', color_bg:'rgba(20,168,0,0.08)',    color_border:'rgba(20,168,0,0.25)',    logo:'🟢', descripcion:'La plataforma freelance más grande del mundo',  search_url:'https://www.upwork.com/nx/search/jobs/?q=brand+design+identity&sort=recency',    jobs:[] },
-        { id:'workana',    nombre:'Workana',         color:'#0075FF', color_bg:'rgba(0,117,255,0.08)',   color_border:'rgba(0,117,255,0.25)',   logo:'🔵', descripcion:'La plataforma líder en Latinoamérica',           search_url:'https://www.workana.com/jobs?category=design&subcategory=brand-design&language=es', jobs:[] },
-        { id:'fiverr',     nombre:'Fiverr',          color:'#1DBF73', color_bg:'rgba(29,191,115,0.08)',  color_border:'rgba(29,191,115,0.25)',  logo:'🟠', descripcion:'Marketplace global con millones de compradores', search_url:'https://www.fiverr.com/search/gigs?query=brand+identity+design&sort_by=rating',     jobs:[] },
-        { id:'linkedin',   nombre:'LinkedIn Jobs',   color:'#0077B5', color_bg:'rgba(0,119,181,0.08)',   color_border:'rgba(0,119,181,0.25)',   logo:'🔷', descripcion:'Oportunidades con empresas y agencias',          search_url:'https://www.linkedin.com/jobs/search/?keywords=brand+designer&f_TPR=r86400&sortBy=DD', jobs:[] },
-        { id:'freelancer', nombre:'Freelancer.com',  color:'#29B2FE', color_bg:'rgba(41,178,254,0.08)',  color_border:'rgba(41,178,254,0.25)',  logo:'⚡', descripcion:'Proyectos globales y concursos de diseño',       search_url:'https://www.freelancer.com/jobs/graphic-design/?q=branding+logo',                  jobs:[] },
-        { id:'behance',    nombre:'Behance Jobs',    color:'#1769FF', color_bg:'rgba(23,105,255,0.08)',  color_border:'rgba(23,105,255,0.25)',  logo:'🎨', descripcion:'Jobs en la comunidad creativa de Adobe',         search_url:'https://www.behance.net/joblist?tracking_source=nav20&field=132',                   jobs:[] }
+        { id:'upwork',     nombre:'Upwork',        color:'#14a800', color_bg:'rgba(20,168,0,0.08)',   color_border:'rgba(20,168,0,0.25)',   logo:'🟢', descripcion:'La plataforma freelance más grande del mundo',  search_url:'https://www.upwork.com/nx/search/jobs/?q=brand+design+identity&sort=recency',    categoria:'branding', fuente:'mock', jobs:[] },
+        { id:'workana',    nombre:'Workana',        color:'#0075FF', color_bg:'rgba(0,117,255,0.08)',  color_border:'rgba(0,117,255,0.25)',  logo:'🔵', descripcion:'La plataforma líder en Latinoamérica',           search_url:'https://www.workana.com/jobs?category=design&subcategory=brand-design&language=es', categoria:'branding', fuente:'mock', jobs:[] },
+        { id:'fiverr',     nombre:'Fiverr',         color:'#1DBF73', color_bg:'rgba(29,191,115,0.08)', color_border:'rgba(29,191,115,0.25)', logo:'🟠', descripcion:'Marketplace global con millones de compradores', search_url:'https://www.fiverr.com/search/gigs?query=brand+identity+design&sort_by=rating',     categoria:'branding', fuente:'mock', jobs:[] },
+        { id:'linkedin',   nombre:'LinkedIn Jobs',  color:'#0077B5', color_bg:'rgba(0,119,181,0.08)',  color_border:'rgba(0,119,181,0.25)',  logo:'🔷', descripcion:'Oportunidades con empresas y agencias',          search_url:'https://www.linkedin.com/jobs/search/?keywords=brand+designer&f_TPR=r86400&sortBy=DD', categoria:'web',      fuente:'mock', jobs:[] },
+        { id:'freelancer', nombre:'Freelancer.com', color:'#29B2FE', color_bg:'rgba(41,178,254,0.08)', color_border:'rgba(41,178,254,0.25)', logo:'⚡', descripcion:'Proyectos globales y concursos de diseño',       search_url:'https://www.freelancer.com/jobs/graphic-design/?q=branding+logo',                  categoria:'web',      fuente:'mock', jobs:[] },
+        { id:'behance',    nombre:'Behance Jobs',   color:'#1769FF', color_bg:'rgba(23,105,255,0.08)', color_border:'rgba(23,105,255,0.25)', logo:'🎨', descripcion:'Jobs en la comunidad creativa de Adobe',         search_url:'https://www.behance.net/joblist?tracking_source=nav20&field=132',                   categoria:'motion',   fuente:'mock', jobs:[] }
       ];
-      radarRenderConData(fallback);
+      // Aplicar filtro local si hay categoría activa
+      var lista = _radarCategoriaActiva
+        ? fallback.filter(function(p) { return p.categoria === _radarCategoriaActiva; })
+        : fallback;
+      radarRenderConData(lista);
     } else {
       radarRenderConData(plataformas);
     }
-  });
+  }, opciones);
 }
 
 function radarGuardarOpp(plataformaId, plataformaNombre) {
