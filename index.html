@@ -114,6 +114,139 @@
   .sales-pipeline .stage-header { display: flex; align-items: center; gap: 6px; overflow: hidden; min-width: 0; }
   .sales-pipeline .stage-title { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; flex: 1; }
   .sales-pipeline .stage-icon { flex-shrink: 0; }
+
+  /* ══ FASE 5: PAQUETES EN CATÁLOGO ══ */
+  .paquetes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+    margin-top: 4px;
+  }
+  .paquete-card {
+    background: rgba(18,53,36,0.22);
+    border: 1px solid rgba(197,162,83,0.15);
+    border-radius: 14px;
+    padding: 18px 20px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .paquete-card:hover {
+    border-color: rgba(197,162,83,0.35);
+    box-shadow: 0 4px 20px rgba(18,53,36,0.3);
+  }
+  .paquete-card-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 12px; margin-bottom: 10px; flex-wrap: wrap;
+  }
+  .paquete-card-titulo {
+    display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;
+  }
+  .paquete-card-titulo strong {
+    font-size: 15px; font-weight: 700; color: var(--gn-text, #E8F0EC);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .paquete-color-dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  }
+  .paquete-badge-descuento {
+    font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px;
+    background: rgba(45,139,94,0.2); color: #2D8B5E; flex-shrink: 0;
+  }
+  .paquete-card-precio {
+    display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  }
+  .paquete-precio-tachado {
+    font-size: 12px; color: var(--gn-text-muted, #8FAB9A);
+    text-decoration: line-through;
+  }
+  .paquete-precio-final {
+    font-size: 16px; font-weight: 700; color: #C5A253;
+  }
+  .paquete-descripcion {
+    font-size: 13px; color: var(--gn-text-muted, #8FAB9A);
+    margin: 0 0 10px; line-height: 1.5;
+  }
+  .paquete-servicios-lista {
+    list-style: none; margin: 0 0 12px; padding: 0;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .paquete-servicios-lista li {
+    font-size: 12px; color: var(--gn-text, #E8F0EC);
+    padding: 4px 0 4px 14px; position: relative;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .paquete-servicios-lista li:before {
+    content: '›'; position: absolute; left: 0;
+    color: #C5A253; font-weight: 700;
+  }
+  .paquete-servicios-lista li:last-child { border-bottom: none; }
+  .paquete-sin-servicios {
+    font-size: 12px; color: var(--gn-text-muted, #8FAB9A); margin: 0 0 12px;
+  }
+  .paquete-card-acciones {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;
+    padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .paquete-card-acciones .btn-table {
+    font-size: 12px; padding: 6px 12px;
+  }
+
+  /* ══ MODAL PAQUETE ══ */
+  #modalPaquete {
+    display: none; position: fixed; inset: 0; z-index: 1100;
+    background: rgba(0,0,0,0.65); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 16px;
+  }
+  #modalPaquete.activo { display: flex; }
+  .modal-paquete-card {
+    background: #0D1710;
+    border: 1px solid rgba(197,162,83,0.2);
+    border-radius: 18px;
+    padding: 28px 28px 24px;
+    width: 100%; max-width: 560px;
+    max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 16px 60px rgba(0,0,0,0.5);
+  }
+  .modal-paquete-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .modal-paquete-header h3 {
+    font-size: 16px; font-weight: 700;
+    color: var(--gn-text, #E8F0EC); margin: 0;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .modal-paquete-header h3 i { color: #C5A253; }
+  .pkg-servicios-titulo {
+    font-size: 12px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.5px; color: var(--gn-text-muted, #8FAB9A);
+    margin: 16px 0 8px;
+  }
+  #pkg-servicios-lista {
+    display: flex; flex-direction: column; gap: 6px;
+    max-height: 220px; overflow-y: auto;
+    padding: 8px 10px;
+    background: rgba(18,53,36,0.2);
+    border: 1px solid rgba(197,162,83,0.1);
+    border-radius: 10px;
+  }
+  .pkg-servicio-check {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--gn-text, #E8F0EC);
+    cursor: pointer; padding: 3px 0;
+  }
+  .pkg-servicio-check input[type="checkbox"] {
+    width: 15px; height: 15px; accent-color: #C5A253; cursor: pointer;
+  }
+  .pkg-precio-ref {
+    font-size: 11px; color: var(--gn-text-muted, #8FAB9A);
+  }
+  #pkg-precio-preview {
+    font-size: 12px; color: var(--gn-text-muted, #8FAB9A);
+    margin-top: 6px; min-height: 18px;
+  }
+  #pkg-precio-preview .color-success { color: #2D8B5E; }
+  .listaPaquetes-container { margin-top: 8px; }
+  #listaPaquetes .paquete-card { margin-bottom: 0; }
 </style>
 </head>
 <body>
@@ -165,6 +298,45 @@
         <button type="button" class="btn-secondary" onclick="ttCerrarModalManual()">Cancelar</button>
         <button type="button" class="btn-primary" onclick="ttGuardarManual()"><i class="ph ph-floppy-disk"></i> Guardar</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL PAQUETE (Fase 5) ══ -->
+  <div id="modalPaquete">
+    <div class="modal-paquete-card">
+      <div class="modal-paquete-header">
+        <h3><i class="ph ph-package"></i> <span id="modal-paquete-titulo">Nuevo Paquete</span></h3>
+        <button type="button" class="btn-secondary" id="btn-cerrar-modal-paquete" style="padding:6px 12px;font-size:12px;"><i class="ph ph-x"></i> Cerrar</button>
+      </div>
+      <form id="formPaquete" onsubmit="return guardarPaquete(event)">
+        <input type="hidden" id="pkg-id-editar" value="">
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label for="pkg-nombre">Nombre del paquete <span class="required">*</span></label>
+            <input type="text" id="pkg-nombre" placeholder="Ej: Branding Starter Pack" required maxlength="200">
+          </div>
+          <div class="form-group full-width">
+            <label for="pkg-descripcion">Descripción</label>
+            <textarea id="pkg-descripcion" rows="2" placeholder="¿Qué incluye este paquete?"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="pkg-precio">Precio del paquete (USD) <span class="required">*</span></label>
+            <input type="number" id="pkg-precio" placeholder="0.00" min="0.01" step="0.01" required>
+            <div id="pkg-precio-preview"></div>
+          </div>
+          <div class="form-group">
+            <label for="pkg-color">Color identificador</label>
+            <input type="color" id="pkg-color" value="#2D8B5E" style="height:40px;padding:2px 6px;">
+          </div>
+        </div>
+        <p class="pkg-servicios-titulo"><i class="ph ph-list-checks"></i> Servicios incluidos</p>
+        <div id="pkg-servicios-lista"></div>
+        <div class="form-feedback" id="feedback-paquete" style="margin-top:12px;"></div>
+        <div class="form-actions" style="margin-top:16px;">
+          <button type="submit" class="btn-primary"><i class="ph ph-floppy-disk"></i> Guardar Paquete</button>
+          <button type="button" class="btn-secondary" onclick="cerrarModalPaquete()"><i class="ph ph-x"></i> Cancelar</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -309,7 +481,7 @@
         <button class="sub-nav-item" onclick="switchSubSection('negocio','oportunidades');setTimeout(()=>oppRenderKanban(),200);"><i class="ph ph-lightning"></i> Oportunidades</button>
         <button class="sub-nav-item" onclick="switchSubSection('negocio','radar');setTimeout(()=>radarRender(),200);"><i class="ph ph-radar"></i> Radar de Trabajos</button>
         <button class="sub-nav-item" onclick="switchSubSection('negocio','cotizaciones');if(typeof ncIniciarModulo==='function') ncIniciarModulo();"><i class="ph ph-file-text"></i> Cotizaciones</button>
-        <button class="sub-nav-item" onclick="switchSubSection('negocio','catalogo')"><i class="ph ph-list-checks"></i> Catálogo</button>
+        <button class="sub-nav-item" onclick="switchSubSection('negocio','catalogo');setTimeout(()=>typeof inicializarPaquetes==='function'&&inicializarPaquetes(),200);"><i class="ph ph-list-checks"></i> Catálogo</button>
         <button class="sub-nav-item" onclick="switchSubSection('negocio','proveedores');setTimeout(()=>prov_renderTabla(),200);"><i class="ph ph-storefront"></i> Proveedores</button>
       </div>
 
@@ -357,7 +529,6 @@
             <button class="btn-primary" onclick="oppAbrirModal()"><i class="ph ph-plus"></i> Nueva Oportunidad</button>
           </div>
         </div>
-        <!-- KPIs -->
         <div class="opp-kpis">
           <div class="opp-kpi-card"><span class="opp-kpi-val" id="opp-kpi-total">0</span><span class="opp-kpi-lbl">Total</span></div>
           <div class="opp-kpi-card"><span class="opp-kpi-val" id="opp-kpi-activas">0</span><span class="opp-kpi-lbl">Activas</span></div>
@@ -365,7 +536,6 @@
           <div class="opp-kpi-card"><span class="opp-kpi-val" id="opp-kpi-tasa">0%</span><span class="opp-kpi-lbl">Tasa de Cierre</span></div>
           <div class="opp-kpi-card"><span class="opp-kpi-val" id="opp-kpi-valor">USD 0.00</span><span class="opp-kpi-lbl">Valor Ganado</span></div>
         </div>
-        <!-- Kanban -->
         <div class="opp-kanban-wrap">
           <div class="opp-kanban-board" id="opp-kanban-board">
             <div style="color:#8FAB9A;font-size:13px;padding:20px;">Cargando oportunidades...</div>
@@ -452,17 +622,22 @@
            TAB 5: CATÁLOGO & PAQUETES
            ══════════════════════════════════ -->
       <div id="negocio-catalogo" class="sub-section">
-        <!-- Paquetes -->
+
+        <!-- ── Paquetes de Servicios ── -->
         <div class="section" style="margin-bottom:24px;">
           <div class="section-header">
             <h2 class="section-title"><i class="ph ph-package"></i> Paquetes de Servicios</h2>
-            <div class="section-actions"><button class="btn-secondary" onclick="catalogo_abrirModalPaquete()"><i class="ph ph-plus"></i> Nuevo Paquete</button></div>
+            <div class="section-actions">
+              <input type="text" id="buscar-paquete" placeholder="Buscar paquete..." class="search-input" style="width:180px;">
+              <button class="btn-primary" id="btn-nuevo-paquete"><i class="ph ph-plus"></i> Nuevo Paquete</button>
+            </div>
           </div>
-          <div class="paquetes-grid" id="paquetes-grid">
-            <div style="color:#8FAB9A;font-size:13px;padding:20px;grid-column:1/-1;">Los paquetes que crees aparecerán aquí.</div>
+          <div class="paquetes-grid" id="listaPaquetes">
+            <div style="color:#8FAB9A;font-size:13px;padding:20px;grid-column:1/-1;">Cargando paquetes...</div>
           </div>
         </div>
-        <!-- Añadir Servicio -->
+
+        <!-- ── Añadir Servicio ── -->
         <div class="form-section">
           <div class="form-header"><h2 class="section-title"><i class="ph ph-plus"></i> Añadir Servicio al Catálogo</h2></div>
           <form id="formServicio" onsubmit="return guardarServicio(event)">
@@ -477,12 +652,14 @@
           </form>
           <div class="form-feedback" id="feedback-servicio"></div>
         </div>
-        <!-- Grupos -->
+
+        <!-- ── Grupos de Servicios ── -->
         <div class="section">
           <div class="section-header"><h2 class="section-title"><i class="ph ph-folder"></i> Grupos de Servicios</h2><div class="section-actions"><button class="btn-secondary" onclick="abrirModalGrupo()"><i class="ph ph-plus"></i> Nuevo grupo</button></div></div>
           <div id="gruposResumenCatalogo" class="grupos-resumen"></div>
         </div>
-        <!-- Catálogo tabla -->
+
+        <!-- ── Catálogo tabla ── -->
         <div class="section">
           <div class="section-header">
             <h2 class="section-title"><i class="ph ph-list-checks"></i> Servicios del Catálogo</h2>
@@ -662,6 +839,7 @@
   <script src="js/utils.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/catalogo.js"></script>
+  <script src="js/catalogo-paquetes.js"></script>
   <script src="js/clientes.js"></script>
   <script src="js/grupos.js"></script>
   <script src="js/cotizaciones.js"></script>
