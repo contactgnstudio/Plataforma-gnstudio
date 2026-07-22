@@ -1,14 +1,14 @@
 // ============================================================
 // js/negocio-cotizaciones.js — Cotizaciones Independientes
 // Sección: Negocio > Cotizaciones
-// Funciones: Formulario, tabla con estados, Convertir en Proyecto
-// GN Studio OS v2.4
+// FIX v2.5: ncConvertirEnProyecto crea proyecto y muestra botón
+//            directo para ir a la sección sin usar confirm()
+// GN Studio OS v2.5
 // ============================================================
 
 (function (window, document) {
   'use strict';
 
-  /* ── helpers ── */
   var byId = function (id) { return document.getElementById(id); };
 
   function log(level, msg, meta) {
@@ -58,24 +58,19 @@
     return [];
   }
 
-  // ── Nombre real de la tabla de servicios (mismo que catalogo.js) ──
   function _tablaServicios() {
-    return (window.STORAGE_KEYS && window.STORAGE_KEYS.SERVICIOS)
-      ? window.STORAGE_KEYS.SERVICIOS
-      : 'servicios';
+    return (window.STORAGE_KEYS && window.STORAGE_KEYS.SERVICIOS) ? window.STORAGE_KEYS.SERVICIOS : 'servicios';
   }
 
-  function toast(type, title, message) {
-    if (window.showToast) window.showToast({ type: type, title: title, message: message });
+  function toast(type, title, message, actions) {
+    if (window.showToast) window.showToast({ type: type, title: title, message: message, actions: actions });
   }
 
-  /* ── estado local ── */
   var _cotizaciones = [];
   var _clientes = [];
   var _editandoId = null;
-  var _items = [];   // filas de la propuesta económica
+  var _items = [];
 
-  /* ── generador de número ── */
   function generarNumero() {
     if (typeof window.generarNumeroCotizacion === 'function') return window.generarNumeroCotizacion();
     var now = new Date();
@@ -107,7 +102,7 @@
     _clientes.forEach(function (c) {
       var opt = document.createElement('option');
       opt.value = c.id;
-      opt.textContent = c.nombre || c.razon_social || 'Sin nombre';
+      opt.textContent = (c.nombre || c.razon_social || 'Sin nombre') + (c.ruc ? ' (' + c.ruc + ')' : '');
       sel.appendChild(opt);
     });
   }
@@ -115,7 +110,6 @@
   async function cargarCotizaciones() {
     try {
       var rows = await getDataFiltered('cotizaciones', [], { order: 'created_at', ascending: false });
-      // Filtrar solo las que NO tienen proyecto_id (independientes)
       _cotizaciones = Array.isArray(rows)
         ? rows.filter(function (r) { return !r.proyecto_id; })
         : [];
@@ -130,10 +124,10 @@
   // RENDER TABLA
   // ============================================================
   var ESTADOS = {
-    cotizado:   { label: 'Cotizado',   color: '#C5A253' },
-    enviado:    { label: 'Enviado',    color: '#60A5FA' },
-    aprobado:   { label: 'Aprobado',   color: '#2D8B5E' },
-    rechazado:  { label: 'Rechazado', color: '#F87171' },
+    cotizado:   { label: 'Cotizado',    color: '#C5A253' },
+    enviado:    { label: 'Enviado',     color: '#60A5FA' },
+    aprobado:   { label: 'Aprobado',    color: '#2D8B5E' },
+    rechazado:  { label: 'Rechazado',  color: '#F87171' },
     convertido: { label: 'Convertido', color: '#8FAB9A' }
   };
 
@@ -252,7 +246,7 @@
   }
 
   // ============================================================
-  // BIND BOTONES DEL FORMULARIO
+  // BIND FORMULARIO
   // ============================================================
   function _bindFormulario() {
     var btnAgregar = byId('nc-btn-agregar-item');
@@ -279,22 +273,13 @@
     }
 
     var form = byId('nc-form');
-    if (form) {
-      form.addEventListener('submit', function (e) {
-        e.preventDefault();
-        ncGuardar();
-      });
-    }
+    if (form) form.addEventListener('submit', function (e) { e.preventDefault(); ncGuardar(); });
 
     var btnNueva = byId('nc-btn-nueva');
-    if (btnNueva) {
-      btnNueva.addEventListener('click', ncAbrirFormulario);
-    }
+    if (btnNueva) btnNueva.addEventListener('click', ncAbrirFormulario);
 
     var btnCancelar = byId('nc-btn-cancelar');
-    if (btnCancelar) {
-      btnCancelar.addEventListener('click', ncCerrarFormulario);
-    }
+    if (btnCancelar) btnCancelar.addEventListener('click', ncCerrarFormulario);
   }
 
   function _bindBuscador() {
@@ -306,13 +291,8 @@
       var est = this.value;
       if (!est) { renderTabla(); return; }
       var f = _cotizaciones.filter(function(c){ return (c.estado||'cotizado') === est; });
-      var tbody = byId('nc-tbody');
-      if (tbody) {
-        var orig = _cotizaciones;
-        _cotizaciones = f;
-        renderTabla();
-        _cotizaciones = orig;
-      }
+      var orig = _cotizaciones;
+      _cotizaciones = f; renderTabla(); _cotizaciones = orig;
     });
   }
 
@@ -333,10 +313,7 @@
     var fecha = byId('nc-fecha');
     if (fecha) fecha.value = new Date().toISOString().slice(0, 10);
     var venc = byId('nc-fecha-vencimiento');
-    if (venc) {
-      var d = new Date(); d.setDate(d.getDate() + 15);
-      venc.value = d.toISOString().slice(0, 10);
-    }
+    if (venc) { var d = new Date(); d.setDate(d.getDate() + 15); venc.value = d.toISOString().slice(0, 10); }
   };
 
   window.ncCerrarFormulario = function () {
@@ -346,11 +323,6 @@
     _items = [];
   };
 
-  // ============================================================
-  // CARGAR CATÁLOGO EN SELECT
-  // FIX: usa la tabla correcta 'servicios' (no 'catalogo')
-  //      y siempre recarga desde Supabase para reflejar cambios
-  // ============================================================
   function _poblarSelectCatalogo(sel, rows) {
     rows.forEach(function (s) {
       var opt = document.createElement('option');
@@ -367,30 +339,20 @@
     var sel = byId('nc-select-catalogo');
     if (!sel) return;
     sel.innerHTML = '<option value="">— Agregar desde catálogo —</option>';
-
-    // FIX 1: usar la tabla correcta 'servicios' (catálogo.js la llama así)
-    // FIX 2: siempre pedir a Supabase para no mostrar datos desactualizados;
-    //        si obtenerServicios() está disponible (catalogo.js), úsala directo.
     if (typeof window.obtenerServicios === 'function') {
       window.obtenerServicios().then(function (rows) {
         if (!Array.isArray(rows) || !rows.length) return;
-        window._catalogoServicios = rows;   // actualizar cache global
+        window._catalogoServicios = rows;
         _poblarSelectCatalogo(sel, rows);
-      }).catch(function (e) {
-        log('warn', '[NC] No se pudo cargar catálogo via obtenerServicios', e);
-      });
+      }).catch(function (e) { log('warn', '[NC] No se pudo cargar catálogo', e); });
       return;
     }
-
-    // Fallback: query directa con la tabla correcta
     if (typeof window.getDataFiltered === 'function') {
       window.getDataFiltered(_tablaServicios(), [], { order: 'codigo', ascending: true }).then(function (rows) {
         if (!Array.isArray(rows)) return;
         window._catalogoServicios = rows;
         _poblarSelectCatalogo(sel, rows);
-      }).catch(function (e) {
-        log('warn', '[NC] No se pudo cargar catálogo via getDataFiltered', e);
-      });
+      }).catch(function (e) { log('warn', '[NC] No se pudo cargar catálogo fallback', e); });
     }
   }
 
@@ -398,12 +360,12 @@
   // GUARDAR COTIZACIÓN
   // ============================================================
   window.ncGuardar = async function () {
-    var numero   = (byId('nc-numero')    || {}).value || generarNumero();
-    var clienteId = (byId('nc-cliente')  || {}).value || null;
-    var titulo   = (byId('nc-titulo')    || {}).value || '';
-    var fecha    = (byId('nc-fecha')     || {}).value || new Date().toISOString().slice(0,10);
-    var venc     = (byId('nc-fecha-vencimiento') || {}).value || null;
-    var notas    = (byId('nc-notas')     || {}).value || '';
+    var numero    = (byId('nc-numero')            || {}).value || generarNumero();
+    var clienteId = (byId('nc-cliente')           || {}).value || null;
+    var titulo    = (byId('nc-titulo')            || {}).value || '';
+    var fecha     = (byId('nc-fecha')             || {}).value || new Date().toISOString().slice(0,10);
+    var venc      = (byId('nc-fecha-vencimiento') || {}).value || null;
+    var notas     = (byId('nc-notas')             || {}).value || '';
 
     if (!titulo) { toast('warning', 'Campo requerido', 'El título es obligatorio.'); return; }
 
@@ -419,12 +381,11 @@
       if (it.aplica_itbms) itbms += (it.total || 0) * 0.07;
     });
     var total = subtotal + itbms;
-
     var userId = await getSessionUserId();
 
     var payload = {
       user_id:          userId,
-      proyecto_id:      null,          // independiente
+      proyecto_id:      null,
       numero:           numero,
       cliente_id:       clienteId || null,
       cliente_nombre:   clienteNombre,
@@ -451,8 +412,7 @@
         toast('success', 'Cotización actualizada', numero + ' actualizada correctamente.');
       } else {
         toast('error', 'Error', 'No se pudo actualizar la cotización.');
-        if (fbEl) fbEl.textContent = '';
-        return;
+        if (fbEl) fbEl.textContent = ''; return;
       }
     } else {
       result = await addItem('cotizaciones', payload);
@@ -460,8 +420,7 @@
         toast('success', 'Cotización creada', numero + ' guardada en Supabase.');
       } else {
         toast('error', 'Error', 'No se pudo guardar la cotización.');
-        if (fbEl) fbEl.textContent = '';
-        return;
+        if (fbEl) fbEl.textContent = ''; return;
       }
     }
 
@@ -483,12 +442,12 @@
     _cargarCatalogoEnSelect();
 
     var set = function(id, val) { var el = byId(id); if (el) el.value = val || ''; };
-    set('nc-numero', cot.numero);
-    set('nc-cliente', cot.cliente_id);
-    set('nc-titulo', cot.titulo || cot.nombre_proyecto);
-    set('nc-fecha', cot.fecha_emision || cot.fecha);
-    set('nc-fecha-vencimiento', cot.fecha_vencimiento);
-    set('nc-notas', cot.notas);
+    set('nc-numero',           cot.numero);
+    set('nc-cliente',          cot.cliente_id);
+    set('nc-titulo',           cot.titulo || cot.nombre_proyecto);
+    set('nc-fecha',            cot.fecha_emision || cot.fecha);
+    set('nc-fecha-vencimiento',cot.fecha_vencimiento);
+    set('nc-notas',            cot.notas);
 
     try {
       _items = typeof cot.items === 'string' ? JSON.parse(cot.items) : (Array.isArray(cot.items) ? cot.items : []);
@@ -532,74 +491,142 @@
       } else {
         toast('error', 'Error', 'No se pudo actualizar el estado.');
       }
-    } catch(e) {
-      log('error', '[NC] Error cambiando estado', e);
-    }
+    } catch(e) { log('error', '[NC] Error cambiando estado', e); }
   };
 
   // ============================================================
-  // CONVERTIR EN PROYECTO
+  // CONVERTIR EN PROYECTO  ← FIX PRINCIPAL v2.5
+  // Antes: usaba confirm() y luego otro confirm() para navegar
+  //        — el segundo confirm bloqueaba la navegación en Safari
+  //          y en algunos builds la función addItem no retornaba
+  //          el objeto con .id correctamente.
+  // Ahora:
+  //   1. Muestra un modal de confirmación nativo
+  //   2. Crea el proyecto y vincula cotizacion_id + proyecto_id
+  //   3. Llama crearCotizacionDesdeProforma para crear la copia
+  //      vinculada al proyecto
+  //   4. Muestra toast con botón directo "Ir a Proyectos"
+  //   5. Actualiza la tabla sin recargar la página
   // ============================================================
   window.ncConvertirEnProyecto = async function (id) {
     var cot = _cotizaciones.find(function(c){ return String(c.id) === String(id); });
     if (!cot) { toast('error', 'Error', 'Cotización no encontrada.'); return; }
     if (cot.estado === 'convertido') { toast('info', 'Ya convertida', 'Esta cotización ya fue convertida en proyecto.'); return; }
-    if (!confirm('¿Convertir "' + (cot.titulo || cot.numero) + '" en un proyecto? Se creará automáticamente en la sección Proyectos.')) return;
 
-    try {
-      var userId = await getSessionUserId();
-      var items  = [];
+    // Modal de confirmación propio (evita el doble confirm del navegador)
+    _mostrarModalConvertir(cot, async function() {
       try {
-        items = typeof cot.items === 'string' ? JSON.parse(cot.items) : (Array.isArray(cot.items) ? cot.items : []);
-      } catch(e) { items = []; }
+        var userId = await getSessionUserId();
+        var items  = [];
+        try { items = typeof cot.items === 'string' ? JSON.parse(cot.items) : (Array.isArray(cot.items) ? cot.items : []); }
+        catch(e) { items = []; }
 
-      var proyectoPayload = {
-        user_id:        userId,
-        nombre:         cot.titulo || cot.nombre_proyecto || 'Proyecto desde ' + cot.numero,
-        cliente_id:     cot.cliente_id || null,
-        cliente_nombre: cot.cliente_nombre || '',
-        fecha_inicio:   cot.fecha_emision || new Date().toISOString().slice(0,10),
-        estado:         'cotizado',
-        presupuesto:    parseMonto(cot.total),
-        descripcion:    cot.notas || '',
-        cotizacion_id:  cot.id
-      };
+        // 1. Crear el proyecto
+        var proyectoPayload = {
+          user_id:        userId,
+          nombre:         cot.titulo || cot.nombre_proyecto || ('Proyecto ' + cot.numero),
+          cliente_id:     cot.cliente_id || null,
+          cliente_nombre: cot.cliente_nombre || '',
+          fecha_inicio:   cot.fecha_emision || new Date().toISOString().slice(0,10),
+          estado:         'cotizado',
+          presupuesto:    parseMonto(cot.total),
+          descripcion:    cot.notas || '',
+          cotizacion_id:  cot.id
+        };
 
-      var nuevoProyecto = await addItem('proyectos', proyectoPayload);
-      if (!nuevoProyecto) throw new Error('No se pudo crear el proyecto.');
+        var nuevoProyecto = await addItem('proyectos', proyectoPayload);
+        if (!nuevoProyecto || !nuevoProyecto.id) throw new Error('No se pudo crear el proyecto o no retornó ID.');
 
-      await updateItem('cotizaciones', id, {
-        proyecto_id: nuevoProyecto.id,
-        estado: 'convertido'
-      });
-
-      if (typeof window.crearCotizacionDesdeProforma === 'function') {
-        await window.crearCotizacionDesdeProforma({
-          proyectoId:     nuevoProyecto.id,
-          clienteId:      cot.cliente_id,
-          clienteNombre:  cot.cliente_nombre,
-          nombreProyecto: cot.titulo || cot.nombre_proyecto,
-          alcanceHtml:    cot.descripcion || '',
-          items:          items,
-          subtotal:       parseMonto(cot.subtotal),
-          itbms:          parseMonto(cot.itbms),
-          total:          parseMonto(cot.total)
+        // 2. Vincular cotización → proyecto y marcar convertido
+        await updateItem('cotizaciones', id, {
+          proyecto_id: nuevoProyecto.id,
+          estado: 'convertido'
         });
-      }
 
-      toast('success', '¡Convertido!', 'El proyecto "' + proyectoPayload.nombre + '" fue creado. Ve a la sección Proyectos para verlo.');
-      await cargarCotizaciones();
-
-      setTimeout(function () {
-        if (confirm('¿Ir a la sección Proyectos ahora?')) {
-          if (typeof window.switchSection === 'function') window.switchSection('proyectos');
+        // 3. Crear copia vinculada al proyecto (para la sección Documentos del proyecto)
+        if (typeof window.crearCotizacionDesdeProforma === 'function') {
+          await window.crearCotizacionDesdeProforma({
+            proyectoId:     nuevoProyecto.id,
+            clienteId:      cot.cliente_id,
+            clienteNombre:  cot.cliente_nombre,
+            nombreProyecto: cot.titulo || cot.nombre_proyecto,
+            alcanceHtml:    cot.descripcion || '',
+            items:          items,
+            subtotal:       parseMonto(cot.subtotal),
+            itbms:          parseMonto(cot.itbms),
+            total:          parseMonto(cot.total)
+          });
         }
-      }, 400);
-    } catch (e) {
-      log('error', '[NC] Error convirtiendo en proyecto', e);
-      toast('error', 'Error', 'No se pudo convertir la cotización: ' + (e.message || e));
-    }
+
+        // 4. Actualizar estado local sin releer toda la BD
+        var idx = _cotizaciones.findIndex(function(c){ return String(c.id) === String(id); });
+        if (idx > -1) { _cotizaciones[idx].estado = 'convertido'; _cotizaciones[idx].proyecto_id = nuevoProyecto.id; }
+        renderTabla();
+
+        // 5. Toast con acción directa "Ver Proyecto"
+        var nombreProy = proyectoPayload.nombre;
+        toast('success', '¡Proyecto creado!',
+          '"' + nombreProy + '" fue creado. Puedes verlo en la sección Proyectos.',
+          [{ label: 'Ver Proyectos', action: function() {
+            if (typeof window.switchSection === 'function') window.switchSection('proyectos');
+            else {
+              var link = document.querySelector('[data-section="proyectos"], [href="#proyectos"]');
+              if (link) link.click();
+            }
+          }}]
+        );
+
+        _cerrarModalConvertir();
+      } catch (e) {
+        log('error', '[NC] Error convirtiendo en proyecto', e);
+        toast('error', 'Error', 'No se pudo convertir: ' + (e.message || e));
+        _cerrarModalConvertir();
+      }
+    });
   };
+
+  // ── Modal de confirmación para Convertir en Proyecto ──
+  function _mostrarModalConvertir(cot, onConfirm) {
+    var ex = document.getElementById('gn-modal-convertir');
+    if (ex) ex.remove();
+
+    var modal = document.createElement('div');
+    modal.id = 'gn-modal-convertir';
+    modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.75);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+
+    modal.innerHTML = [
+      '<div style="background:#111E17;border-radius:14px;padding:32px;width:100%;max-width:440px;border:1px solid rgba(197,162,83,0.25);">',
+        '<div style="text-align:center;margin-bottom:20px;">',
+          '<i class="ph ph-arrow-square-out" style="font-size:40px;color:#C5A253;"></i>',
+        '</div>',
+        '<h3 style="margin:0 0 10px;color:#F0F0F5;font-size:17px;text-align:center;">Convertir en Proyecto</h3>',
+        '<p style="color:#8FAB9A;font-size:13px;text-align:center;margin:0 0 20px;">',
+          'Se creará un proyecto basado en <strong style="color:#C5A253;">' + esc(cot.titulo || cot.numero) + '</strong>',
+          ' con presupuesto de <strong style="color:#F0F0F5;">' + money(cot.total) + '</strong>.<br>',
+          'La cotización quedará vinculada y marcada como <em>Convertido</em>.',
+        '</p>',
+        '<div style="display:flex;gap:12px;justify-content:center;">',
+          '<button id="gn-conv-cancelar" style="padding:10px 24px;background:rgba(18,53,36,0.3);border:none;border-radius:8px;color:#F0F0F5;cursor:pointer;font-size:14px;">Cancelar</button>',
+          '<button id="gn-conv-confirmar" style="padding:10px 24px;background:#C5A253;border:none;border-radius:8px;color:#111;font-weight:700;cursor:pointer;font-size:14px;"><i class="ph ph-check"></i> Crear Proyecto</button>',
+        '</div>',
+      '</div>'
+    ].join('');
+
+    document.body.appendChild(modal);
+
+    document.getElementById('gn-conv-cancelar').addEventListener('click', _cerrarModalConvertir);
+    document.getElementById('gn-conv-confirmar').addEventListener('click', function() {
+      this.disabled = true;
+      this.textContent = 'Creando...';
+      onConfirm();
+    });
+    modal.addEventListener('click', function(e) { if (e.target === modal) _cerrarModalConvertir(); });
+  }
+
+  function _cerrarModalConvertir() {
+    var m = document.getElementById('gn-modal-convertir');
+    if (m) m.remove();
+  }
 
   // ============================================================
   // EXPONER INIT
@@ -607,9 +634,7 @@
   window.ncIniciarModulo = iniciarModulo;
 
   document.addEventListener('DOMContentLoaded', function () {
-    if (byId('negocio-cotizaciones')) {
-      iniciarModulo();
-    }
+    if (byId('negocio-cotizaciones')) iniciarModulo();
   });
 
 })(window, document);
