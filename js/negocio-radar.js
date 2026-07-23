@@ -2,11 +2,26 @@
 // js/negocio-radar.js — GN Studio OS v2.0
 // Radar de Oportunidades: consume la Edge Function radar-jobs
 // y renderiza tarjetas con trabajos reales (o fallback mock).
-// Fase 4: filtros por categoría + métricas de lanzamiento.
+// Fase 5: fetch con timeout, retry, refresh automático,
+//         estados visuales En vivo / Caché / Sin jobs,
+//         validación robusta de SUPABASE_FUNCTIONS_URL.
 // ============================================================
 
 // ─── Config ─────────────────────────────────────────────────
-var RADAR_API_URL = (window.SUPABASE_FUNCTIONS_URL || '') + '/radar-jobs';
+var RADAR_FETCH_TIMEOUT_MS  = 8000;   // 8 s máximo por petición
+var RADAR_FETCH_RETRIES     = 2;      // reintentos ante error de red
+var RADAR_REFRESH_INTERVAL  = 5 * 60 * 1000; // refresco cada 5 min
+var _radarRefreshTimer      = null;
+var _radarCategoriaActiva   = null;
+var _radarUltimaRespuesta   = null;   // cache in-memory de la última respuesta OK
+
+// ─── Validación de URL base ──────────────────────────────────
+function radarGetApiUrl() {
+  var base = (window.SUPABASE_FUNCTIONS_URL || '').toString().trim();
+  // Considera URL válida solo si tiene protocolo http(s)
+  if (!base || !/^https?:\/\//i.test(base)) return null;
+  return base.replace(/\/+$/, '') + '/radar-jobs';
+}
 
 // ─── Datos mock (fallback mientras no hay integración real) ──
 var RADAR_MOCK_JOBS = {
@@ -46,42 +61,130 @@ var RADAR_MOCK_JOBS = {
 function radarFormatFecha(iso) {
   if (!iso) return null;
   var d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
   var diff = Math.floor((Date.now() - d.getTime()) / 60000);
+  if (diff < 1)    return 'ahora mismo';
   if (diff < 60)   return 'hace ' + diff + ' min';
   if (diff < 1440) return 'hace ' + Math.floor(diff / 60) + 'h';
   return 'hace ' + Math.floor(diff / 1440) + 'd';
 }
 
-// ─── Fase 4: Registrar lanzamiento (métrica) ─────────────────
+// ─── Tracking de lanzamiento (best-effort) ───────────────────
 function radarTrackLanzamiento(plataformaId, jobUrl) {
-  if (!RADAR_API_URL || RADAR_API_URL === '/radar-jobs') return;
-  fetch(RADAR_API_URL + '/track', {
+  var apiUrl = radarGetApiUrl();
+  if (!apiUrl) return;
+  fetch(apiUrl + '/track', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ plataforma_id: plataformaId, job_url: jobUrl })
-  }).catch(function() {}); // best-effort, no bloquea UI
+  }).catch(function() {});
 }
 
-// ─── Fetch de la API ─────────────────────────────────────────
-// Fase 4: acepta parámetro opcional de categoría
+// ─── Fetch con timeout + retry ───────────────────────────────
+function radarFetchConTimeout(url, timeoutMs) {
+  return new Promise(function(resolve, reject) {
+    var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timer = setTimeout(function() {
+      if (controller) controller.abort();
+      reject(new Error('timeout'));
+    }, timeoutMs);
+
+    var opts = controller ? { signal: controller.signal } : {};
+    fetch(url, opts)
+      .then(function(res) {
+        clearTimeout(timer);
+        if (!res.ok) reject(new Error('HTTP ' + res.status));
+        else resolve(res);
+      })
+      .catch(function(err) {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
+
+function radarFetchConRetry(url, intentosRestantes) {
+  return radarFetchConTimeout(url, RADAR_FETCH_TIMEOUT_MS)
+    .catch(function(err) {
+      if (intentosRestantes > 0) {
+        return new Promise(function(resolve) { setTimeout(resolve, 1200); })
+          .then(function() { return radarFetchConRetry(url, intentosRestantes - 1); });
+      }
+      throw err;
+    });
+}
+
+// ─── Fetch principal de plataformas ──────────────────────────
 function radarFetchPlataformas(callback, opciones) {
-  if (!RADAR_API_URL || RADAR_API_URL === '/radar-jobs') {
-    callback(null);
+  var apiUrl = radarGetApiUrl();
+  if (!apiUrl) {
+    callback(null, 'no_url');
     return;
   }
+
   var params = new URLSearchParams({ limit: '3' });
   if (opciones && opciones.categoria) params.set('categoria', opciones.categoria);
   if (opciones && opciones.plataforma) params.set('plataforma', opciones.plataforma);
 
-  fetch(RADAR_API_URL + '?' + params.toString())
+  radarFetchConRetry(apiUrl + '?' + params.toString(), RADAR_FETCH_RETRIES)
     .then(function(res) { return res.json(); })
-    .then(function(data) { callback(data.plataformas || null); })
-    .catch(function() { callback(null); });
+    .then(function(data) {
+      var plataformas = (data && Array.isArray(data.plataformas)) ? data.plataformas : null;
+      callback(plataformas, plataformas ? 'ok' : 'empty');
+    })
+    .catch(function(err) {
+      var tipo = (err && err.message === 'timeout') ? 'timeout' : 'error';
+      callback(null, tipo);
+    });
+}
+
+// ─── Refresh automático ───────────────────────────────────────
+function radarIniciarRefresh() {
+  radarDetenerRefresh();
+  _radarRefreshTimer = setInterval(function() {
+    var container = document.getElementById('radar-plataformas-grid');
+    if (!container) { radarDetenerRefresh(); return; }
+    radarRenderSilencioso();
+  }, RADAR_REFRESH_INTERVAL);
+}
+
+function radarDetenerRefresh() {
+  if (_radarRefreshTimer) {
+    clearInterval(_radarRefreshTimer);
+    _radarRefreshTimer = null;
+  }
+}
+
+// Refresco silencioso: actualiza sin mostrar spinner
+function radarRenderSilencioso() {
+  var apiUrl = radarGetApiUrl();
+  if (!apiUrl) return;
+
+  var opciones = {};
+  if (_radarCategoriaActiva) opciones.categoria = _radarCategoriaActiva;
+
+  radarFetchPlataformas(function(plataformas, estado) {
+    if (plataformas && plataformas.length > 0) {
+      _radarUltimaRespuesta = plataformas;
+      radarRenderConData(plataformas);
+      radarActualizarTimestamp();
+    }
+    // Si falla el silencioso, se mantiene la vista actual sin interrumpir
+  }, opciones);
+}
+
+// ─── Timestamp del último refresco ───────────────────────────
+function radarActualizarTimestamp() {
+  var el = document.getElementById('radar-ultima-actualizacion');
+  if (!el) return;
+  var hora = new Date();
+  el.textContent = 'Actualizado: '
+    + String(hora.getHours()).padStart(2, '0') + ':'
+    + String(hora.getMinutes()).padStart(2, '0');
 }
 
 // ─── Mini-Viewer Modal ───────────────────────────────────────
 function radarAbrirViewer(url, nombre, color, plataformaId) {
-  // Fase 4: registrar métrica al abrir viewer
   if (plataformaId) radarTrackLanzamiento(plataformaId, url);
 
   var existente = document.getElementById('radar-viewer-overlay');
@@ -174,10 +277,9 @@ function radarViewerIframeLoaded(iframe) {
   } catch(e) { /* Cross-origin = OK */ }
 }
 
-// ─── Fase 4: Render filtros de categoría ─────────────────────
+// ─── Render filtros de categoría ─────────────────────────────
 function radarRenderFiltros(categorias, categoriaActiva) {
-  var wrapId = 'radar-filtros-wrap';
-  var wrap = document.getElementById(wrapId);
+  var wrap = document.getElementById('radar-filtros-wrap');
   if (!wrap) return;
 
   var html = '<button onclick="radarCambiarCategoria(null)" '
@@ -201,13 +303,69 @@ function radarRenderFiltros(categorias, categoriaActiva) {
 }
 
 // ─── Cambiar categoría activa ─────────────────────────────────
-var _radarCategoriaActiva = null;
 function radarCambiarCategoria(categoria) {
   _radarCategoriaActiva = categoria;
   radarRender();
 }
 
-// ─── Render principal ────────────────────────────────────────
+// ─── Badge de fuente de datos ────────────────────────────────
+function radarBadgeFuente(p, usandoMock) {
+  if (!usandoMock) {
+    if (p.fuente === 'rss' || p.fuente === 'api') {
+      return '<span style="font-size:9px;color:#4ade80;margin-left:auto;padding:2px 7px;'
+        + 'background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.2);'
+        + 'border-radius:4px;white-space:nowrap;">● En vivo</span>';
+    }
+    if (p.fuente === 'cache' || p.fuente === 'bd') {
+      return '<span style="font-size:9px;color:rgba(255,200,60,0.9);margin-left:auto;padding:2px 7px;'
+        + 'background:rgba(255,200,60,0.06);border:1px solid rgba(255,200,60,0.15);'
+        + 'border-radius:4px;white-space:nowrap;">⏱ Caché</span>';
+    }
+    // Jobs existen pero sin fuente conocida
+    return '<span style="font-size:9px;color:rgba(255,255,255,0.35);margin-left:auto;padding:2px 6px;'
+      + 'background:rgba(255,255,255,0.04);border-radius:4px;white-space:nowrap;">datos reales</span>';
+  }
+  // Sin datos de la API — usando mock local
+  return '<span style="font-size:9px;color:rgba(255,255,255,0.25);margin-left:auto;padding:2px 6px;'
+    + 'background:rgba(255,255,255,0.04);border-radius:4px;white-space:nowrap;">datos de ejemplo</span>';
+}
+
+// ─── Estado de error en el grid ──────────────────────────────
+function radarMostrarError(motivo) {
+  var container = document.getElementById('radar-plataformas-grid');
+  if (!container) return;
+
+  var mensajes = {
+    timeout:  'La API tardó demasiado. Mostrando datos de ejemplo.',
+    error:    'No se pudo conectar con la API. Mostrando datos de ejemplo.',
+    no_url:   'Supabase no configurado. Mostrando datos de ejemplo.',
+    empty:    'La API no devolvió plataformas. Mostrando datos de ejemplo.'
+  };
+  var msg = mensajes[motivo] || mensajes['error'];
+
+  // Mostrar banner informativo ENCIMA del grid (no bloquea el fallback)
+  var banner = document.getElementById('radar-api-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'radar-api-banner';
+    banner.style.cssText = [
+      'font-size:11px','color:rgba(255,200,60,0.8)','padding:6px 12px',
+      'background:rgba(255,200,60,0.06)','border:1px solid rgba(255,200,60,0.15)',
+      'border-radius:6px','margin-bottom:12px','display:flex',
+      'align-items:center','gap:6px'
+    ].join(';');
+    container.parentNode.insertBefore(banner, container);
+  }
+  banner.innerHTML = '<i class="ph ph-warning"></i> ' + msg;
+  banner.style.display = 'flex';
+}
+
+function radarOcultarBanner() {
+  var banner = document.getElementById('radar-api-banner');
+  if (banner) banner.style.display = 'none';
+}
+
+// ─── Render con datos ────────────────────────────────────────
 function radarRenderConData(plataformas) {
   var container = document.getElementById('radar-plataformas-grid');
   if (!container) return;
@@ -229,11 +387,9 @@ function radarRenderConData(plataformas) {
     document.head.appendChild(style);
   }
 
-  // Fase 4: recolectar y renderizar filtros de categorías disponibles
   var categsSet = {};
   plataformas.forEach(function(p) { if (p.categoria) categsSet[p.categoria] = true; });
-  var categorias = Object.keys(categsSet).sort();
-  radarRenderFiltros(categorias, _radarCategoriaActiva);
+  radarRenderFiltros(Object.keys(categsSet).sort(), _radarCategoriaActiva);
 
   var html = '';
   plataformas.forEach(function(p) {
@@ -241,23 +397,7 @@ function radarRenderConData(plataformas) {
       ? p.jobs
       : (RADAR_MOCK_JOBS[p.id] || []);
     var usandoMock = !(p.jobs && p.jobs.length > 0);
-
-    // Fase 4: badge de fuente de datos
-    var fuenteBadge = '';
-    if (!usandoMock) {
-      if (p.fuente === 'rss') {
-        fuenteBadge = '<span style="font-size:9px;color:#4ade80;margin-left:auto;padding:2px 7px;'
-          + 'background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.2);'
-          + 'border-radius:4px;white-space:nowrap;">● En vivo</span>';
-      } else if (p.fuente === 'cache' || p.fuente === 'bd') {
-        fuenteBadge = '<span style="font-size:9px;color:rgba(255,200,60,0.9);margin-left:auto;padding:2px 7px;'
-          + 'background:rgba(255,200,60,0.06);border:1px solid rgba(255,200,60,0.15);'
-          + 'border-radius:4px;white-space:nowrap;">⏱ Caché</span>';
-      }
-    } else {
-      fuenteBadge = '<span style="font-size:9px;color:rgba(255,255,255,0.25);margin-left:auto;padding:2px 6px;'
-        + 'background:rgba(255,255,255,0.04);border-radius:4px;white-space:nowrap;">datos de ejemplo</span>';
-    }
+    var fuenteBadge = radarBadgeFuente(p, usandoMock);
 
     html += '<div class="radar-card" style="border-color:'+p.color_border+';background:'+p.color_bg+';padding:0;overflow:hidden;">';
 
@@ -271,20 +411,22 @@ function radarRenderConData(plataformas) {
     html += fuenteBadge;
     html += '</div>';
 
-    // Sección de jobs
+    // Lista de jobs
     html += '<div style="padding:0 16px 12px;">';
     html += '<p style="color:rgba(255,255,255,0.45);font-size:10px;font-weight:700;letter-spacing:0.08em;'
            + 'text-transform:uppercase;margin:0 0 8px 0;padding-bottom:6px;'
            + 'border-bottom:1px solid rgba(255,255,255,0.06);">📋 Trabajos recientes</p>';
 
     if (jobs.length === 0) {
-      html += '<p style="color:rgba(255,255,255,0.3);font-size:12px;text-align:center;padding:16px 0;">'
-             + 'Sin datos aún — usa el botón de abajo</p>';
+      html += '<div style="display:flex;flex-direction:column;align-items:center;padding:18px 0;gap:8px;">'
+             + '<i class="ph ph-binoculars" style="font-size:24px;color:rgba(255,255,255,0.2);"></i>'
+             + '<p style="color:rgba(255,255,255,0.3);font-size:12px;text-align:center;margin:0;">'
+             + 'Sin datos aún — usa el botón de abajo</p>'
+             + '</div>';
     } else {
       jobs.forEach(function(job) {
-        var jobUrl  = job.url || p.search_url || '#';
-        var tiempo  = radarFormatFecha(job.fecha_publicacion) || '';
-        // Fase 4: pasar plataformaId al viewer para registrar métrica
+        var jobUrl = job.url || p.search_url || '#';
+        var tiempo = radarFormatFecha(job.fecha_publicacion) || '';
         html += '<div class="radar-job-item" onclick="radarAbrirViewer(\''+jobUrl+'\',\''+p.nombre+'\',\''+p.color+'\',\''+p.id+'\')" '
                + 'style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;'
                + 'border-radius:8px;cursor:pointer;margin-bottom:4px;background:rgba(255,255,255,0.03);">';
@@ -316,9 +458,8 @@ function radarRenderConData(plataformas) {
     html += '<div class="radar-card-footer" style="padding:10px 16px;border-top:1px solid rgba(255,255,255,0.06);">';
     html += '<button onclick="radarGuardarOpp(\''+p.id+'\',\''+p.nombre+'\')" class="radar-btn-opp" style="border-color:'+p.color_border+';color:'+p.color+';">';
     html += '<i class="ph ph-lightning"></i> Guardar Oportunidad</button>';
-    html += '<a href="'+searchUrl+'" target="_blank" rel="noopener noreferrer" class="radar-btn-open" style="background:'+p.color+';"';
-    // Fase 4: registrar lanzamiento al abrir link directo también
-    html += ' onclick="radarTrackLanzamiento(\''+p.id+'\',\''+searchUrl+'\')">'
+    html += '<a href="'+searchUrl+'" target="_blank" rel="noopener noreferrer" class="radar-btn-open" style="background:'+p.color+';"'
+           + ' onclick="radarTrackLanzamiento(\''+p.id+'\',\''+searchUrl+'\')">';
     html += '<i class="ph ph-arrow-square-out"></i> Abrir '+p.nombre+'</a>';
     html += '</div>';
 
@@ -328,40 +469,84 @@ function radarRenderConData(plataformas) {
   container.innerHTML = html;
 }
 
-// ─── Entry point ─────────────────────────────────────────────
+// ─── Fallback mock local ─────────────────────────────────────
+function radarRenderFallback(motivo) {
+  radarMostrarError(motivo);
+
+  var fallback = [
+    { id:'upwork',     nombre:'Upwork',        color:'#14a800', color_bg:'rgba(20,168,0,0.08)',   color_border:'rgba(20,168,0,0.25)',   logo:'🟢', descripcion:'La plataforma freelance más grande del mundo',  search_url:'https://www.upwork.com/nx/search/jobs/?q=brand+design+identity&sort=recency',    categoria:'branding', fuente:'mock', jobs:[] },
+    { id:'workana',    nombre:'Workana',        color:'#0075FF', color_bg:'rgba(0,117,255,0.08)',  color_border:'rgba(0,117,255,0.25)',  logo:'🔵', descripcion:'La plataforma líder en Latinoamérica',           search_url:'https://www.workana.com/jobs?category=design&subcategory=brand-design&language=es', categoria:'branding', fuente:'mock', jobs:[] },
+    { id:'fiverr',     nombre:'Fiverr',         color:'#1DBF73', color_bg:'rgba(29,191,115,0.08)', color_border:'rgba(29,191,115,0.25)', logo:'🟠', descripcion:'Marketplace global con millones de compradores', search_url:'https://www.fiverr.com/search/gigs?query=brand+identity+design&sort_by=rating',     categoria:'branding', fuente:'mock', jobs:[] },
+    { id:'linkedin',   nombre:'LinkedIn Jobs',  color:'#0077B5', color_bg:'rgba(0,119,181,0.08)',  color_border:'rgba(0,119,181,0.25)',  logo:'🔷', descripcion:'Oportunidades con empresas y agencias',          search_url:'https://www.linkedin.com/jobs/search/?keywords=brand+designer&f_TPR=r86400&sortBy=DD', categoria:'web',      fuente:'mock', jobs:[] },
+    { id:'freelancer', nombre:'Freelancer.com', color:'#29B2FE', color_bg:'rgba(41,178,254,0.08)', color_border:'rgba(41,178,254,0.25)', logo:'⚡', descripcion:'Proyectos globales y concursos de diseño',       search_url:'https://www.freelancer.com/jobs/graphic-design/?q=branding+logo',                  categoria:'web',      fuente:'mock', jobs:[] },
+    { id:'behance',    nombre:'Behance Jobs',   color:'#1769FF', color_bg:'rgba(23,105,255,0.08)', color_border:'rgba(23,105,255,0.25)', logo:'🎨', descripcion:'Jobs en la comunidad creativa de Adobe',         search_url:'https://www.behance.net/joblist?tracking_source=nav20&field=132',                   categoria:'motion',   fuente:'mock', jobs:[] }
+  ];
+
+  var lista = _radarCategoriaActiva
+    ? fallback.filter(function(p) { return p.categoria === _radarCategoriaActiva; })
+    : fallback;
+
+  radarRenderConData(lista);
+}
+
+// ─── Entry point principal ───────────────────────────────────
 function radarRender() {
   var container = document.getElementById('radar-plataformas-grid');
   if (!container) return;
 
-  container.innerHTML = '<div class="radar-loading"><i class="ph ph-spinner" style="animation:spin 1s linear infinite"></i> Cargando plataformas…</div>';
+  radarOcultarBanner();
+  container.innerHTML = '<div class="radar-loading">'
+    + '<i class="ph ph-spinner" style="animation:spin 1s linear infinite"></i>'
+    + ' Cargando plataformas…</div>';
 
-  // Fase 4: pasar opciones de filtro (categoría activa si la hay)
   var opciones = {};
   if (_radarCategoriaActiva) opciones.categoria = _radarCategoriaActiva;
 
-  radarFetchPlataformas(function(plataformas) {
-    if (!plataformas || plataformas.length === 0) {
-      var fallback = [
-        { id:'upwork',     nombre:'Upwork',        color:'#14a800', color_bg:'rgba(20,168,0,0.08)',   color_border:'rgba(20,168,0,0.25)',   logo:'🟢', descripcion:'La plataforma freelance más grande del mundo',  search_url:'https://www.upwork.com/nx/search/jobs/?q=brand+design+identity&sort=recency',    categoria:'branding', fuente:'mock', jobs:[] },
-        { id:'workana',    nombre:'Workana',        color:'#0075FF', color_bg:'rgba(0,117,255,0.08)',  color_border:'rgba(0,117,255,0.25)',  logo:'🔵', descripcion:'La plataforma líder en Latinoamérica',           search_url:'https://www.workana.com/jobs?category=design&subcategory=brand-design&language=es', categoria:'branding', fuente:'mock', jobs:[] },
-        { id:'fiverr',     nombre:'Fiverr',         color:'#1DBF73', color_bg:'rgba(29,191,115,0.08)', color_border:'rgba(29,191,115,0.25)', logo:'🟠', descripcion:'Marketplace global con millones de compradores', search_url:'https://www.fiverr.com/search/gigs?query=brand+identity+design&sort_by=rating',     categoria:'branding', fuente:'mock', jobs:[] },
-        { id:'linkedin',   nombre:'LinkedIn Jobs',  color:'#0077B5', color_bg:'rgba(0,119,181,0.08)',  color_border:'rgba(0,119,181,0.25)',  logo:'🔷', descripcion:'Oportunidades con empresas y agencias',          search_url:'https://www.linkedin.com/jobs/search/?keywords=brand+designer&f_TPR=r86400&sortBy=DD', categoria:'web',      fuente:'mock', jobs:[] },
-        { id:'freelancer', nombre:'Freelancer.com', color:'#29B2FE', color_bg:'rgba(41,178,254,0.08)', color_border:'rgba(41,178,254,0.25)', logo:'⚡', descripcion:'Proyectos globales y concursos de diseño',       search_url:'https://www.freelancer.com/jobs/graphic-design/?q=branding+logo',                  categoria:'web',      fuente:'mock', jobs:[] },
-        { id:'behance',    nombre:'Behance Jobs',   color:'#1769FF', color_bg:'rgba(23,105,255,0.08)', color_border:'rgba(23,105,255,0.25)', logo:'🎨', descripcion:'Jobs en la comunidad creativa de Adobe',         search_url:'https://www.behance.net/joblist?tracking_source=nav20&field=132',                   categoria:'motion',   fuente:'mock', jobs:[] }
-      ];
-      // Aplicar filtro local si hay categoría activa
-      var lista = _radarCategoriaActiva
-        ? fallback.filter(function(p) { return p.categoria === _radarCategoriaActiva; })
-        : fallback;
-      radarRenderConData(lista);
-    } else {
-      radarRenderConData(plataformas);
-    }
-  }, opciones);
+  var apiUrl = radarGetApiUrl();
+  if (!apiUrl) {
+    // SUPABASE_FUNCTIONS_URL no disponible todavía — esperar 500 ms y reintentar una vez
+    setTimeout(function() {
+      var urlReintentar = radarGetApiUrl();
+      if (!urlReintentar) {
+        radarRenderFallback('no_url');
+        return;
+      }
+      radarFetchPlataformas(radarHandleApiResponse, opciones);
+    }, 500);
+    return;
+  }
+
+  radarFetchPlataformas(radarHandleApiResponse, opciones);
 }
 
+function radarHandleApiResponse(plataformas, estado) {
+  if (plataformas && plataformas.length > 0) {
+    _radarUltimaRespuesta = plataformas;
+    radarOcultarBanner();
+    radarRenderConData(plataformas);
+    radarActualizarTimestamp();
+    radarIniciarRefresh();
+  } else if (_radarUltimaRespuesta && _radarUltimaRespuesta.length > 0) {
+    // Hay datos anteriores en caché in-memory: usarlos
+    radarOcultarBanner();
+    radarRenderConData(_radarUltimaRespuesta);
+  } else {
+    radarRenderFallback(estado || 'error');
+  }
+}
+
+// ─── Guardar oportunidad desde Radar ─────────────────────────
 function radarGuardarOpp(plataformaId, plataformaNombre) {
   if (typeof oppAbrirModal === 'function') {
     oppAbrirModal({ plataforma: plataformaId, stage: 'nuevo' });
   }
 }
+
+// ─── Exponer globals necesarios ──────────────────────────────
+window.radarRender              = radarRender;
+window.radarCambiarCategoria    = radarCambiarCategoria;
+window.radarAbrirViewer         = radarAbrirViewer;
+window.radarViewerIframeLoaded  = radarViewerIframeLoaded;
+window.radarTrackLanzamiento    = radarTrackLanzamiento;
+window.radarGuardarOpp          = radarGuardarOpp;
+window.radarDetenerRefresh      = radarDetenerRefresh;
